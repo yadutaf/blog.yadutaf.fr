@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Google HTTPS SEO (Nginx) | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2012/09/07/google-https-seo-nginx/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Google HTTPS SEO (Nginx)</h1>
+      <div class="meta">
+        Sep 7, 2012 &nbsp;
+        
+          #<a href="/tags/google">google</a>&nbsp;
+        
+          #<a href="/tags/https">https</a>&nbsp;
+        
+          #<a href="/tags/nginx">nginx</a>&nbsp;
+        
+          #<a href="/tags/seo">seo</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>A couple of days ago, well, 5 to be precise, I moved this blog to a new server, new Nginx based stack. In the move, I decided to enforce secured HTTPS force all my services, including this blog. Privacy matters!</p>
+
+<p>Surprisingly enough, I suddenly disappeared from Google at the very same time.</p>
+
+<p>It appears to be linked to the HTTPS move. Disabling the systematic redirection to the secured protocol made it happy again.</p>
+
+<p>However, I still want to be automatically moved to the secure version every time I log into the backend. All WordPress admin pages starts with &#8216;/wp-&#8216;, it is then straight forward to make Nginx clever about security. Here is a nice snippet to put into the relevant &#8216;server&rsquo; section:</p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">location /wp-
+    {
+      if ($ssl_protocol = "")
+      {
+          rewrite ^   https://$server_name$request_uri? permanent;
+      }
+    }
+</pre>
+
+<p>instead of only</p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">if ($ssl_protocol = "")
+    {
+        rewrite ^   https://$server_name$request_uri? permanent;
+    }
+</pre>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/" rel="prev">Nginx: IPv6 and SSL termination</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/" rel="next">Lazy man backup strategy with duplicity</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

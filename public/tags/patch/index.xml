@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Patch on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/patch/</link>
+    <description>Recent content in Patch on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 12 Dec 2014 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/patch/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How to run Docker behind an Nginx reverse proxy</title>
+      <link>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
+      <pubDate>Fri, 12 Dec 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
+      <description>
+
+&lt;p&gt;A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.&lt;/p&gt;
+
+&lt;p&gt;Shared hosting farms are usually built around some kind of public gateway for incoming/outgoing traffic as well as management traffic including FTP and SSH. Te largest part of the farm - not unlike an iceberg - being &amp;#8220;hidden&amp;#8221; in a private network behind these gateways.&lt;/p&gt;
+
+&lt;p&gt;So, my question was, is there any way we can imagine that could enable a similar gateway behavior with Docker, including multi-tenancy support and all features you&amp;rsquo;d expect?&lt;/p&gt;
+
+&lt;p&gt;It turns out, there is.&lt;/p&gt;
+
+&lt;p&gt;Docker binary can actually play up to 3 roles:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Docker Command line -&amp;gt; the one making it shiny and plain awesome&lt;/li&gt;
+&lt;li&gt;Docker Daemon -&amp;gt; the one behind the scenes doing most of the hard work&lt;/li&gt;
+&lt;li&gt;Docker init -&amp;gt; the one behind the one behind the scenes doing the early container setup&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The command line and and daemon talk together using a &lt;em&gt;&lt;strong&gt;mostly&lt;/strong&gt;&lt;/em&gt; HTTP based protocol. I say &amp;#8220;mostly&amp;#8221; because the a couple of API endpoints &amp;#8216;hijack&amp;rsquo; the connection, notably the &lt;code&gt;container/attach&lt;/code&gt; endpoint, also known as &amp;#8220;forward my container&amp;rsquo;s console.&amp;#8221;&lt;/p&gt;
+
+&lt;p&gt;Knowing that, a common setup, already well covered by blog posts around the web, recommend to setup an &lt;code&gt;NGinx&lt;/code&gt; reverse proxy and add basic authentication for the security.&lt;/p&gt;
+
+&lt;p&gt;Sadly, there are 2 downsides with this approach:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Stock Docker client does not &amp;#8220;speak&amp;#8221; HTTP basic authentication&lt;/li&gt;
+&lt;li&gt;Stock Nginx is completely lost when Docker hijacks the connection&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Regarding the authentication issue, I recommend to rather rely on Docker TLS certificate as they are supported out of the box. Then, using some LUA magic, we could use them as &amp;#8220;public keys&amp;#8221; to balance to the appropriate. This would in itself a good subject for a dedicated post.&lt;/p&gt;
+
+&lt;p&gt;How do we deal with the second point, namely, Nginx being lost?&lt;/p&gt;
+
+&lt;p&gt;Once the mechanism behind the &amp;#8220;hijack&amp;#8221; is well identified, things quickly becomes straight forward: A usual HTTP connection could be seen as &amp;#8220;half-duplex&amp;#8221; network. One peer talks and, when it is done, the other peer can talk and so on, using a well known protocol. When doing a docker attach, Docker uses the raw TCP connection in &amp;#8220;full duplex&amp;#8221; mode, any peer can talk whenever they have something to say. This is why reverse proxies are lost: they expect - and rely - a lot on the HTTP protocol being well respected.&lt;/p&gt;
+
+&lt;p&gt;Interestingly, there is another mainstream protocol doing just this. As it turns out, this standard protocol is so popular that it has been integrated in Nginx years ago. I named &lt;code&gt;WebSocket&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;So, basically, the idea is to teach Nginx how to handle Docker&amp;rsquo;s custom protocol just as it does with websockets. Here is the patch:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;--- a/src/http/ngx_http_upstream.c Tue Nov 04 19:56:23 2014 +0900
++++ b/src/http/ngx_http_upstream.c  Sat Nov 15 16:21:58 2014 +0100
+@@ -89,6 +89,8 @@
+     ngx_table_elt_t *h, ngx_uint_t offset);
+ static ngx_int_t ngx_http_upstream_process_content_length(ngx_http_request_t *r,
+     ngx_table_elt_t *h, ngx_uint_t offset);
++static ngx_int_t ngx_http_upstream_process_content_type(ngx_http_request_t *r,
++    ngx_table_elt_t *h, ngx_uint_t offset);
+ static ngx_int_t ngx_http_upstream_process_last_modified(ngx_http_request_t *r,
+     ngx_table_elt_t *h, ngx_uint_t offset);
+ static ngx_int_t ngx_http_upstream_process_set_cookie(ngx_http_request_t *r,
+@@ -175,7 +177,7 @@
+                  ngx_http_upstream_copy_header_line, 0, 0 },
+
+     { ngx_string(&#34;Content-Type&#34;),
+-                 ngx_http_upstream_process_header_line,
++                 ngx_http_upstream_process_content_type,
+                  offsetof(ngx_http_upstream_headers_in_t, content_type),
+                  ngx_http_upstream_copy_content_type, 0, 1 },
+
+@@ -2716,6 +2718,7 @@
+     u-&amp;gt;write_event_handler = ngx_http_upstream_upgraded_write_upstream;
+     r-&amp;gt;read_event_handler = ngx_http_upstream_upgraded_read_downstream;
+     r-&amp;gt;write_event_handler = ngx_http_upstream_upgraded_write_downstream;
++    u-&amp;gt;headers_in.chunked = 0;
+
+     if (clcf-&amp;gt;tcp_nodelay) {
+         tcp_nodelay = 1;
+@@ -3849,6 +3852,25 @@
+
+ static ngx_int_t
++ngx_http_upstream_process_content_type(ngx_http_request_t *r, ngx_table_elt_t *h,
++    ngx_uint_t offset)
++{
++    ngx_int_t ret = ngx_http_upstream_process_header_line(r, h, offset);
++    if (ret != NGX_OK) {
++        return ret;
++    }
++
++    // is docker header ?
++    if (ngx_strstrn(h-&amp;gt;value.data,
++                    &#34;application/vnd.docker.raw-stream&#34;, 34 - 1) != NULL) {
++        r-&amp;gt;upstream-&amp;gt;upgrade = 1;
++    }
++
++    return NGX_OK;
++}
++
++
++static ngx_int_t
+ ngx_http_upstream_process_last_modified(ngx_http_request_t *r,
+     ngx_table_elt_t *h, ngx_uint_t offset)
+ {
+1
+
+The only remaining step is then to configure the reverse proxy, as usual. This should be easy 😉
+
+Just for the record, here is my test &amp;lt;code&amp;gt;nginx.conf&amp;lt;/code&amp;gt;:
+
+1
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+
+    keepalive_timeout  65;
+
+    server {
+        listen 9000;
+
+        location / {
+            proxy_buffering off;
+            proxy_pass http://localhost:8080;
+        }
+    }
+}
+&lt;/pre&gt;
+
+&lt;p&gt;You just need to run Docker on port 8080 with a command like the following or just add your params to &lt;code&gt;/etc/default/docker&lt;/code&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;docker -d -H tcp://localhost:8080&lt;/pre&gt;
+
+&lt;p&gt;And we&amp;rsquo;re done!&lt;/p&gt;
+
+&lt;h3 id=&#34;final-thought:d5aecd33c8f89018de5951b27bb1e669&#34;&gt;Final thought&lt;/h3&gt;
+
+&lt;p&gt;While hacking this, I noticed that all Nginx needs to switch protocols for websockets was proper HTTP Headers:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;# Request
+Connection: Upgrade
+Upgrade: websocket
+
+# Response
+HTTP/1.1 101 Upgraded
+Connection: Upgrade
+Upgrade: websocket
+&lt;/pre&gt;
+
+&lt;p&gt;So that another approach could be to inject proper headers in Docker protocol.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Latency on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/latency/</link>
+    <description>Recent content in Latency on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 11 Oct 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/latency/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Investigating DynamoDB 5sec latency</title>
+      <link>http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/</link>
+      <pubDate>Thu, 11 Oct 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/</guid>
+      <description>&lt;p&gt;It goes without saying that a 5000ms latency is&amp;#8230; &lt;em&gt;unacceptable&lt;/em&gt; in a real-time environment. Honestly, we first blamed our &lt;a href=&#34;http://pypi.python.org/pypi/dynamodb-mapper&#34; title=&#34;(Python) DynamoDB Mapper&#34;&gt;home-grown DynamoDB-Mapper&lt;/a&gt; and, indeed found, and fixed, a nasty design. &lt;a href=&#34;https://bitbucket.org/Ludia/dynamodb-mapper/changeset/059791c53426e92556a9c20a3376db298be38a37&#34; title=&#34;commit about always filling transactions&#34;&gt;Here is the specific commit&lt;/a&gt; for those liking juicy details &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Ok, so &amp;#8220;case closed&amp;#8221; you might think. Sadly not, it did not change anything but since this behavior was random and the application still under very low load (development environment) it took some time to spot it again.&lt;/p&gt;
+
+&lt;p&gt;Case re-opened.&lt;/p&gt;
+
+&lt;p&gt;Diving deeper in CloudWatch, I saw these pick latency in the stat. Interestingly enough, this was always like 5000 + n milliseconds. Where &amp;#8216;n&amp;rsquo; is small and pretty close to the normal average latency observed on DynamoDB. After mailing directly Amazon&amp;rsquo;s support about this specific issue, it appeared that this intuition was right. 5 sec it the failure timeout on their side.&lt;/p&gt;
+
+&lt;p&gt;We already know that data is spread over partitions. But this &amp;#8220;partitions&amp;#8221; might simply be instances running as part of a cluster. This cluster would then be exposed by an ELB with failure timeout set to 5sec. From my early tests, I noticed that there is 2 exposed partitions on a nearly empty table at a throughput of 1000. It now appears that both partition contains the whole dataset. Good!&lt;/p&gt;
+
+&lt;p&gt;Mystery solved ? Dunno. I have no clue how DynamoDB is actually built and all this is jealously kept as an &amp;#8216;IP&amp;rsquo; secret, which I can understand.&lt;/p&gt;
+
+&lt;p&gt;So, most of the time DynamoDB is indeed a great choice. But, sometimes, you may experience unusual latencies. In this case, feel free to tell the support so that they can drop an eye.&lt;/p&gt;
+
+&lt;p&gt;Last advice: always keep profiling informations. I was asked for the &amp;#8216;TransactionID&amp;rsquo; and suddenly felt stupid as we have none. Bad luck. If you use the great &lt;a href=&#34;http://docs.pythonboto.org/en/latest/index.html&#34; title=&#34;Python Boto library&#34;&gt;Boto library&lt;/a&gt;, do not forget to configure &amp;#8216;boto.perflog&amp;rsquo;, I contributed it for this very purpose &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Oh, If you read this down to that point, you may be interested in some &lt;a href=&#34;https://blog.jtlebi.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/&#34; title=&#34;Common DynamoDB questions/misconceptions/recipes&#34;&gt;common DynamoDB recipies&lt;/a&gt; too.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

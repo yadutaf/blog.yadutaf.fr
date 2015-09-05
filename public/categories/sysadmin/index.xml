@@ -1,0 +1,1836 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Sysadmin on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/categories/sysadmin/</link>
+    <description>Recent content in Sysadmin on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 25 Aug 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/categories/sysadmin/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Of being hacked, found guilty of spam</title>
+      <link>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
+      <pubDate>Tue, 25 Aug 2015 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
+      <description>&lt;p&gt;A few days ago, my hosting company sent me an automated email notifying me that port 25 had been blocked on my personal server. Cause: It had been found guilty of sending spam. As I&amp;rsquo;m not (at least officially) in the spam business, this could only mean one thing: I got hacked.&lt;/p&gt;
+
+&lt;p&gt;I was shocked. If felt to me as though I was having a car accident.&lt;/p&gt;
+
+&lt;p&gt;The first think to do in such situations is to restrict to the bare minimum connections from the outside world to regain control of the machine. In my case, I rebooted the server to rescue mode with only SSH access. This means mail server downtime BUT SMTP protocol is reliable by design. Actually, it has been developed when Internet barely existed and mails where directly hosted on terminals with intermittent connexions. Hence, not an issue.&lt;/p&gt;
+
+&lt;p&gt;Next, inspect postfix queue to get an overview:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;postqueue -p | head
+&lt;/pre&gt;
+
+&lt;p&gt;Dumping a random email from the queue is also a good idea:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;postcat -qv POSTFIX_QUEUE_ID
+&lt;/pre&gt;
+
+&lt;p&gt;This gives a good idea of where the bulk of the emails came from. In this specific scenario, most mail (~55K) were coming from &amp;#8220;@blog.jtlebi.fr&amp;#8221;. Which is a pretty good news since NO legitimate mail is ever sent from this domain. Anyway, at this point, you should be able to infer basic patterns.&lt;/p&gt;
+
+&lt;p&gt;Time to filter out the spam. The film-hacker way: with a shiny progress bar. Actully, this is not about hype but truly about getting feedback. Filtering 10s of thousands of mails using postfix tools takes a &lt;em&gt;very&lt;/em&gt; long time. You need to have an ETA. Here is the command I used:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;CANDIDATES=&#34;grep -rlP &#39;(MAILER-DAEMON|@blog\.jtlebi\.fr)&#39; /var/spool/postfix/deferred/&#34;; (
+    eval $CANDIDATES   # get the list of mails, directly from the pool
+    | tee deleting     # track actions
+    | grep -o &#39;[^/]*$&#39; # extract POSTFIX_QUEUE_ID
+    | pv -lns $(eval $CANDIDATES | wc -l) -i0.1 # compute progress based on processed lines (mails) vs matching files (mails) in the spool.
+    | postadmin -d -   # delete mail by  POSTFIX_QUEUE_ID (1 per line)
+
+) 2&amp;gt;&amp;1
+| dialog --no-lines --no-shadow  --gauge &#34;Delicately filtering away da F*cking spam... &#34; 7 70 # The hype thing
+&lt;/pre&gt;
+
+&lt;p&gt;After that, before re-opening accesses, do not forget to close the holes the hacker came in through. Temporary fix was to upgrade all, disable most plugins. Long term fix ? &lt;strong&gt;KILL WORDPRESS&lt;/strong&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Force a remote host to reboot via VNC</title>
+      <link>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
+      <pubDate>Mon, 04 May 2015 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
+      <description>&lt;p&gt;Yesterday, dealt with a machine in a pretty bad state:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;SSH was Down&lt;/li&gt;
+&lt;li&gt;Memory was exhausted (OOM)&lt;/li&gt;
+&lt;li&gt;Ctrl + Alt + Del from VNC was not responding&lt;/li&gt;
+&lt;li&gt;A background operation on the OpenStack API was preventing any &lt;code&gt;nova reboot --hard zombie-essential-instance.my-infra.net&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;In such situations, the last resort is &lt;code&gt;Alt+SysRQ+b&lt;/code&gt; to force the host into immediate reboot, possible loosing or corrupting data data in the way.&lt;/p&gt;
+
+&lt;p&gt;The trick is that, obviously, you can not type this sequence on your laptop as usual, or the machine that will reboot will not be the one you expect&amp;#8230; Hence to goal is to feed the relevant keycodes directly to VNC. &lt;a href=&#34;http://www.realvnc.com/docs/rfbproto.pdf&#34;&gt;As VNC has originally been built specifically for X11&lt;/a&gt;, the keycodes you need to send are the one X11 itself uses internally. Which are found &lt;a href=&#34;http://www.cl.cam.ac.uk/~mgk25/ucs/keysymdef.h&#34;&gt;in the source code&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Long story short, the codes you are looking for are:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;0xffe9&lt;/code&gt;: Alt&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;0xff15&lt;/code&gt;: SySRq&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;0x0062&lt;/code&gt;: b&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;If you are viewing the console through NoVNC, you may feed theses codes to the guest by opening a console in your browser (&lt;code&gt;F12&lt;/code&gt; in most browser) and typing:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;rfb.sendKey(0xffe9, 1);
+rfb.sendKey(0xff15, 1);
+rfb.sendKey(0x0062, 1);
+rfb.sendKey(0x0062, 0);
+rfb.sendKey(0xff15, 0);
+rfb.sendKey(0xffe9, 0);
+&lt;/pre&gt;
+
+&lt;p&gt;This will send the relevant key down events then the key up in reverse order. This is roughly how the &amp;#8220;Send CtrlAltDel&amp;#8221; button works.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>How I shrunk a Docker image by 98.8% – featuring fanotify</title>
+      <link>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
+      <pubDate>Sat, 25 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
+      <description>
+
+&lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
+
+&lt;p&gt;You can find a couple of pretty decent common-sense powered approach &lt;a href=&#34;https://intercityup.com/blog/downsizing-docker-containers.html&#34;&gt;on the web&lt;/a&gt; like removing well known cache folders, temporary files, installing all superfluous packages and flatten layers if not the full image. There is also the &lt;code&gt;-slim&lt;/code&gt; declination of the official language images.&lt;/p&gt;
+
+&lt;p&gt;But, thinking at it, do we &lt;em&gt;really&lt;/em&gt; need a full consistent base Linux install? Which files do we &lt;em&gt;really&lt;/em&gt; need in a given image? I found a radical and pretty efficient approaches with a go binary. It was statically build, almost no external dependency. &lt;a href=&#34;http://blog.codeship.com/building-minimal-docker-containers-for-go-applications/&#34;&gt;Resulting image&lt;/a&gt;: 6.12MB.&lt;/p&gt;
+
+&lt;p&gt;Whaou! Is there any chance to do something comparable, deterministic with any random application?&lt;/p&gt;
+
+&lt;p&gt;It turns out there could be one. The idea is simple: We could profile the image at run time one way or another to determine which files are ever accessed/opened/&amp;#8230;, then remove all the remaining files. Hmm, sounds promising. Let&amp;rsquo;s PoC it.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Target definition&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Start image&lt;/strong&gt;: Ubuntu (~200MB)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Application that MUST run&lt;/strong&gt;: &lt;code&gt;/bin/ls&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Goal&lt;/strong&gt;: Build the smallest possible image&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;code&gt;/bin/ls&lt;/code&gt; is a good target: It is simple enough for a PoC with no nasty behavior but still not trivial, it uses dynamic linking.&lt;/p&gt;
+
+&lt;p&gt;Now that we have a target, let&amp;rsquo;s pick a tool. As this is a proof of concept, using dynamites where a hole puncher would  be enough &lt;em&gt;IS&lt;/em&gt; an option, as long as it does the job.&lt;/p&gt;
+
+&lt;p&gt;The base idea it to record all file accesses. Be it a stat or a open. There are a couple of good candidates to help with the task. We could use &lt;a href=&#34;http://linux.die.net/man/7/inotify&#34; title=&#34;Man Inotify&#34;&gt;inotify&lt;/a&gt; but it is a pain to setup and watches needs to be attached on every single files, which potentially mean a *lot* of watches. We could use LD_PRELOAD but 1/ it&amp;rsquo;s no fun to use, 2/ it won&amp;rsquo;t catch direct syscalls 3/ it won&amp;rsquo;t work with statically linked programs (who said golang&amp;rsquo;s?). A solution that would work well even for statically linked program would be to use &lt;a href=&#34;http://linux.die.net/man/2/ptrace&#34; title=&#34;Man ptrace&#34;&gt;ptrace&lt;/a&gt; to trace all syscalls, in realtime. It is also a pain to setup but, it would be a reliable and flexible option. A lesser known linux syscall is &lt;a href=&#34;http://man7.org/linux/man-pages/man7/fanotify.7.html&#34;&gt;fanotify&lt;/a&gt;. As the title suggests, This is the one we&amp;rsquo;ll go with&lt;sup&gt;1&lt;/sup&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;fanotify&lt;/code&gt; syscall has originally been implemented as &amp;#8220;decent&amp;#8221; mechanism for anti-virus vendors to intercept file access events, potentially on a whole mountpoint at once. Sounds familiar? While it may be used to deny file accesses, it may also just report file access events in a non-blocking fashion, potentially dropping&lt;sup&gt;2&lt;/sup&gt; events if the kernel queue overflows. In this last case, a special message will be generated to notify user-land listener about the message loss. This is perfectly what I needed. Non intrusive, a whole mountpoint at once, simple setup (well, provided that you find the documentation, no comment&amp;#8230;). This may seem anecdotal but it has its importance, as a learned after.&lt;/p&gt;
+
+&lt;p&gt;Using it is fairly simple:&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1/ Init &lt;code&gt;fanotify&lt;/code&gt; in &lt;code&gt;FAN_CLASS_NOTIF&lt;/code&gt;ication mode using &lt;a href=&#34;http://man7.org/linux/man-pages/man2/fanotify_init.2.html&#34;&gt;&lt;code&gt;fanotify_init&lt;/code&gt; syscall&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Open ``fan`` fd for fanotify notifications. Messages will embed a 
+// filedescriptor on accessed file. Expect it to be read-only
+fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ Subscribe to &lt;code&gt;FAN_ACCESS&lt;/code&gt; and &lt;code&gt;FAN_OPEN&lt;/code&gt; events on &amp;#8220;/&amp;#8221; &lt;code&gt;FAN_MARK_MOUNT&lt;/code&gt;point using &lt;a href=&#34;http://man7.org/linux/man-pages/man2/fanotify_mark.2.html&#34;&gt;&lt;code&gt;fanotify_mark&lt;/code&gt; syscall&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Watch open/access events on root mountpoint
+fanotify_mark(
+    fan, 
+    FAN_MARK_ADD | FAN_MARK_MOUNT, // Add mountpoint mark to fan
+    FAN_ACCESS | FAN_OPEN,         // Report open and access events, non blocking
+    -1, &#34;/&#34;                        // Watch root mountpoint (-1 is ignored for FAN_MARK_MOUNT type calls)
+);
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;3/ read&lt;/code&gt; pending event messages from the filedescriptor returned by &lt;code&gt;fanotify_init&lt;/code&gt; and iterate using &lt;code&gt;FAN_EVENT_NEXT&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Read pending events from ``fan`` into ``buf``
+buflen = read(fan, buf, sizeof(buf));
+
+// Position cursor on first message
+metadata = (struct fanotify_event_metadata*)&amp;buf;
+
+// Loop until we reached the last event
+while(FAN_EVENT_OK(metadata, buflen)) {
+    // Do something interesting with the notification
+    // ``metadata-&amp;gt;fd`` will contain a valid, RO fd to accessed file.
+
+    // Close opened fd, otherwise we&#39;ll quickly exhaust the fd pool.
+    close(metadata-&amp;gt;fd);
+
+    // Move to next event in buffer
+    metadata = FAN_EVENT_NEXT(metadata, buflen);
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Putting it all together, we&amp;rsquo;ll print the full name of all accessed files and add queue overflow detection. This should be plain enough for us (comments and error checks stripped for the purpose of this illustration):&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;limits.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sys/fanotify.h&amp;gt;
+
+int main(int argc, char** argv) {
+    int fan;
+    char buf[4096];
+    char fdpath[32];
+    char path[PATH_MAX + 1];
+    ssize_t buflen, linklen;
+    struct fanotify_event_metadata *metadata;
+
+    // Init fanotify structure
+    fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+
+    // Watch open/access events on root mountpoint
+    fanotify_mark(
+        fan,
+        FAN_MARK_ADD | FAN_MARK_MOUNT,
+        FAN_ACCESS | FAN_OPEN,
+        -1, &#34;/&#34;
+    );
+
+    while(1) {
+        buflen = read(fan, buf, sizeof(buf));
+        metadata = (struct fanotify_event_metadata*)&amp;buf;
+
+        while(FAN_EVENT_OK(metadata, buflen)) {
+            if (metadata-&amp;gt;mask &amp; FAN_Q_OVERFLOW) {
+                printf(&#34;Queue overflow!\n&#34;);
+                continue;
+            }
+
+            // Resolve path, using automatically opened fd
+            sprintf(fdpath, &#34;/proc/self/fd/%d&#34;, metadata-&amp;gt;fd);
+            linklen = readlink(fdpath, path, sizeof(path) - 1);
+            path[linklen] = &#39;&amp;#92;&amp;#48;&#39;;
+            printf(&#34;%s\n&#34;, path);
+
+            close(metadata-&amp;gt;fd);
+            metadata = FAN_EVENT_NEXT(metadata, buflen);
+        }
+    }
+}
+&lt;/pre&gt;
+
+&lt;p&gt;To build it, use:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;gcc main.c --static -o fanotify-profiler
+&lt;/pre&gt;
+
+&lt;p&gt;We basically now have a tool to report any file access on the active &amp;#8216;/&amp;rsquo; mountpoint in real time. Good.&lt;/p&gt;
+
+&lt;p&gt;What now? Let&amp;rsquo;s create an Ubuntu container, start the recorder and run &lt;code&gt;/bin/ls&lt;/code&gt;. &lt;code&gt;fanotify&lt;/code&gt; requires require the &amp;#8220;&lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&amp;#8221; capability. This is basically the &amp;#8220;catch-all&amp;#8221; root &lt;a href=&#34;http://linux.die.net/man/7/capabilities&#34;&gt;capability&lt;/a&gt;. Still better than running in &lt;code&gt;--privileged&lt;/code&gt; mode though.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Run image
+docker run --name profiler_ls \
+           --volume $PWD:/src \
+           --cap-add SYS_ADMIN \
+           -it ubuntu /src/fanotify-profiler
+
+# Run the command to profile, from another shell
+docker exec -it profiler_ls ls
+
+# Interrupt Running image using
+docker kill profiler_ls # You know, the &#34;dynamite&#34;
+&lt;/pre&gt;
+
+&lt;p&gt;This should produce an output like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;/etc/passwd
+/etc/group
+/etc/passwd
+/etc/group
+/bin/ls
+/bin/ls
+/bin/ls
+/lib/x86_64-linux-gnu/ld-2.19.so
+/lib/x86_64-linux-gnu/ld-2.19.so
+/etc/ld.so.cache
+/lib/x86_64-linux-gnu/libselinux.so.1
+/lib/x86_64-linux-gnu/libacl.so.1.1.0
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libattr.so.1.1.0
+&lt;/pre&gt;
+
+&lt;p&gt;Awesome! It worked. We now know for sure what &lt;code&gt;/bin/ls&lt;/code&gt; ultimately needs to run.&lt;/p&gt;
+
+&lt;p&gt;So we&amp;rsquo;ll just copy-paste-import all this in a &amp;#8220;&lt;code&gt;FROM scratch&lt;/code&gt;&amp;#8221; Docker Image and we&amp;rsquo;ll be done. Easy. Well, not so. But let&amp;rsquo;s do it to see by ourselves.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Export base docker image
+mkdir ubuntu_base
+docker export profiler_ls | sudo tar -x -C ubuntu_base
+
+# Create new image
+mkdir ubuntu_lean
+
+# Get the linker (trust me)
+sudo mkdir -p ubuntu_lean/lib64
+sudo cp -a ubuntu_base/lib64/ld-linux-x86-64.so.2 ubuntu_lean/lib64/
+
+# Copy the files
+sudo mkdir -p ubuntu_lean/etc
+sudo mkdir -p ubuntu_lean/bin
+sudo mkdir -p ubuntu_lean/lib/x86_64-linux-gnu/
+
+sudo cp -a ubuntu_base/bin/ls ubuntu_lean/bin/ls
+sudo cp -a ubuntu_base/etc/group ubuntu_lean/etc/group
+sudo cp -a ubuntu_base/etc/passwd ubuntu_lean/etc/passwd
+sudo cp -a ubuntu_base/etc/ld.so.cache ubuntu_lean/etc/ld.so.cache
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libselinux.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libselinux.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1.1.0
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libc-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3.13.1 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libdl-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1.1.0
+
+# Import it back to Docker
+cd ubuntu_lean
+sudo tar -c . | docker import - ubuntu_lean
+&lt;/pre&gt;
+
+&lt;p&gt;Run the resulting image:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run --rm -it ubuntu_lean /bin/ls
+&lt;/pre&gt;
+
+&lt;p&gt;And, Tadaaaaa:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;# If you did not trust me with the linker (as it was already loaded when the profiler started, it does not show in the ouput)
+no such file or directoryFATA[0000] Error response from daemon: Cannot start container f318adb174a9e381500431370a245275196a2948828919205524edc107626d78: no such file or directory
+
+# Otherwise
+/bin/ls: error while loading shared libraries: libacl.so.1: cannot open shared object file: No such file or directory
+&lt;/pre&gt;
+
+&lt;p&gt;Well, not so&amp;#8230; What went wrong? Remember when I said this syscall was primarily designed with antivirus in mind? The real-time part of the antivirus is supposed to detect that a file is being accessed, run some checks, take a decision. What matters here is the actual, real content of the file. In particular, filesystem races MUST be avoided at all costs. This is the reason why &lt;code&gt;fanotify&lt;/code&gt; yields filedescriptors instead of accesses path. Determining the underlying physical file is done by probing &lt;code&gt;/proc/self/fd/[fd]&lt;/code&gt;. It does not tell you through which symlink the file being accessed was accessed, only what file it is.&lt;/p&gt;
+
+&lt;p&gt;To make this work, we need to find all links to reported files and install them in the filtered image as well. A &lt;code&gt;find&lt;/code&gt; command like this will do the job:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Find all files refering to a given one
+find -L -samefile &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; 2&amp;gt;/dev/null
+
+# If you want to exclude the target itself from the results
+find -L -samefile &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; -a ! -path &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; 2&amp;gt;/dev/null
+&lt;/pre&gt;
+
+&lt;p&gt;This can easily be automated with a loop like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;for f in $(cd ubuntu_lean; find)
+do 
+    (
+        cd ubuntu_base
+        find -L -samefile &#34;$f&#34; -a ! -path &#34;$f&#34;
+    ) 2&amp;gt;/dev/null
+done
+&lt;/pre&gt;
+
+&lt;p&gt;Which produces the list of missing symlinks. All libs.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;./lib/x86_64-linux-gnu/libc.so.6
+./lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+./lib/x86_64-linux-gnu/libattr.so.1
+./lib/x86_64-linux-gnu/libdl.so.2
+./lib/x86_64-linux-gnu/libpcre.so.3
+./lib/x86_64-linux-gnu/libacl.so.1
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s copy them too from the source image and re-create the destination image. (Yeah, could also have created them on the fly).&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Copy the links
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc.so.6 ubuntu_lean/lib/x86_64-linux-gnu/libc.so.6
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ubuntu_lean/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl.so.2 ubuntu_lean/lib/x86_64-linux-gnu/libdl.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1
+
+# Import it back to Docker
+cd ubuntu_lean
+docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Warning&lt;/strong&gt;: This method is limited. For example, it won&amp;rsquo;t return links to links to files neither absolute links. The later requiring at least a chroot. Or to be run in the source container itself, provided that find or equivalent is present.&lt;/p&gt;
+
+&lt;p&gt;Run the resulting image:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run --rm -it ubuntu_lean /bin/ls
+&lt;/pre&gt;
+
+&lt;p&gt;And, Tadaaaaa:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;bin  dev  etc  lib  lib64  proc  sys
+&lt;/pre&gt;
+
+&lt;p&gt;It works! &lt;sup&gt;tm&lt;/sup&gt;&lt;/p&gt;
+
+&lt;p&gt;Time is over, let&amp;rsquo;s measure:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;&lt;strong&gt;ubuntu&lt;/strong&gt;: 209M&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;strong&gt;ubuntu_lean&lt;/strong&gt;: 2,5M&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Resulting Docker image is 83.5 &lt;em&gt;times&lt;/em&gt; smaller&lt;sup&gt;3&lt;/sup&gt;. That&amp;rsquo;s a 98.8% reduction. Looks good to me, I&amp;rsquo;ll accept it. If you agree.&lt;/p&gt;
+
+&lt;h3 id=&#34;last-thought:ed6b7f79feba98b85e08740dab416986&#34;&gt;Last Thought&lt;/h3&gt;
+
+&lt;p&gt;Like all profiling based method, it will only tell you about what&amp;rsquo;s actually done/used in a specific scenario. For example, try to run &lt;code&gt;/bin/ls -l&lt;/code&gt; in the resulting image and see by yourself. (spoiler: it does not work. Well it does, but not as expected).&lt;/p&gt;
+
+&lt;p&gt;The profiling technique itself is not without flaws. It does not detect how a file was opened but only which file this is. This is a problem for symlinks, especially cross-filesytems (read: cross-volumes). With fanotify, we&amp;rsquo;ll completely miss the original symlink and break the application.&lt;/p&gt;
+
+&lt;p&gt;If I were to build a production shrinker, I would probably go for a &lt;code&gt;ptrace&lt;/code&gt; based method.&lt;/p&gt;
+
+&lt;h3 id=&#34;footnotes:ed6b7f79feba98b85e08740dab416986&#34;&gt;Footnotes&lt;/h3&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;Let&amp;rsquo;s face the truth: What I really wanted, was experimenting with this syscall. Docker images are more of a (good) pretext.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Actually, one could use &lt;code&gt;FAN_UNLIMITED_QUEUE&lt;/code&gt; well calling &lt;code&gt;fanotify_init&lt;/code&gt; to remove this limitation, provided that the calling process is at least &lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;That&amp;rsquo;s also 2.4 times smaller that the 6.13MB image I mentioned at the beginning of this post. But the comparison is not fair.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Getting Docker to run on Power8</title>
+      <link>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</link>
+      <pubDate>Tue, 28 Oct 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</guid>
+      <description>
+
+&lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
+
+&lt;p&gt;[UPDATE 2014-11-19]: IBM is currently porting Docker to gccgo/Power8, see the comments below for more informations.&lt;/p&gt;
+
+&lt;p&gt;Power8 is the name of a 64bits RISC processor micro-architecture of the same family as the G5 for example. This was the processor powering the venerable Mac G5. It is extremely parallel with up to 8 threads per core. This makes it especially good at running databases. Notably, &lt;a href=&#34;https://www.flamingspork.com/blog/2014/06/03/1-million-sql-queries-per-second-mysql-5-7-on-power8/&#34;&gt;Stewart Smith tuned MySQL 7 to get up to 1M request per seconds&lt;/a&gt;. This is just amazing!&lt;/p&gt;
+
+&lt;p&gt;Docker is a tool helping developers to build, ship and run code anywhere just like containers helps shipping anything anywhere. It is increasingly used in production to cleanly isolate processes on a same physical machine without the overhead of a Virtual Machine.&lt;/p&gt;
+
+&lt;p&gt;So, let&amp;rsquo;s get started. My goal was to get docker running and, if possible the latest version (it turns out it actually **is** the latest version). The goal was not to make it the shiniest way. That&amp;rsquo;s for later.&lt;/p&gt;
+
+&lt;p&gt;Here is the state of the art:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Docker depends on Go and cgo 1.2.1 until version 1.1.1&lt;/li&gt;
+&lt;li&gt;Docker depends on Go and cgo 1.3+ after then&lt;/li&gt;
+&lt;li&gt;gccgo 4.9, shipped with Ubuntu 14.04 supports go 1.2.1 but lacks some reflexivity implementation for Power8 and Elf parsing for Power8 in libcgo&lt;/li&gt;
+&lt;li&gt;gccgo trunk supports go 1.4 (yes), fixes the reflexivity but still lacks the Elf parsing&lt;/li&gt;
+&lt;li&gt;golang 1.3 has no support for Power8&lt;/li&gt;
+&lt;li&gt;golang dev.power64 is still very work in progress but supports ELF parsing for Power8 (hint, hint)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As you can see, this is not &lt;span class=&#34;span9&#34;&gt;attempting to square the circle but not so close.&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;It is also worth noting that gccgo is only the compiler parts. It brings no support for the &amp;#8220;go&amp;#8221; command line itself (which is written in pure go) neither for cgo (which bridges the gap between Go and C worlds). Fortunately, Dave Cheney, of Canonical, did the hard work of getting &amp;#8220;go&amp;#8221; to build with gccgo and in turn seamlessly work with gccgo backend by default. His work is now available through &amp;#8216;apt-get&amp;rsquo;. He also did a great presentation of his work which is available online &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide&#34;&gt;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide&lt;/a&gt;. And, honestly, after a full week-end battling to get it right, I totally share his opinions when he writes &amp;#8220;ʕ╯◔ϖ◔ʔ╯︵ ┻━┻&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;Among the discarded, aborted, failed attempts: cross compile from my laptop, find ready to use instructions, use stock gcc 4.9, build dev.power64 Go branch (it&amp;rsquo;s completely broken / Work in progress), fly a unicorn.&lt;/p&gt;
+
+&lt;p&gt;Anyway, let&amp;rsquo;s start over. What we&amp;rsquo;ll do:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;get a Power8 machine. No cross build sorry.&lt;/li&gt;
+&lt;li&gt;grab latest version of GCC from trunk (SVN, that&amp;rsquo;s 1 VCS)&lt;/li&gt;
+&lt;li&gt;grab latest WIP version of Power8 from dev.power64 (Mercurial, that&amp;rsquo;s a 2nd VCS)&lt;/li&gt;
+&lt;li&gt;copy required bits from go to gccgo, namely the ELF parser of libcgo&lt;/li&gt;
+&lt;li&gt;patch, build and install gccgo in /opt/gcc-trunk&lt;/li&gt;
+&lt;li&gt;build &amp;#8220;go&amp;#8221; and &amp;#8220;cgo&amp;#8221; commands to use our updated libgo.so.6 instead of libgo.so.5&lt;/li&gt;
+&lt;li&gt;grab lastest version of Docker from master (Git, that&amp;rsquo;s a 3rd VCS)&lt;/li&gt;
+&lt;li&gt;patch, build, install Docker&lt;/li&gt;
+&lt;li&gt;celebrate&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&#34;1-get-a-power8-machine:843e6337e67e60d94f17e70050c565c9&#34;&gt;1. Get a Power8 Machine&lt;/h3&gt;
+
+&lt;p&gt;The easiest way to get one is to &lt;a href=&#34;http://labs.runabove.com/power8/&#34;&gt;join RunAbove&amp;rsquo;s public beta&lt;/a&gt; which comes with a $32 Voucher. That&amp;rsquo;s one month worth of Power8.&lt;/p&gt;
+
+&lt;p&gt;Common setup:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo locale-gen
+sudo apt-get -y update
+sudo apt-get -y install subversion mercurial git build-essential gccgo-go
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;2-grab-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;2. Grab GCC&lt;/h3&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+svn checkout svn://gcc.gnu.org/svn/gcc/trunk gcc
+# Be *very* patient
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;3-grab-go-dev-power64:843e6337e67e60d94f17e70050c565c9&#34;&gt;3. Grab Go dev.power64&lt;/h3&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+hg clone -u release https://code.google.com/p/go
+cd go
+hg update dev.power64
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;4-patch-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;4. Patch GCC&lt;/h3&gt;
+
+&lt;p&gt;GCC&amp;rsquo;s libcgo implementation lakes elf parsing supporting for PPC64 instruction set. As this is required by &lt;code&gt;cgo&lt;/code&gt;, we&amp;rsquo;ll get it from Go itself.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+cp go/src/debug/elf/file.go gcc/libgo/go/debug/elf/
+cp go/src/debug/elf/elf.go gcc/libgo/go/debug/elf/
+&lt;/pre&gt;
+
+&lt;p&gt;It also lacks some termios related symbols required to build docker command line interface. They&amp;rsquo;re easily added with this patch (extracted from `svn diff`):&lt;/p&gt;
+
+&lt;p&gt;[UPDATE 2014-11-11]: This patch is no longer needed thanks to IBM&amp;rsquo;s upstream work.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;--- libgo/mksysinfo.sh  (revision 216693)
++++ libgo/mksysinfo.sh  (working copy)
+@@ -174,6 +174,15 @@
+ #ifdef TIOCGWINSZ
+   TIOCGWINSZ_val = TIOCGWINSZ,
+ #endif
++#ifdef TIOCSWINSZ
++  TIOCSWINSZ_val = TIOCSWINSZ,
++#endif
++#ifdef TCGETS
++  TCGETS_val = TCGETS,
++#endif
++#ifdef TCSETS
++  TCSETS_val = TCSETS,
++#endif
+ #ifdef TIOCNOTTY
+   TIOCNOTTY_val = TIOCNOTTY,
+ #endif
+@@ -790,6 +799,21 @@
+     echo &#39;const TIOCGWINSZ = _TIOCGWINSZ_val&#39; &amp;gt;&amp;gt; ${OUT}
+   fi
+ fi
++if ! grep &#39;^const TIOCSWINSZ&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++  if grep &#39;^const _TIOCSWINSZ_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++    echo &#39;const TIOCSWINSZ = _TIOCSWINSZ_val&#39; &amp;gt;&amp;gt; ${OUT}
++  fi
++fi
++if ! grep &#39;^const TCGETS&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++  if grep &#39;^const _TCGETS_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++    echo &#39;const TCGETS = _TCGETS_val&#39; &amp;gt;&amp;gt; ${OUT}
++  fi
++fi
++if ! grep &#39;^const TCSETS&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++  if grep &#39;^const _TCSETS_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++    echo &#39;const TCSETS = _TCSETS_val&#39; &amp;gt;&amp;gt; ${OUT}
++  fi
++fi
+ if ! grep &#39;^const TIOCNOTTY&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
+   if grep &#39;^const _TIOCNOTTY_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
+     echo &#39;const TIOCNOTTY = _TIOCNOTTY_val&#39; &amp;gt;&amp;gt; ${OUT}
+&lt;/pre&gt;
+
+&lt;p&gt;If you&amp;rsquo;re planning on making a break, just wait one more minute. We&amp;rsquo;ll launch GCC&amp;rsquo;s build&amp;#8230;&lt;/p&gt;
+
+&lt;h3 id=&#34;5-build-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;5. Build GCC&lt;/h3&gt;
+
+&lt;p&gt;As usual, except that we built it out of tree.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+mkdir build-gcc
+cd build-gcc
+sudo apt-get install -y libgmp-dev libmpfr-dev libmpc-dev flex bison
+../gcc/configure --enable-languages=go --disable-multilib --prefix=/opt/gcc-trunk
+make -j200 # if using the big instance
+sudo make install
+&lt;/pre&gt;
+
+&lt;p&gt;Be patient, read a book, watch a movie, go visit friends&amp;#8230; It takes a while. On the &amp;#8216;S&amp;rsquo; instance, it took me around 98 minutes.&lt;/p&gt;
+
+&lt;p&gt;Once done, we have some additional setup:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;export PATH=/opt/gcc-trunk/bin:$PATH
+echo &#34;/opt/gcc-trunk/lib64&#34; | sudo tee /etc/ld.so.conf.d/gcc-trunk.conf
+sudo ldconfig
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;6-build-and-install-cgo:843e6337e67e60d94f17e70050c565c9&#34;&gt;6. Build (and install) CGO&lt;/h3&gt;
+
+&lt;p&gt;Cgo is the component bridging the gap between Go and C world. It is notably required to build the devmapper driver of Docker.&lt;/p&gt;
+
+&lt;p&gt;As we won&amp;rsquo;t attempt to build the full go toolchain (it does&amp;rsquo;nt work yet), we&amp;rsquo;ll need to patch &amp;#8220;gcc.go&amp;#8220; to insert `const defaultCC = &amp;#8220;gcc&amp;#8221;` near the top of the file.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd go/src/cmd/cgo
+go build
+&lt;/pre&gt;
+
+&lt;p&gt;You can now install it. It&amp;rsquo;s hackish but it does the job. But I still can&amp;rsquo;t figure out why I needed to copy the source files to `/usr/src/cmd/cgo`. Anyway, it&amp;rsquo;s working.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo mkdir -p /usr/pkg/tool/linux_ppc64
+sudo mkdir -p /usr/src/cmd/cgo
+sudo cp cgo /usr/pkg/tool/linux_ppc64/cgo
+sudo cp * /usr/src/cmd/cgo
+&lt;/pre&gt;
+
+&lt;p&gt;One more thing: to let `go build` know we prepared to using cgo, we need to switch `CGO_ENABLED` environment variable on.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;export CGO_ENABLED=1
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;7-grab-docker-1-3-0:843e6337e67e60d94f17e70050c565c9&#34;&gt;7. Grab Docker 1.3.0&lt;/h3&gt;
+
+&lt;p&gt;This is the last stable release at the time of writing. Let&amp;rsquo;s use it.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+git clone https://github.com/docker/docker.git
+cd docker
+git checkout v1.3.1
+&lt;/pre&gt;
+
+&lt;p&gt;We&amp;rsquo;ll also need to prepare a little the build environment:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo mkdir -p /go/src/github.com/docker/
+sudo ln -s $HOME/docker /go/src/github.com/docker/docker
+export PATH=/opt/gcc-trunk/bin/:$PATH
+export GOPATH=/go:/go/src/github.com/docker/docker/vendor
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;8-build-docker:843e6337e67e60d94f17e70050c565c9&#34;&gt;8. Build Docker&lt;/h3&gt;
+
+&lt;p&gt;Just issue &amp;#8216;docker build&amp;rsquo;. I&amp;rsquo;m kidding.&lt;/p&gt;
+
+&lt;p&gt;This is the trickiest part of the job as all the full build systems assumes a working docker environment. So we&amp;rsquo;ll mostly emulate it.&lt;/p&gt;
+
+&lt;p&gt;First, let&amp;rsquo;s apply a couple of patches.&lt;/p&gt;
+
+&lt;p&gt;Remove a runtime (?!) check preventing Docker to run on non amd64 platforms:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;diff --git a/daemon/daemon.go b/daemon/daemon.go
+index 235788c..b75a94e 100644
+--- a/daemon/daemon.go
++++ b/daemon/daemon.go
+@@ -1104,9 +1104,9 @@ func (daemon *Daemon) ImageGetCached(imgID string, config *runconfig.Config) (*i
+ 
+ func checkKernelAndArch() error {
+    // Check for unsupported architectures
+-   if runtime.GOARCH != &#34;amd64&#34; {
+-       return fmt.Errorf(&#34;The Docker runtime currently only supports amd64 (not %s). This will change in the future. Aborting.&#34;, runtime.GOARCH)
+-   }
++   //if runtime.GOARCH != &#34;amd64&#34; {
++   //  return fmt.Errorf(&#34;The Docker runtime currently only supports amd64 (not %s). This will change in the future. Aborting.&#34;, runtime.GOARCH)
++   //}
+    // Check for unsupported kernel versions
+    // FIXME: it would be cleaner to not test for specific versions, but rather
+    // test for specific functionalities.
+&lt;/pre&gt;
+
+&lt;p&gt;Next, we need to workaround hard-coded references to official go compiler:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;diff --git a/vendor/src/github.com/kr/pty/pty_linux.go b/vendor/src/github.com/kr/pty/pty_linux.go
+index 6e5a042..8525f80 100644
+--- a/vendor/src/github.com/kr/pty/pty_linux.go
++++ b/vendor/src/github.com/kr/pty/pty_linux.go
+@@ -7,6 +7,11 @@ import (
+    &#34;unsafe&#34;
+ )
+ 
++type (
++        _C_int  int32
++        _C_uint uint32
++)
++
+ var (
+    ioctl_TIOCGPTN   = _IOR(&#39;T&#39;, 0x30, unsafe.Sizeof(_C_uint(0))) /* Get Pty Number (of pty-mux device) */
+    ioctl_TIOCSPTLCK = _IOW(&#39;T&#39;, 0x31, unsafe.Sizeof(_C_int(0)))  /* Lock/unlock Pty */
+&lt;/pre&gt;
+
+&lt;p&gt;And, finally, change the link flags. Note that for some reason `-static` breaks network communication. It seems to be related to name resolution but I did not investigate further as dynamic linking works just fine.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;diff --git a/hack/make/binary b/hack/make/binary
+index b97069a..f5398ae 100755
+--- a/hack/make/binary
++++ b/hack/make/binary
+@@ -6,9 +6,8 @@ DEST=$1
+ go build \
+    -o &#34;$DEST/docker-$VERSION&#34; \
+    &#34;${BUILDFLAGS[@]}&#34; \
+-   -ldflags &#34;
+-       $LDFLAGS
+-       $LDFLAGS_STATIC_DOCKER
++   -gccgoflags &#34;
++       -static-libgo -static-libgcc
+    &#34; \
+    ./docker
+ echo &#34;Created binary: $DEST/docker-$VERSION&#34;
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start to build. Most of the following steps are normally handled by the Dockerfile but&amp;#8230; we don&amp;rsquo;t have a working Docker yet.&lt;/p&gt;
+
+&lt;p&gt;Grab the dependencies:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo apt-get install -y \
+        aufs-tools \
+        automake \
+        btrfs-tools \
+        build-essential \
+        curl \
+        dpkg-sig \
+        git \
+        iptables \
+        libapparmor-dev \
+        libcap-dev \
+        libsqlite3-dev \
+        lxc=1.0* \
+        mercurial \
+        parallel \
+        reprepro \
+        ruby1.9.1 \
+        ruby1.9.1-dev \
+        s3cmd=1.1.0* \
+        --no-install-recommends
+&lt;/pre&gt;
+
+&lt;p&gt;Docker needs a pretty recent devmapper build to run. Get it.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+git clone --no-checkout https://git.fedorahosted.org/git/lvm2.git
+cd lvm2
+git checkout -q v2_02_103
+&lt;/pre&gt;
+
+&lt;p&gt;Now we&amp;rsquo;ll hit an outdated file `config.guess`, overload it.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;mkdir -p autoconf
+wget &#39;http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD&#39; -O autoconf/config.guess
+&lt;/pre&gt;
+
+&lt;p&gt;Build it:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;./configure --enable-static_link
+make device-mapper
+sudo make install_device-mapper
+&lt;/pre&gt;
+
+&lt;p&gt;Make sure you have the the ldconfig, PATH and CGO_ENABLED tricks then:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+cd docker
+./hack/make.sh binary
+sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
+&lt;/pre&gt;
+
+&lt;p&gt;And we&amp;rsquo;re done !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces – Part 5: NET</title>
+      <link>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
+      <pubDate>Sun, 19 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/&#34; title=&#34;Introduction to Linux namespaces – Part 4: PID&#34;&gt;previous post on PID namespace&lt;/a&gt; (Restart process numbering to &amp;#8220;1&amp;#8221;), would like to go further and fly eve closer to full-featured VMs ? Great ! The two last posts of this series will precisely focus on this. Isolate network interfaces with the &amp;#8220;NET&amp;#8221; namespace (Yes, really) and user/group identifier for even more transparency. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-5.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;For once we won&amp;rsquo;t start with the addition of the &amp;#8220;CLONE_NEWNET&amp;#8221; flag to the &amp;#8220;clone&amp;#8221; syscall. I keep it for later. For now, IMHO, the best way to get started with this namespace is the incredibly mighty &amp;#8220;&lt;a href=&#34;http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2&#34; title=&#34;IPRoute2 official website&#34;&gt;iproute2&lt;/a&gt;&amp;#8221; net-admin swiss army knife. If you don&amp;rsquo;t have it (yet) I highly encourage you to install it. Nonetheless, if don&amp;rsquo;t want to / can&amp;rsquo;t, you may as well skip the explanation part and go straight to the full code sample.&lt;/p&gt;
+
+&lt;p&gt;First, let&amp;rsquo;s see what network interfaces we have at the moment:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;ip link list&lt;/pre&gt;
+
+&lt;p&gt;Which outputs something like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: &amp;lt;NO-CARRIER,BROADCAST,MULTICAST,UP&amp;gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+3: wlan0: &amp;lt;BROADCAST,MULTICAST,UP,LOWER_UP&amp;gt; mtu 1500 qdisc mq state UP mode DORMANT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+# ...
+&lt;/pre&gt;
+
+&lt;p&gt;Nothing unexpected here. I have a working loopback, UP (Yeah, &amp;#8216;UNKNOWN&amp;rsquo; means &amp;#8216;UP&amp;rsquo;&amp;#8230;) and am connected to my wireless network + a couple of extra connections eclipsed for this article.&lt;/p&gt;
+
+&lt;p&gt;Now, let&amp;rsquo;s create a network namespace and run the same from inside:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# create a network namespace called &#34;demo&#34;
+ip netns add demo
+# exec &#34;ip link list&#34; inside the namespace
+ip netns exec demo ip link list
+&lt;/pre&gt;
+
+&lt;p&gt;Output is now:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK&amp;gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+&lt;/pre&gt;
+
+&lt;p&gt;Huuu, not only is there only a loopback but also it is &amp;#8220;DOWN&amp;#8221;. Even more interesting, it is fully isolated from the main loopback. That is to say, any application inside the namespace binding on &amp;#8220;the&amp;#8221; loopback would only be able to communicate with applications inside the same namespace. Exactly the same level of isolation as with the IPC namespace. Neat, isnt&amp;rsquo;t ?&lt;/p&gt;
+
+&lt;p&gt;Right, but how do I communicate with the interwebz now ?&lt;/p&gt;
+
+&lt;p&gt;There are multiple solutions. The easiest and most common one is to create a Point-to-Point tunnel between your &amp;#8220;Host&amp;#8221; and &amp;#8220;Guest&amp;#8221; system. Once, again, the Linux Kernel provides multiple alternatives. I recommend to use the &amp;#8220;veth&amp;#8221; interfaces as these are the best integrated in the ecosystem especially with iproute2. This is also an extremely well tested piece of code as it is used by LXC and actually comes from the &lt;a href=&#34;http://openvz.org&#34; title=&#34;OpenVZ offical website&#34;&gt;OpenVZ project&lt;/a&gt;. Another alternative could be the &amp;#8220;etun&amp;#8221; driver. It conceptually is the same with another name but I&amp;rsquo;m not aware of any project using it.&lt;/p&gt;
+
+&lt;p&gt;Both &amp;#8220;veth&amp;#8221; and &amp;#8220;etun&amp;#8221; create a pair of virtual interfaces linked on with the other in the current namespace. You can then pick one and move it in the target namespace to get a communication channel. You could think of it as intricate particles if it makes it easier to understand ;).&lt;/p&gt;
+
+&lt;p&gt;The next step is to give them an IP, set them up and ping ! Here is an example bash session doing just that:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Create a &#34;demo&#34; namespace
+ip netns add demo
+
+# create a &#34;veth&#34; pair
+ip link add veth0 type veth peer name veth1
+
+# and move one to the namespace
+ip link set veth1 netns demo
+
+# configure the interfaces (up + IP)
+ip netns exec demo ip link set lo up
+ip netns exec demo ip link set veth1 up
+ip netns exec demo ip addr add 169.254.1.2/30 dev veth1
+ip link set veth0 up
+ip addr add 169.254.1.1/30 dev veth0
+&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s it ! Nothing scary.&lt;/p&gt;
+
+&lt;p&gt;If you need to get Internet access from the &amp;#8220;guest&amp;#8221; system using the &amp;#8220;veth&amp;#8221; technique, you could setup masquerding, commonly known as &amp;#8220;NAT&amp;#8221;. In the same way, to make a webserver listening on the :80 inside the namespace appear to listen directly on the main interface, one could use &amp;#8220;DNAT&amp;#8221; commonly known as port &amp;#8220;forwarding&amp;#8221;. I&amp;rsquo;ll leave this up to the reader.&lt;/p&gt;
+
+&lt;p&gt;Here is a basic example to quickly get started:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# make sure ip forwarding is enabled
+echo 1 &amp;gt; /proc/sys/net/ipv4/ip_forward
+# enable Internet access for the namespace, assuming you ran the previous example
+iptables -t nat -A POSTROUTING -i veth0 -j  MASQUERADE
+# Forward main &#34;:80&#34; to guest &#34;:80&#34;
+iptables -t nat -A PREROUTING -d &amp;lt;your main ip&amp;gt;/32 -p tcp --dport 80 -j  DNAT --to-destination  169.254.1.2:80
+&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s put it all together and finally append the &lt;code&gt;CLONE_NEWNET&lt;/code&gt; flag to the &lt;code&gt;clone&lt;/code&gt; syscall. For the sake of simplicity we&amp;rsquo;ll simply stick with direct calls to &amp;#8220;ip&amp;#8221; using the &lt;code&gt;system()&lt;/code&gt; syscall.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [9,40,41,42,57,60,61,62,63,64,65,66]; title: main-5-net.c; notranslate&#34; title=&#34;main-5-net.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;sys/mount.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+
+  // setup hostname
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+
+  // remount &#34;/proc&#34; to get accurate &#34;top&#34; &amp;&amp; &#34;ps&#34; output
+  mount(&#34;proc&#34;, &#34;/proc&#34;, &#34;proc&#34;, 0, NULL);
+
+  // wait for network setup in parent
+  read(checkpoint[0], &amp;c, 1);
+
+  // setup network
+  system(&#34;ip link set lo up&#34;);
+  system(&#34;ip link set veth1 up&#34;);
+  system(&#34;ip addr add 169.254.1.2/30 dev veth1&#34;);
+
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, NULL);
+
+  // further init: create a veth pair
+  char* cmd;
+  asprintf(&amp;cmd, &#34;ip link set veth1 netns %d&#34;, child_pid);
+  system(&#34;ip link add veth0 type veth peer name veth1&#34;);
+  system(cmd);
+  system(&#34;ip link set veth0 up&#34;);
+  system(&#34;ip addr add 169.254.1.1/30 dev veth0&#34;);
+  free(cmd);
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s give it a test run !&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns &amp;&amp; sudo ./ns
+ - [22094] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog$ # run a super-powerful server, fully isolated
+root@In Namespace:~/blog$ nc -l 4242
+Hi !
+Bye...
+root@In Namespace:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
+&lt;/pre&gt;
+
+&lt;p&gt;This is what you would have seen if, from another terminal, you had:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
+Hi !    
+Bye...
+jean-tiare@jeantiare-Ubuntu:~$ 
+&lt;/pre&gt;
+
+&lt;p&gt;To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;If you feel that running a bunch of &lt;code&gt;system()&lt;/code&gt; calls into a production system is a dirty hack (and it is !), you could have look at the &lt;code&gt;rtnetlink&lt;/code&gt; kernel communication interface. This is the barely documented API used by iproute under the hood.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NET&amp;#8221; namespace. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. With the next article we&amp;rsquo;ll explore the last and most tricky namespace &amp;#8220;USER&amp;#8221;. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 4: NS (FS)</title>
+      <link>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
+      <pubDate>Sun, 12 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/&#34; title=&#34;Introduction to Linux namespaces – Part 4: NS (FS)&#34;&gt;previous post on FS namespace&lt;/a&gt; (mountpoints table isolation), we will now have a look at an amazing one: isolated mount table. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-4.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;In the previous post we &amp;#8220;chrooted&amp;#8221; the PID namespace and got a new &amp;#8220;1&amp;#8221; process. But even with this namespace activated, there still lacked isolation for tools like &amp;#8220;top&amp;#8221; because they rely on the &amp;#8220;/proc&amp;#8221; virtual filesystem which is still shared (identical) between namespaces. In this post, let me introduce the namespace that will solve this: &amp;#8220;NS&amp;#8221;. This is historically the first Linux Namespace, hence the name.&lt;/p&gt;
+
+&lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWNS&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, any (un)mount operations from the child will only affect the child and vice-versa.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start experimenting. In the previous example, just activate the NS:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; first-line: 43; title: activate-ns-snippet.c; notranslate&#34; title=&#34;activate-ns-snippet.c&#34;&gt;int child_pid = clone(child_main, child_stack+STACK_SIZE, 
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
+&lt;/pre&gt;
+
+&lt;p&gt;Now, if we run it, we finally can fix the issue from the previous post on PID:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; highlight: [4,7,8]; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall ns.c -o ns &amp;&amp; sudo ./ns
+ - [14472] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# mount -t proc proc /proc
+root@In Namespace:~/blog# ps aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  1.0  0.0  23620  4680 pts/4    S    00:07   0:00 /bin/bash
+root        79  0.0  0.0  18492  1328 pts/4    R+   00:07   0:00 ps aux
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;Tadaaa ! &amp;#8220;/proc&amp;#8221; is now working as expected from the container, without breaking the parent.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s automate it to finalize previous post&amp;rsquo;s example:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [4,33,51]; title: main-4-ns.c; notranslate&#34; title=&#34;main-4-ns.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;sys/mount.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+
+  // setup hostname
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+
+  // remount &#34;/proc&#34; to get accurate &#34;top&#34; &amp;&amp; &#34;ps&#34; output
+  mount(&#34;proc&#34;, &#34;/proc&#34;, &#34;proc&#34;, 0, NULL);
+
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
+
+  // further init here (nothing yet)
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;If you run this snippet, you should get exactly the same behavior as the previous test without manually remounting &amp;#8220;/proc&amp;#8221; neither messing with your real parent&amp;rsquo;s &amp;#8220;/proc&amp;#8221;. Neat isn&amp;rsquo;t it ?&lt;/p&gt;
+
+&lt;p&gt;To leverage the power of this technique you could now prepare and enter a chroot to further enhance the isolation. Steps involved would be to prepare a &amp;#8220;debootstrap&amp;#8221;, remount some essentials filesystems like &amp;#8220;/tmp&amp;#8221;, &amp;#8220;/dev/shm&amp;#8221;, &amp;#8220;/proc&amp;#8221;, optionally all or part of &amp;#8220;/dev&amp;#8221; and &amp;#8220;/sys&amp;#8221; and then &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/2/chdir&#34; title=&#34;man chdir&#34;&gt;chdir&lt;/a&gt;&amp;#8221; + &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/1/chroot&#34; title=&#34;man Chroot&#34;&gt;chroot&lt;/a&gt;&amp;#8220;. I&amp;rsquo;ll leave it as an exercise for the reader.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NS&amp;#8221; namespace. With the next article we&amp;rsquo;ll explore an incredibly powerful namespace &amp;#8220;NET&amp;#8221;. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 3: PID</title>
+      <link>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
+      <pubDate>Sun, 05 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/&#34; title=&#34;Introduction to Linux namespaces – Part 2: IPC&#34;&gt;previous post on IPC namespace&lt;/a&gt; (Inter Process Communication isolation), I would now like to introduce my personal favorite one (as sysadmin): PID namespaces. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-3.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Yes, that&amp;rsquo;s it, with this namespace it is possible to restart PID numbering and get your own &amp;#8220;1&amp;#8221; process. This could be seen as a &amp;#8220;chroot&amp;#8221; in the process identifier tree. It&amp;rsquo;s extremely handy when you need to deal with pids in day to day work and are stuck with 4 digits numbers&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWPID&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, the result of getpid() from child process will invariably be &amp;#8220;1&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;But, WAIT! I know have to &amp;#8220;1&amp;#8221; process right ? What about process management ?&lt;/p&gt;
+
+&lt;p&gt;Well, actually, this *really* is much like a &amp;#8220;chroot&amp;#8221;. That is to say, a change of view point.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Host: &lt;em&gt;all&lt;/em&gt; processes are visible, &lt;em&gt;global&lt;/em&gt; PIDs (init=1, &amp;#8230;, child=xxx, &amp;#8230;.)&lt;/li&gt;
+&lt;li&gt;Container: &lt;em&gt;only child + descendant&lt;/em&gt; are visible, local PIDs (child=1, &amp;#8230;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Here is an illustration:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [29,41,44]; title: ; notranslate&#34; title=&#34;&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | SIGCHLD, NULL);
+
+  // further init here (nothing yet)
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;And an example run:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns &amp;&amp; sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# echo &#34;=&amp;gt; My PID: $$&#34;
+=&amp;gt; My PID: 1
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;As expected, even thought the parent process as a PID of &amp;#8220;7823&amp;#8221;, the child&amp;rsquo;s PID is &amp;#8220;1&amp;#8221;. If you are playfull, you could try to &amp;#8220;kill -KILL 7823&amp;#8221; the parent process. It would do exactly&amp;#8230; nothing:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns &amp;&amp; sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# kill -KILL 7823
+bash: kill: (7823) - No such process
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;The isolation is working as expected. And, as written earlier, this behaves much like a &amp;#8220;chroot&amp;#8221; meaning that with a &amp;#8220;top&amp;#8221; or &amp;#8220;ps exf&amp;#8221; from the parent process will show the child process with its real un-mapped PID. This is an essential feature for process control like &amp;#8220;kill&amp;#8221;, &amp;#8220;cgroups&amp;#8221;, &amp;#8230; and various policies.&lt;/p&gt;
+
+&lt;p&gt;Wait! Speaking of &amp;#8220;top&amp;#8221; and &amp;#8220;ps exf&amp;#8221;, I just ran them from the child and saw exactly the same as from the parent. You lied to me about isolation !&lt;/p&gt;
+
+&lt;p&gt;Well, not at all. This is because these tools get their informations from the virtual &amp;#8220;/proc&amp;#8221; filesystem which is not (yet) isolated. This is the purpose of the next article.&lt;/p&gt;
+
+&lt;p&gt;In the mean time, an easy workaround could be:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; highlight: [3,5]; title: ; notranslate&#34; title=&#34;&#34;&gt;# from child
+root@In Namespace:~/blog# mkdir -p proc
+root@In Namespace:~/blog# mount -t proc proc proc
+root@In Namespace:~/blog# ls proc
+1          dma          key-users      net            sysvipc
+80         dri          kmsg           pagetypeinfo   timer_list
+acpi       driver       kpagecount     partitions     timer_stats
+asound     execdomains  kpageflags     sched_debug    tty
+buddyinfo  fb           latency_stats  schedstat      uptime
+bus        filesystems  loadavg        scsi           version
+cgroups    fs           locks          self           version_signature
+cmdline    interrupts   mdstat         slabinfo       vmallocinfo
+consoles   iomem        meminfo        softirqs       vmstat
+cpuinfo    ioports      misc           stat           zoneinfo
+crypto     irq          modules        swaps
+devices    kallsyms     mounts         sys
+diskstats  kcore        mtrr           sysrq-trigger
+&lt;/pre&gt;
+
+&lt;p&gt;Everything seems reasonable again. As expected, you get PID &amp;#8220;1&amp;#8221; for /bin/bash itself and &amp;#8220;80&amp;#8221; corresponds to the running &amp;#8220;/bin/ls proc&amp;#8221; command. Much nicer to read than usual /proc, isn&amp;rsquo;t it ? That&amp;rsquo;s why I love it.&lt;/p&gt;
+
+&lt;p&gt;If you attempt to run this command directly on the &amp;#8220;/proc&amp;#8221; from the namespace, it will &lt;em&gt;seem&lt;/em&gt; to work in the child but BREAK your main namespace. Example:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ ps aux
+Error, do this: mount -t proc proc /proc
+&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for PID namespace. With the next article, we&amp;rsquo;ll be able to re-mount /proc itself and hence fix &amp;#8220;top&amp;#8221; and any similar tools without breaking the parent namespace. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 2: IPC</title>
+      <link>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
+      <pubDate>Sat, 28 Dec 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;previous post on UTS namespace&lt;/a&gt; (hostname isolation), we will now go deeper and look at a more security oriented namespace: IPC, Inter-Process Communications. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-2.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Activating the IPC namespace is only a matter of adding &amp;#8220;CLONE_NEWIPC&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, you are free to create any IPC as usual, even named one, without any risk of collision with other applications.&lt;/p&gt;
+
+&lt;p&gt;But, WAIT! My &amp;#8220;parent process&amp;#8221; is now isolated from my &amp;#8220;child process&amp;#8221; right ? What if I need to do some kind of communication between them ?&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s a good question. A common use case for this is you need some additional setup from the parent before letting the child take full control. Fortunately, not everything is isolated and clone shares memory space with its parent so that you can still use:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;signal&lt;/li&gt;
+&lt;li&gt;poll memory&lt;/li&gt;
+&lt;li&gt;sockets&lt;/li&gt;
+&lt;li&gt;use files and file-descriptors&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Because of it&amp;rsquo;s context changes, signaling is probably not the most practical one while polling memory is damn inefficient way of communicating !&lt;/p&gt;
+
+&lt;p&gt;If you don&amp;rsquo;t plan to fully isolate the network stack, you could go with sockets. Same remark applies with filesystem. But, in the case of this series this is precisely what we intend to do: isolate everything, step by step.&lt;/p&gt;
+
+&lt;p&gt;A little known / rarely used solution is to watch events on a pipe pair. In fact this is the technique used (with no explanation) by Lennart Poettering in &lt;a href=&#34;http://cgit.freedesktop.org/systemd/systemd/tree/src/nspawn/nspawn.c&#34; title=&#34;systemd nspawn - git&#34;&gt;Systemd&amp;rsquo;s &amp;#8220;nspawn&amp;#8221;&lt;/a&gt; command. This is an extremely powerful technique that I would like to introduce here. This is also the one we will rely upon in the next articles.&lt;/p&gt;
+
+&lt;p&gt;We first need to init a pair of pipes. Let&amp;rsquo;s call them a &amp;#8220;checkpoint&amp;#8221;.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-global-init.c; notranslate&#34; title=&#34;checkpoint-global-init.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// global status:
+int checkpoint[2];
+
+// [parent] init:
+pipe(checkpoint);
+&lt;/pre&gt;
+
+&lt;p&gt;The idea is to trigger a &amp;#8220;close&amp;#8221; event from the parent and wait for &amp;#8220;EOF&amp;#8221; to be received on the reading end, in the child. Something crucial to understand is that *all* writing file-descriptors must be closed for an EOF to be received. Hence, the first thing to do before waiting in the child is to close our own write fd copy.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-child-init.c; notranslate&#34; title=&#34;checkpoint-child-init.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// [child] init:
+close(checkpoint[1]);
+&lt;/pre&gt;
+
+&lt;p&gt;Actual &amp;#8220;signaling&amp;#8221; is now straightforward:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;close write fd in parent&lt;/li&gt;
+&lt;li&gt;wait for EOF from child&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-signal.c; notranslate&#34; title=&#34;checkpoint-signal.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// [child] wait:
+char c; // stub char
+read(checkpoint[0], &amp;c, 1);
+
+// [parent] signal ready code:
+close(checkpoint[1]);
+&lt;/pre&gt;
+
+&lt;p&gt;If we put it together the first example on UTS namespace, it could look like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [7,12,25,27,39,49]; title: main-2-ipc.c; notranslate&#34; title=&#34;main-2-ipc.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  printf(&#34; - World !\n&#34;);
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - Hello ?\n&#34;);
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD, NULL);
+
+  // some damn long init job
+  sleep(4);
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;As this requires advanced capabilities, this snippets needs root or equivalent privileges to run. Obviously, there is no need to keep &amp;#8220;CLONE_NEWUTS&amp;#8221; in this example. I kept it only to show that multiple namespaces may be used together.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for IPC. IPC in itself is nothing complicated. It just becomes tricky when it comes to parent/child synchronization as we will do later. This is where the &amp;#8220;pipe&amp;#8221; technique comes as a handy solution. It actually works and is used in production.&lt;/p&gt;
+
+&lt;p&gt;The next article will be on my favorite one (as sysadmin): PID namespaces.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 1: UTS</title>
+      <link>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</link>
+      <pubDate>Sun, 22 Dec 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</guid>
+      <description>&lt;p&gt;As a part of my job at &lt;a href=&#34;http://www.ovh.com/&#34;&gt;OVH&lt;/a&gt; I dealt with Linux Namespaces as a security mechanism in a &amp;#8220;yet to be announced&amp;#8221; product. I was astonished by both how powerful and poorly documented it is.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-1.html&#34;&gt;here&lt;/a&gt;:&lt;/p&gt;
+
+&lt;p&gt;Most of you have probably heard about &lt;a href=&#34;http://linuxcontainers.org/&#34; title=&#34;LXC - Linux Container official website&#34;&gt;LXC - LinuX Containers&lt;/a&gt;, &amp;#8220;Chroot on steroids&amp;#8221;. What it basically does is isolate applications from others. A bit like chroot does by isolating applications in a virtual private root but taking the process further. Internally, LXC relies on 3 main isolation infrastructure of the Linux Kernel:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Chroot&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.kernel.org/doc/Documentation/cgroups/&#34; title=&#34;Linux Cgroups. Kernel.org&#34;&gt;Cgroups&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Namespaces&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;I could have entitled this article series &amp;#8220;How to build your own LXC&amp;#8221; and probably earned a better Google rank but that would have been quite a bit pretentious. In fact LXC does a lot more than isolation. It also brings template management, freezing, and much much more. What this series really about is more of demystifying than reinventing the wheel.&lt;/p&gt;
+
+&lt;p&gt;During this series, we will write a minimal C program starting /bin/bash with more isolation from steps to steps.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start.&lt;/p&gt;
+
+&lt;p&gt;What&amp;rsquo;s really interesting with Linux&amp;rsquo; approach to containers is that precisely it does &lt;em&gt;not&lt;/em&gt; provide a &amp;#8220;back-box/magical&amp;#8221; container solution but instead provides individual isolation building blocks called &amp;#8220;Namespaces&amp;#8221;, new one appearing from releases to release. It also allows you to use solely the one you actually need for your specific application.&lt;/p&gt;
+
+&lt;p&gt;As of 3.12, Linux supports 6 Namespaces:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;UTS: hostname (this post)&lt;/li&gt;
+&lt;li&gt;IPC: inter-process communication (in a future post)&lt;/li&gt;
+&lt;li&gt;PID: &amp;#8220;chroot&amp;#8221; process tree (in a future post)&lt;/li&gt;
+&lt;li&gt;NS: mount points, first to land in Linux (in a future post)&lt;/li&gt;
+&lt;li&gt;NET: network access, including interfaces (in a future post)&lt;/li&gt;
+&lt;li&gt;USER: map virtual, local user-ids to real local ones (in a future post)&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Here is a complete skeleton for cleanly launching /bin/bash from a child process: (error checking stripped for clarity/brevity)&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [20,29]; title: main-0-template.c; notranslate&#34; title=&#34;main-0-template.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  printf(&#34; - World !\n&#34;);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  printf(&#34; - Hello ?\n&#34;);
+  int child_pid = clone(child_main, child_stack+STACK_SIZE, SIGCHLD, NULL);
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Notice the use of the &lt;a href=&#34;http://linux.die.net/man/2/clone&#34; title=&#34;Man 2 clone&#34;&gt;&amp;#8220;clone&amp;#8221; syscall&lt;/a&gt; instead of the more traditional &amp;#8220;fork&amp;#8221; syscall. This is where the magic (will) happen.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns &amp;&amp; ./ns
+ - Hello ?
+ - World !
+jean-tiare@jeantiare-Ubuntu:~/blog$ # inside the container
+jean-tiare@jeantiare-Ubuntu:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
+&lt;/pre&gt;
+
+&lt;p&gt;Ok, cool. But pretty hard to notice without the comments that we are in a child /bin/bash. Actually, while writing this post, I accidentally exited the &lt;em&gt;parent&lt;/em&gt; shell a couple of times&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;Wouldn&amp;rsquo;t it be cool if we could just change, let&amp;rsquo;s say, the hostname with 0% env vars tricks ? Just plain Namespaces ? Easy, just&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;add &amp;#8220;CLONE_NEWUTS&amp;#8221; flag to clone&lt;/li&gt;
+&lt;li&gt;call &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/2/sethostname&#34; title=&#34;Man 2 sethostname&#34;&gt;sethostname&lt;/a&gt;&amp;#8221; from &lt;em&gt;child&lt;/em&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;pre class=&#34;brush: cpp; first-line: 15; highlight: [20,29,30]; title: main-1-uts.c; notranslate&#34; title=&#34;main-1-uts.c&#34;&gt;// (needs root privileges (or appropriate capabilities))
+//[...]
+int child_main(void* arg)
+{
+  printf(&#34; - World !\n&#34;);
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  printf(&#34; - Hello ?\n&#34;);
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | SIGCHLD, NULL);
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Run it&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns &amp;&amp; sudo ./ns
+ - Hello ?
+ - World !
+root@In Namespace:~/blog$ # inside the container
+root@In Namespace:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
+&lt;/pre&gt;
+
+&lt;p&gt;And that&amp;rsquo;s all folks! (for this first article, at least). Getting started with namespaces is pretty damn easy: clone, set appropriate &amp;#8220;CLONE_NEW*&amp;#8221; flags, setup the new env, done!&lt;/p&gt;
+
+&lt;p&gt;Would like to go further ? You might be interested in reading also the &lt;a href=&#34;http://lwn.net/Articles/531114/&#34; title=&#34;Linux namespaces, LWN&#34;&gt;excellent LWN article series on namespaces&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Gérer son site avec GIT sur un serveur mutualisé</title>
+      <link>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
+      <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
+      <description>
+
+&lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Prérequis&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Compte Mutualisé avec accès SSH (&lt;a href=&#34;http://www.ovh.com/fr/hebergement-web/&#34; title=&#34;Hébergement Web chez OVH&#34;&gt;à partir de l&amp;rsquo;offre pro chez OVH par ex&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Connaissance de base de GIT ainsi qu&amp;rsquo;un client fonctionnel (&lt;a href=&#34;http://git-scm.com/documentation&#34; title=&#34;Introduction à GIT&#34;&gt;documentation&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Connaissances de bases de SSH/Bash&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;première-étape-initialiser-un-dépôt-distant:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Première étape: Initialiser un dépôt distant&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Dans votre &amp;#8220;/homez.123/&lt;votre identifiant&gt;&amp;#8221;:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git init --bare site-perso.git
+# Initialized empty Git repository in /homez.123/identifiant/site-perso.git/
+&lt;/pre&gt;
+
+&lt;p&gt;Cette commande initialise un dépôt git &amp;#8220;nue&amp;#8221; (bare) dans le dossier `site-perso.git`. Aucune copie de travail ne sera présente sur le serveur. Et c&amp;rsquo;est probablement ce que vous voulez 😉&lt;/p&gt;
+
+&lt;h2 id=&#34;deuxième-étape-clone-local-et-première-publication:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Deuxième étape: Clone local et première publication&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Clone local:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git clone identifiant@ftp.cluster012.ovh.net:site-perso.git
+# Cloning into &#39;site-perso&#39;...
+# warning: You appear to have cloned an empty repository.
+# Checking connectivity... done
+cd site-perso/
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Création d&amp;rsquo;une première page:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;echo &#34;Bienvenu sur mon nouveau site&#34; &amp;gt; index.html
+git add index.html
+git commit -am &#34;ajoute la page d&#39;accueil&#34;
+# [master (root-commit) 87a0483] ajoute la page d&#39;accueil
+#  1 file changed, 1 insertion(+)
+#  create mode 100644 index.html
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Publication:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git push origin master
+# Counting objects: 3, done.
+# Writing objects: 100% (3/3), 262 bytes | 0 bytes/s, done.
+# Total 3 (delta 0), reused 0 (delta 0)
+# To identifiant@ftp.cluster012.ovh.net:site-perso.git
+#  * [new branch]      master -&amp;gt; master
+&lt;/pre&gt;
+
+&lt;p&gt;On a maintenant un site avec une page statique versionné. Une copie du dépôt GIT se trouve directement sur le serveur web. Toute personne disposant d&amp;rsquo;un accès à ce compte SSH aura la possibilité de contribuer au dépôt.&lt;/p&gt;
+
+&lt;h2 id=&#34;troisième-étape-optionnelle-accès-collaborateurs-et-public:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Troisième étape (optionnelle): Accès collaborateurs et Public&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Accès en écriture pour les collaborateurs, restreint à GIT:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Dans la mesure où l&amp;rsquo;on a pas la main sur le système d&amp;rsquo;authentification système, on va utiliser l&amp;rsquo;authentification par clé publique ssh en forçant la commande &amp;#8220;git-shell&amp;#8221;. De cette manière, on bloque l&amp;rsquo;accès à toutes actions autres que GIT (sftp, shell, tunnel, &amp;#8230;). Pour plus d&amp;rsquo;information sur l&amp;rsquo;authentification par clé publique SSH, je vous invite à consulter &lt;a href=&#34;http://git-scm.com/book/fr/Git-sur-le-serveur-G%C3%A9n%C3%A9ration-des-cl%C3%A9s-publiques-SSH&#34; title=&#34;Manuel GIT - authentification par clé publique SSH&#34;&gt;l’excellent manuel de GIT&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Dans le fichier &lt;code&gt;~/.ssh/authorized_keys&lt;/code&gt;, ajoutez une ligne du type:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;command=&#34;git-shell&#34;,no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-rsa AAAAD3NzaC1yc2EABBBCIwAAAQEAtRFmADxUSCX97CS/Uh7/N0y0vL...
+&lt;/pre&gt;
+
+&lt;p&gt;En utilisant une technique comparable il serait possible de mettre en place un contrôle d&amp;rsquo;autorisation fine mais cela sort du cadre de cet article. Pour plus d&amp;rsquo;informations sur une piste possible, je vous invite à consulter le très complet &lt;a href=&#34;https://github.com/sitaramc/gitolite/&#34;&gt;projet gitolite&lt;/a&gt;. Bien qu&amp;rsquo;il ne soit pas très adapté à un hébergement mutualisé, ses techniques pourront servir de référence.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Accès en public en lecture seule:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Exemple: ouvrir un accès public à &lt;code&gt;site-perso.git&lt;/code&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Dans votre &#34;/homez.123/&amp;lt;votre identifiant&amp;gt;&#34;
+
+# 1/ activer la publication automatique
+mv site-perso.git/hooks/post-update.sample site-perso.git/hooks/post-update
+chmod +x site-perso.git/hooks/post-update
+
+# 2/ publication dans le dossier web `public-git`
+mkdir -p www/public-git
+cd www/public-git
+ln -s ../../site-perso.git ./
+&lt;/pre&gt;
+
+&lt;p&gt;Votre dépôt peut maintenant être cloné avec &lt;code&gt;git clone http://www.example.com/public-git/site-perso.git&lt;/code&gt;. Pour révoquer l&amp;rsquo;accès, il suffit de supprimer le lien dans &lt;code&gt;www/public-git/site-perso.git&lt;/code&gt;. Il n&amp;rsquo;est pas nécessaire de supprimer le &amp;#8220;hook&amp;#8221;. Pour ajouter une authentification minimale, la méthode habituelle par &amp;#8220;htaccess&amp;#8221; pourra être employée.&lt;/p&gt;
+
+&lt;h2 id=&#34;quatrième-étape-optionnelle-déploiement-continue-oh-yeah:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Quatrième étape (optionnelle): Déploiement continue (Oh Yeah !)&lt;/h2&gt;
+
+&lt;p&gt;La crème de la crème avec GIT, ce sont les &amp;#8220;hook&amp;#8221; que je traduirai par &amp;#8220;prises&amp;#8221; en français. Ce sont des points sur lesquels on se branche aisément pour personnaliser un traitement. On a déjà utilisé l&amp;rsquo;un de ceux qui sont fourni à titre d&amp;rsquo;exemple dans tout dépôt GIT pour le rendre disponible en HTTP.&lt;/p&gt;
+
+&lt;p&gt;Ici, nous avons besoin d&amp;rsquo;une &amp;#8220;prise&amp;#8221; sur mesure qui va se charger de mettre à jour &lt;code&gt;site-perso&lt;/code&gt; à chaque fois qu&amp;rsquo;une mise à jour est &amp;#8220;poussée&amp;#8221; (publiée) sur la branche &amp;#8220;prod&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Exemple de &amp;#8220;prise&amp;#8221; GIT assurant la publication automatique:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: site-perso.git/hooks/post-receive; notranslate&#34; title=&#34;site-perso.git/hooks/post-receive&#34;&gt;#!/bin/bash
+
+# Pour chaque branche affectée par un &#34;push&#34;, GIT
+# nous passe sur une ligne et dans cet ordre:
+# &amp;lt;ancienne révision&amp;gt; &amp;lt;nouvelle révision&amp;gt; &amp;lt;~nom de la branche&amp;gt;
+while read oldrev newrev ref
+do
+    branch=`echo $ref | cut -d/ -f3`
+    # mise à jour de la version de production ?
+    if [ &#34;$branch&#34; == &#34;prod&#34; ]
+    then
+        reponame=$(basename `pwd` | sed &#39;s/\.git$//&#39;)
+        # 1/ passer le site en maintenance
+        echo &#34;[$reponame] 1/4 Passage en mode maintenance&#34;
+        # 2/ mettre à jour le code 
+        echo &#34;[$reponame] 2/4 Mise à jour&#34;
+        GIT_WORK_TREE=~/$reponame git checkout -f $branch
+        # 3/ Paramètrage, migration de schéma, ...
+        echo &#34;[$reponame] 3/4 Migration&#34;
+        # 4/ rendre le site à nouveau disponible
+        echo &#34;[$reponame] 4/4 Passage en mode production&#34;
+    fi
+done
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Activer la prise:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;chmod +x site-perso.git/hooks/post-receive&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Exemple de fonctionnement:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: session git locale &amp;#039;site-perso&amp;#039;; notranslate&#34; title=&#34;session git locale &amp;#039;site-perso&amp;#039;&#34;&gt;git checkout master
+# Switched to branch &#39;master&#39;
+
+echo &#34;version 1.2&#34; &amp;gt;&amp;gt; CHANGELOG
+git commit -am &#34;Update CHANGELOG&#34;
+# [master 75c770c] Update CHANGELOG
+#  1 file changed, 1 insertion(+)
+
+git checkout prod
+# Switched to branch &#39;prod&#39;
+
+git merge master
+# Updating 2f8b5ca..75c770c
+# Fast-forward
+#  CHANGELOG | 1 +
+#  1 file changed, 1 insertion(+)
+
+git push
+# Counting objects: 5, done.
+# Delta compression using up to 4 threads.
+# Compressing objects: 100% (2/2), done.
+# Writing objects: 100% (3/3), 312 bytes | 0 bytes/s, done.
+# Total 3 (delta 0), reused 0 (delta 0)
+# remote: [site-perso] 1/4 Passage en mode maintenance
+# remote: [site-perso] 2/4 Mise a jour
+# remote: Switched to branch &#39;prod&#39;
+# remote: [site-perso] 3/4 Migration
+# remote: [site-perso] 4/4 Passage en mode production
+# To lj75593x1@ftp.cluster012.ovh.net:site-perso.git
+#    2f8b5ca..75c770c  master -&amp;gt; master
+#    2f8b5ca..75c770c  prod -&amp;gt; prod
+&lt;/pre&gt;
+
+&lt;h2 id=&#34;conclusion:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;GIT est incroyablement puissant, mais ça vous le saviez déjà. Bien maîtrisé, il permet de mettre en place à moindre frais une véritable solution de déploiement continue et de travail collaboratif pour un site Web. Un grand &amp;#8220;plus&amp;#8221; en terme de professionnalisme. D&amp;rsquo;autre part, cette solution à l&amp;rsquo;immense avantage de fonctionner avec une offre d&amp;rsquo;hébergement mutualisé en disposant d&amp;rsquo;un simple accès SSH+GIT.&lt;/p&gt;
+
+&lt;p&gt;Happy GITing !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>WordPress: from localhost to production</title>
+      <link>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</link>
+      <pubDate>Wed, 03 Jul 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</guid>
+      <description>&lt;p&gt;Yesterday, a friend of mine asked me urgent help. He fully developed a WP based website for a research project on &lt;em&gt;localhost/his_website&lt;/em&gt;. As WP stores &lt;em&gt;full links&lt;/em&gt; pretty much everywhere in the database, his website was obviously completely broken when he moved it to production on &lt;em&gt;his_website.com&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;I quickly put some PHP lines of codes together to fix the whole DB at once. Feel free to re-use it in your own projects.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;usage&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;put the script on your server, for example /website/root/wordpress_production.php&lt;/li&gt;
+&lt;li&gt;configure DB connection + old and new URL&lt;/li&gt;
+&lt;li&gt;visit &lt;a href=&#34;http://www.your_website.com/wordpress_production.php&#34;&gt;http://www.your_website.com/wordpress_production.php&lt;/a&gt; (you should see nothing)&lt;/li&gt;
+&lt;li&gt;you&amp;rsquo;re done !&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;DISCLAIMER: this script comes with NO WARRANTY. USE IT AT YOUR OWN RISKS.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Lazy man backup strategy with duplicity</title>
+      <link>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
+      <pubDate>Sat, 08 Sep 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
+      <description>&lt;p&gt;I recently moved to a new dedicated server and decided it also was a good to time do start doing things &amp;#8220;the good way&amp;#8221; &lt;sup&gt;tm&lt;/sup&gt;. A good backup strategy was especially needed.&lt;/p&gt;
+
+&lt;p&gt;Most articles I found on the net explains how to backup your data and they do it well. But they lack something essential that might someday become a real issue in case there is a disaster. Main disk crash ? Yes, you know what I mean &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let me introduce &lt;a href=&#34;http://duplicity.nongnu.org/&#34; title=&#34;Duplicity backup&#34;&gt;Duplicity&lt;/a&gt; command line utility. It supports multiple storage backends including S3, FTP, SFTP as well as regular mounted folder. It supports incremental backup and automatic older archive removal. Last but not least: all archives are fully encrypted by default !&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s enough words.&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Define &lt;strong&gt;backup&lt;/strong&gt; frequency. I use daily for my server, weekly for my personal computer&lt;/li&gt;
+&lt;li&gt;Define &lt;strong&gt;full backup&lt;/strong&gt; frequency. I use one per month&lt;/li&gt;
+&lt;li&gt;Define &lt;strong&gt;full backup lifetime&lt;/strong&gt;. I use 6 month as this is not too critical&lt;/li&gt;
+&lt;li&gt;Define &lt;strong&gt;incremental backup lifetime&lt;/strong&gt;. I use 1 month&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Lets rephrase all this into plain English: Backup my data every single day. Every month, start backup from scratch. Keep a full month of daily history. For older, you can keep only the monthly full copy.&lt;/p&gt;
+
+&lt;p&gt;Incremental backup helps to save space on the remote storage but slows down the recovery as every intermediate file up to the previous full backup will need to be read.&lt;/p&gt;
+
+&lt;p&gt;Here is my generic backup script. It is fully configurable and will automatically walk into /root/server/backup.d to find target files. These are trivial files containing the full path to a single folder to save. The name of the file determines the target.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;#!/bin/bash
+
+#File: /root/server/backup.sh
+
+# to backup a set of folder, put its name
+# in a file in backup.d. There maybe only
+# one folder per file
+# - enable  the backup with &#39;chmod +x&#39;
+# - disable the backup with &#39;chmod -x&#39;
+
+FTP_URL=&#34;ftp://&amp;lt;login&amp;gt;@&amp;lt;server.tld&amp;gt;/backup&#34;
+FTP_PASS=&#34;&amp;lt;your ftp pass goes here&amp;gt;&#34;
+BK_FULL_FREQ=&#34;1M&#34; # create a new full backup every...
+BK_FULL_LIFE=&#34;6M&#34; # delete any backup older than this
+BK_KEEP_FULL=&#34;1&#34;  # How many full+inc cycle to keep
+BK_PASS=&#34;&amp;lt;your very secret encryption key goes here&amp;gt;&#34;
+
+export APT=&#39;apt-get -q -y&#39;
+export CONF=&#39;/root/conf&#39;
+
+################################
+#        enter section
+################################
+
+function enter_section {
+  echo &#34;&#34;
+  echo &#34;==============================&#34;
+  echo &#34;$1: $2&#34;
+  echo &#34;==============================&#34;
+}
+
+################################
+#         do backup
+################################
+
+function do_backup {
+  enter_section &#34;backing up&#34; &#34;$2 -&amp;gt; $1&#34;
+  export FTP_PASSWORD=$FTP_PASS
+  export PASSPHRASE=&#34;$BK_PASS&#34;
+  duplicity --full-if-older-than $BK_FULL_FREQ $3 &#34;$2&#34; --asynchronous-upload &#34;$FTP_URL/$1&#34;
+  duplicity remove-older-than $BK_FULL_LIFE --force &#34;$FTP_URL/$1&#34;
+  duplicity remove-all-inc-of-but-n-full $BK_KEEP_FULL --force &#34;$FTP_URL/$1&#34;
+  unset PASSPHRASE
+  unset FTP_PASSWORD
+}
+
+################################
+#      run sub-scripts
+################################
+
+# backup should be independant from the system state
+# always make sure the required tools are ready
+$APT install duplicity ncftp &amp;gt; /dev/null
+
+for PARAM in /root/server/backup.d/*
+do
+  if [ -f $PARAM -a -x $PARAM ]
+  then
+    do_backup $(basename &#34;$PARAM&#34;) `cat $PARAM`
+  fi
+done
+
+exit 0
+&lt;/pre&gt;
+
+&lt;p&gt;Example: Backup /root folder to &amp;#8220;42&amp;#8221; subfolder of backup target:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;echo &#34;/root&#34; /root/server/backup.d/42
+chmod +x /root/server/backup.d/42
+&lt;/pre&gt;
+
+&lt;p&gt;Run it daily as root:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;echo &#34;25 2  * * * root /root/backup.sh&#34; &amp;gt;&amp;gt; /etc/crontab
+&lt;/pre&gt;
+
+&lt;p&gt;Beware that there is a major &lt;strong&gt;drawback&lt;/strong&gt; with this method. Backing-up &lt;strong&gt;/var/lib/mysql&lt;/strong&gt; with this method will probably result in &lt;strong&gt;data corruption&lt;/strong&gt; as the tables are not locked. Again, most articles forgets to mention this&amp;#8230; You can workaround this by first running &amp;#8216;mysqldump&amp;rsquo; then archiving the resulting file. This is left as an exercise to the reader 😉&lt;/p&gt;
+
+&lt;p&gt;In a next article, I will try yo address the &lt;strong&gt;restore&lt;/strong&gt; issue.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Google HTTPS SEO (Nginx)</title>
+      <link>http://localhost:1313/2012/09/07/google-https-seo-nginx/</link>
+      <pubDate>Fri, 07 Sep 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/09/07/google-https-seo-nginx/</guid>
+      <description>&lt;p&gt;A couple of days ago, well, 5 to be precise, I moved this blog to a new server, new Nginx based stack. In the move, I decided to enforce secured HTTPS force all my services, including this blog. Privacy matters!&lt;/p&gt;
+
+&lt;p&gt;Surprisingly enough, I suddenly disappeared from Google at the very same time.&lt;/p&gt;
+
+&lt;p&gt;It appears to be linked to the HTTPS move. Disabling the systematic redirection to the secured protocol made it happy again.&lt;/p&gt;
+
+&lt;p&gt;However, I still want to be automatically moved to the secure version every time I log into the backend. All WordPress admin pages starts with &amp;#8216;/wp-&amp;#8216;, it is then straight forward to make Nginx clever about security. Here is a nice snippet to put into the relevant &amp;#8216;server&amp;rsquo; section:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;location /wp-
+    {
+      if ($ssl_protocol = &#34;&#34;)
+      {
+          rewrite ^   https://$server_name$request_uri? permanent;
+      }
+    }
+&lt;/pre&gt;
+
+&lt;p&gt;instead of only&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;if ($ssl_protocol = &#34;&#34;)
+    {
+        rewrite ^   https://$server_name$request_uri? permanent;
+    }
+&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Nginx: IPv6 and SSL termination</title>
+      <link>http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/</link>
+      <pubDate>Sun, 02 Sep 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/</guid>
+      <description>&lt;p&gt;I just installed the beautiful NGINX reverse proxy on my personal server. I use it to run various personal web-based services like this blog, Etherpad or Gitlab. That&amp;rsquo;s 3 different programming languages, PHP, JS, Ruby. Wow.&lt;/p&gt;
+
+&lt;p&gt;Sadly, none of them handles natively HTTPS nor IPv6 moreover, they all require a standalone port to run on. Hopefully, reverse proxies are here to solve the problem. And I chose NGINX. I was previously using a home grown one which is much, much easier to configure but not really state of the art. So Bye Bye &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I want to to enforce HTTPS connections and allow both IPv4 and IPv6.&lt;/p&gt;
+
+&lt;p&gt;Add this to the top of each &amp;#8220;server&amp;#8221; block:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;listen   80;
+listen   [::]:80;
+listen   443 ssl;
+listen   [::]:443 ssl;
+&lt;/pre&gt;
+
+&lt;p&gt;Add this right after the previous or directly in the &amp;#8220;http&amp;#8221; block if &amp;#8220;nginx.conf&amp;#8221; if you have wildcard certificate:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;ssl_certificate /etc/ssl/private/ssl-full-chain.crt;
+ssl_certificate_key /etc/ssl/private/ssl-main.key;
+&lt;/pre&gt;
+
+&lt;p&gt;Note that Nginx expects the whole certificate chain to be in the .crt or .pem file that is you actual certificate followed by the whole certification chain up to the root CA at the end.&lt;/p&gt;
+
+&lt;p&gt;The last step is now to &amp;#8220;force&amp;#8221; HTTPS. The idea is to read an ssl variable. If unset, redirect to the HTTPS version of the page:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;if ($ssl_protocol = &#34;&#34;) {
+    rewrite ^   https://$server_name$request_uri? permanent;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;If Nginx complains with &amp;#8220;nginx: [emerg] bind() to [::]:443 failed (98: Address already in use)&amp;#8221;, try appending &amp;#8220;ipv6only=on&amp;#8221; to the the faulty config line.&lt;/p&gt;
+
+&lt;p&gt;Try on this blog, it should only be accessible with HTTPS &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>IPv6 fails after a certain time</title>
+      <link>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</link>
+      <pubDate>Tue, 10 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</guid>
+      <description>&lt;p&gt;[UPDATE]&lt;/p&gt;
+
+&lt;p&gt;I still did not find the real source of the problem but it seems that both OVH and Ubuntu stock kernel fail to renew the default routes. Good news, it can be manually renewed, including from a Cron job:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;rdisc eth0&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;[ORIGINAL POST]&lt;/p&gt;
+
+&lt;p&gt;This blog as well as a couple other private tools are hosted on a kimsufi 2G OVH server. They&amp;rsquo;ve offered IPv6 on their dedicated boxes for quite a while yet and I&amp;rsquo;m proud to be hosted by such leaders.&lt;/p&gt;
+
+&lt;p&gt;Sadly, they are also famous for screwing it up on lower end servers and I just lost my evening trying to fix the configuration. Curiously my gateway had gone away. This should not have been an issue because of the RA protocol of IPv6.This is strange&lt;/p&gt;
+
+&lt;p&gt;Anyway, the only fix that worked for me was simply to&lt;/p&gt;
+
+&lt;pre&gt;sudo /etc/init.d/networking restart&lt;/pre&gt;
+
+&lt;p&gt;I hope it can help some of you &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

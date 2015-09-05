@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Ituneshelper on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/ituneshelper/</link>
+    <description>Recent content in Ituneshelper on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 20 Nov 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/ituneshelper/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Anatomy of a virus: iTunesHelper.vbe 2/2</title>
+      <link>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
+      <pubDate>Wed, 20 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
+      <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;This post is the source-code analysis part of the article. For an introduction to the iTunesHelper.vbe virus and a more qualitative approach, &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/&#34; title=&#34;Anatomy of a virus 1/2: iTunesHelper.vbe&#34;&gt;you may be interested in reading the first part&amp;#8230; first&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1/ What does it look like ?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;Name&lt;/em&gt;: iTunesHelper.vbe&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Target system&lt;/em&gt;: Windows &amp;gt;= XP&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Propagation vector&lt;/em&gt;: Replace files by shortcuts to virus code on USB drive root&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Hiding techniques&lt;/em&gt;:
+
+&lt;ul&gt;
+&lt;li&gt;Hides real files as well as himself as &amp;#8220;system files&amp;#8221;&lt;/li&gt;
+&lt;li&gt;Use a name close to a real world program &amp;#8220;iTunesHelper.exe&amp;#8221;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Symptoms&lt;/em&gt;:
+
+&lt;ul&gt;
+&lt;li&gt;All files on USB drive root are shortcuts to &amp;#8220;strange/suspect&amp;#8221; script&lt;/li&gt;
+&lt;li&gt;Process &amp;#8220;wscript&amp;#8221; using ~1/2GB of memory&lt;/li&gt;
+&lt;li&gt;Real files visible when &amp;#8220;system files&amp;#8221; are not hidden&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ How does it work ? - Dissimulation&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1st&lt;/strong&gt; level of dissimulation: &lt;em&gt;dissuasion&lt;/em&gt;. The file appears to be 65MB big. While this seems small, most text editors (who said Notepad ?) just assumes text files are no more than a couple of KB big. It makes it almost impossible to read it. Moreover, it starts with empty lines discouraging to scroll down to the real code. We&amp;rsquo;ll make it fast.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: filter iTuneHelper.vbe empty lines noise; notranslate&#34; title=&#34;filter iTuneHelper.vbe empty lines noise&#34;&gt;jean-tiare@laptop:~$ grep -E &#34;^\\s*$&#34; iTuneHelper.vbe | wc -l
+34 598 142 # huh huh, ~34 *millions* of empty lines. Useful...
+jean-tiare@laptop:~$ grep -vE &#34;^\\s*$&#34; iTuneHelper.vbe | wc -l
+43 # &#34;real&#34; code
+jean-tiare@laptop:~$ grep -vE &#34;^\\s*$&#34; iTuneHelper.vbe &amp;gt; iTuneHelper-trimmed.vbe
+&lt;/pre&gt;
+
+&lt;p&gt;The code now looks like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: vb; title: iTuneHelper-trimmed.vbe; notranslate&#34; title=&#34;iTuneHelper-trimmed.vbe&#34;&gt;Audi = Mercedes(&#34;&amp;lt;base64 &#39;hidden&#39; payload&amp;gt;&#34;)
+EXECUTE (Audi)
+Function Mercedes(data)
+     Mercedes=decodeBase64(data)
+End Function
+Function decodeBase64(ByVal base64String)
+&#39; trimmed
+End Function
+&lt;/pre&gt;
+
+&lt;p&gt;This basically decodes a base64 encoded the payload and run it. `&lt;code&gt;decodeBase64&lt;/code&gt;` is standard and has been removed from this snippet for brevity. Nothing fancy, here apart from the variable&amp;rsquo;s name.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;2nd&lt;/strong&gt; level of dissimulation: &lt;em&gt;base64, fun var names&lt;/em&gt;. That&amp;rsquo;s an easy one. It can be manually decoded for example with the following one liner. Notice that I also trim empty lines as it re-uses the same trick as before:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: decode iTuneHelper.vbe base64 payload; notranslate&#34; title=&#34;decode iTuneHelper.vbe base64 payload&#34;&gt;jean-tiare@laptop:~$ head -n1 iTuneHelper-trimmed.vbe | cut -d\&#34; -f2 | base64 -d &amp;gt; iTuneHelper-decoded.vbe
+&lt;/pre&gt;
+
+&lt;p&gt;It basically takes the part between double quotes on the first line and feeds it to base64 decoder and finally stores the result.&lt;/p&gt;
+
+&lt;p&gt;We notice the same kind of fanciness in the variables names but with names (Benjamin, Christophe, Raphael, Damien, Pierre) instead of cars.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;3/ How does it work ? - Virus skeleton&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;As stated in the disclaimer, I wont provide real source code. But here is what the code roughly looks like once all &amp;#8220;obfuscation&amp;#8221; techniques have been bypassed.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: vb; title: iTuneHelper-decoded.vbe; notranslate&#34; title=&#34;iTuneHelper-decoded.vbe&#34;&gt;&#39; Init
+Benjamin = &#34;&amp;lt;command server fqdn&amp;gt;&#34;
+Christophe = -1 &#39;Port on command server
+Raphael = &#34;&amp;lt;install dir on target&amp;gt;&#34;
+Damien = True
+Pierre = True
+
+&#39; Main loop:
+&#39;   - install (*each*) iteration
+&#39;   - contact command server
+&#39;   - execute command
+&#39;   - sleep 5s&amp;lt;/p&amp;gt;
+
+&#39; Command handlers
+
+Sub install
+On Error Resume Next
+&#39; trimmed code
+&#39; handles USB propagation
+End Sub
+
+Sub information
+On Error Resume Next
+&#39; trimmed code
+&#39; leaks informations, especially Installed AV software, if any.
+End Sub
+
+&#39;and so on...
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;4/ How does it work ? - (Un-)Install&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;The main loop runs roughly every 5s. The &lt;em&gt;first&lt;/em&gt; thing it does is call `&lt;code&gt;install&lt;/code&gt;` function. (no, the last thing is not a call to `&lt;code&gt;uninstall&lt;/code&gt;` function).&lt;/p&gt;
+
+&lt;p&gt;Here is what it basically &lt;em&gt;looks&lt;/em&gt; like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: vb; title: install procedure; notranslate&#34; title=&#34;install procedure&#34;&gt;Sub install
+
+&#39; 1/ ensure start mode
+&#39; make sure it starts on session start
+setRegistryKey &#34;HKEY_CURRENT_USER\software\microsoft\windows\currentversion\run\&amp;lt;virus name&amp;gt;&#34;
+&#39; attempts to even set it globally (Admin session ?)
+setRegistryKey &#34;HKEY_LOCAL_MACHINE\software\microsoft\windows\currentversion\run\&amp;lt;virus name&amp;gt;&#34;
+
+&#39; 2/ copy virus file
+filesystemobj.copyfile wscript.scriptfullname, &#34;&amp;lt;destination 1&amp;gt;&#34;, True
+filesystemobj.copyfile wscript.scriptfullname, &#34;&amp;lt;destination 2&amp;gt;&#34;, True
+
+&#39; 3/ infect each USB Mass Storage
+For each drive in filesystemobj.drives
+
+    &#39; 3.1/ is it a mass storage ?
+    If isUsbMassStorage drive Then
+        &#39; 3.2 install file
+        filesystemobj.copyfile wscript.scriptfullname, &#34;&amp;lt;usb root&amp;gt;&#34;, True
+        &#39; 3.3 hide it (no snippet)
+        &#39; 3.4 for each file (and folder) on storage root:
+        For Each file in filesystemobj.getfolder( drive.path &amp; &#34;\&#34; ).Files
+            &#39; 3.4.1 hide each reach file (no snippet)
+            &#39; 3.4.2 create *visible* shortcut to each real file *first* calling the virus (no snippet)
+            &#39; 3.4.3 pretend to be the real file by forcing the icon (no snippet)
+        Next
+    End If
+
+Next
+
+End Sub
+&lt;/pre&gt;
+
+&lt;p&gt;On the opposite, the `&lt;code&gt;uninstall&lt;/code&gt;`does exactly the reverse with one noteworthy difference: It is executed only after the control server requests so, never automatically.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;5/ How does it work ? - Backdoor&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So, this virus is build around a main loop sleeping for 5s after each run. It also starts by (re-)installing the virus. Up to this point that still is a common virus. What it does right after makes it also a Trojan Horse. Nice &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/frownie.png&#34; alt=&#34;:(&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;To make it short it&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Connects to a server&lt;/li&gt;
+&lt;li&gt;Reads the command from the answer&lt;/li&gt;
+&lt;li&gt;Execute it&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;There are 13 supported commands, some of them doing similar things. The most important is that it allows an attacker to trigger an auto-update, (up|down)-load arbitrary files, run arbitrary commands, &amp;#8230;: do anything. And &lt;em&gt;that&lt;/em&gt; is the scary part.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;6/ Last word&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;I find strange to find such simple script-based viruses in the wild, while not being detected by Antivirus software. This makes me wonder if they are of any use, but that&amp;rsquo;s another question. The most important point I would like to stress is: User behavior and vigilance &lt;em&gt;is&lt;/em&gt; the most efficient way to protect himself. Being infected happens even to the best but noticing this strange behavior and asking around has been, in this case, the most efficient response.&lt;/p&gt;
+
+&lt;p&gt;This said, even very simple, this virus has most characteristics one would expect:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Efficient dissimulation.&lt;/li&gt;
+&lt;li&gt;Clever propagation mechanism.&lt;/li&gt;
+&lt;li&gt;Centralized command server.&lt;/li&gt;
+&lt;li&gt;Background command loop.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This last point makes me think this virus is part of a botnet. But I may be wrong.&lt;/p&gt;
+
+&lt;p&gt;There are nonetheless a couple of interesting vulnerabilities in the conception itself:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Interpreted language makes it easy to analyze.&lt;/li&gt;
+&lt;li&gt;Code &amp;#8220;obfuscation&amp;#8221; with only base64 ???&lt;/li&gt;
+&lt;li&gt;No attempts to dissimulate itself better than &amp;#8220;system files&amp;#8221;.&lt;/li&gt;
+&lt;li&gt;Essential registry key is still visible.&lt;/li&gt;
+&lt;li&gt;&amp;#8220;What are all theses shortcuts doing here ???&amp;#8221; user suspicion.&lt;/li&gt;
+&lt;li&gt;and HEAVY on memory usage !&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Anatomy of a virus: iTunesHelper.vbe 1/2</title>
+      <link>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</link>
+      <pubDate>Mon, 18 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</guid>
+      <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;I recently identified a virus called &amp;#8220;iTunesHelper.vbe&amp;#8221; on my Dad&amp;rsquo;s personal laptop. By the time we noticed it it already had infected the whole House. Let aside the (pretty bad) surprise I found interesting that none of the (up to date) Antivirus were able to detect it. And, interestingly enough this virus is script based, hence easily studied. Let&amp;rsquo;s dive in it.&lt;/p&gt;
+
+&lt;p&gt;This first post is a purely qualitative approach, voluntarily avoiding any source reading. For a more in-depth approach, you may be interested in reading the &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;second part of this post&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1/ Lab system&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Windows XP, in a virtual Machine&lt;/li&gt;
+&lt;li&gt;NO updates&lt;/li&gt;
+&lt;li&gt;NO antivirus software&lt;/li&gt;
+&lt;li&gt;&amp;gt;1GB RAM&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Infection test was run from this VM. Analysis was performed directly on my Linux laptop with no special security as it lacks the required runtime.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ Symptoms&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;When an infected USB mass storage is connected to a target system, all files on its root folder appears as shortcuts instead of plain files. This set aside, icons are as expected and &amp;#8220;files&amp;#8221; behaves apparently behave as expected too.&lt;/p&gt;
+
+&lt;div id=&#34;attachment_344&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-344&#34; alt=&#34;iTuneHelper, only shortcuts visible&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible-300x225.png&#34; width=&#34;300&#34; height=&#34;225&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTuneHelper, only shortcut visible
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Diving a little deeper the shortcut appears to &lt;em&gt;really&lt;/em&gt; be a shortcut:&lt;/p&gt;
+
+&lt;div id=&#34;attachment_346&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-3-really.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-346&#34; alt=&#34;iTunesHelper. The shortcut is the virus vector&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-3-really-300x298.png&#34; width=&#34;300&#34; height=&#34;298&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTunesHelper. The shortcut is the virus vector
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Here is the full, plain text target:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: pseudo shortcut target; notranslate&#34; title=&#34;pseudo shortcut target&#34;&gt;C:\WINDOWS\system32\cmd.exe /c start iTunesHelper.vbe&amp;start Secret&#34; &#34;Text&#34; &#34;File.txt&amp;exit
+&lt;/pre&gt;
+
+&lt;p&gt;Which basically means:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;run &amp;#8220;iTunesHelper.vbe&amp;#8221;&lt;/li&gt;
+&lt;li&gt;open the real &amp;#8220;Secret Text File.txt&amp;#8221;&lt;/li&gt;
+&lt;li&gt;and you&amp;rsquo;re done&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Huh huh, interesting. But where are theses files located ? Turning off &amp;#8220;Hide protected operating system files&amp;#8221; in &amp;#8220;Folder Options&amp;#8221; will do the trick. Yes ! This nice piece of software pretends to be an essential piece of the Operating System. Simple and efficient way to &lt;em&gt;dissimulate&lt;/em&gt; itself from almost all computers. Here is what one could then see:&lt;/p&gt;
+
+&lt;div id=&#34;attachment_345&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-2-all.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-345&#34; alt=&#34;iTuneHelper, payload and real files when system files are visible&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-2-all-300x225.png&#34; width=&#34;300&#34; height=&#34;225&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTuneHelper, payload and real files when system files are visible
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Last but not least, the name &amp;#8220;iTunesHelper.vbe&amp;#8221; itself has been chosen for dissimulation. &amp;#8220;iTunesHelper.&lt;strong&gt;exe&lt;/strong&gt;&amp;#8221; being an actual.. &amp;#8220;iTunes background Helper&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;Long story short: The virus dissimulate itself under the name of a common software and pretending to be an essential system file. Nonetheless, it is still quite easy to suspect it&amp;rsquo;s presence as it replaces all files on the root of the drive by shortcuts.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ Propagation Mechanism&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;With all this initial analysis done it is now straightforward to guess the virus&amp;rsquo; propagation mechanism:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;System is clean&lt;/li&gt;
+&lt;li&gt;Infected drive is inserted. Nothing happens&lt;/li&gt;
+&lt;li&gt;A file is opened from the drive&lt;/li&gt;
+&lt;li&gt;The virus payload is executed, then the real file is opened&lt;/li&gt;
+&lt;li&gt;[hypothesis] The virus installs itself&lt;/li&gt;
+&lt;li&gt;[hypothesis] The virus manages to watch for new USB drives&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;The last point is easy to check: Insert a clean drive and observe: files will quickly be replaced by shortcuts.&lt;/p&gt;
+
+&lt;p&gt;In fact the virus remains in memory. Speaking of memory, it consumes quite a lot of it&amp;#8230; Around 1/2GB!&lt;/p&gt;
+
+&lt;div id=&#34;attachment_347&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-4-resources.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-347&#34; alt=&#34;iTunesHelper, quite a lot of memory !&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-4-resources-300x292.png&#34; width=&#34;300&#34; height=&#34;292&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTunesHelper, quite a lot of memory !
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;When the computer is rebooted, the virus is reloaded with it via the registry. Even more Ironic, being a script ran by &amp;#8220;wscript.exe&amp;#8221; from Microsoft, its is reported as a Microsoft program. Trustworthy? Simple and efficient.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;3/ Counter measures, cleaning&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;All these informations gathered It is also possible to guess a way to efficiently get rid of it:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Remove any USB drive from the computer&lt;/li&gt;
+&lt;li&gt;Kill any &amp;#8220;wscript.exe&amp;#8221; process, especially if it eats up all your memory !&lt;/li&gt;
+&lt;li&gt;Disable further automatic restarts. A tool like CCleaner will help. It will also give the path to the resident payload&lt;/li&gt;
+&lt;li&gt;Delete the resident Payload&lt;/li&gt;
+&lt;li&gt;Show system protected files&lt;/li&gt;
+&lt;li&gt;For each infected drive:
+
+&lt;ol&gt;
+&lt;li&gt;Insert it. DO NOT open &lt;em&gt;any&lt;/em&gt; file from it&lt;/li&gt;
+&lt;li&gt;Delete iTunesHelper.vbe along with &lt;em&gt;ALL&lt;/em&gt; shortcuts&lt;/li&gt;
+&lt;li&gt;Reset files to regular attributes&lt;/li&gt;
+&lt;/ol&gt;&lt;/li&gt;
+&lt;li&gt;Hide system protected files&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Which also appears to be quite close from the real uninstall procedure, hardcoded in the virus.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;4/ Last word&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;This Post dived into a virus from a purely qualitative point of view, following the same general approach the author used to quickly get rid of this file. All the informations from this post have been cross-verified against the virus source code which appears to be only poorly obfuscated. But that&amp;rsquo;s another topic, for a future post.&lt;/p&gt;
+
+&lt;p&gt;This virus has been reported to an antivirus editor. Hopefully it&amp;rsquo;s signature will quickly be added to official databases.&lt;/p&gt;
+
+&lt;p&gt;[&lt;/p&gt;
+
+&lt;p&gt;For a more technical approach, please read on: second part.]&lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;1&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

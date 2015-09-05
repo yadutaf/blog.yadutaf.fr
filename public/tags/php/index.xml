@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Php on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/php/</link>
+    <description>Recent content in Php on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 03 Jul 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/php/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>WordPress: from localhost to production</title>
+      <link>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</link>
+      <pubDate>Wed, 03 Jul 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</guid>
+      <description>&lt;p&gt;Yesterday, a friend of mine asked me urgent help. He fully developed a WP based website for a research project on &lt;em&gt;localhost/his_website&lt;/em&gt;. As WP stores &lt;em&gt;full links&lt;/em&gt; pretty much everywhere in the database, his website was obviously completely broken when he moved it to production on &lt;em&gt;his_website.com&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;I quickly put some PHP lines of codes together to fix the whole DB at once. Feel free to re-use it in your own projects.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;usage&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;put the script on your server, for example /website/root/wordpress_production.php&lt;/li&gt;
+&lt;li&gt;configure DB connection + old and new URL&lt;/li&gt;
+&lt;li&gt;visit &lt;a href=&#34;http://www.your_website.com/wordpress_production.php&#34;&gt;http://www.your_website.com/wordpress_production.php&lt;/a&gt; (you should see nothing)&lt;/li&gt;
+&lt;li&gt;you&amp;rsquo;re done !&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;DISCLAIMER: this script comes with NO WARRANTY. USE IT AT YOUR OWN RISKS.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

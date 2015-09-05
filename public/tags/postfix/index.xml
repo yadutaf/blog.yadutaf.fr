@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Postfix on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/postfix/</link>
+    <description>Recent content in Postfix on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 25 Aug 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/postfix/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Of being hacked, found guilty of spam</title>
+      <link>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
+      <pubDate>Tue, 25 Aug 2015 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
+      <description>&lt;p&gt;A few days ago, my hosting company sent me an automated email notifying me that port 25 had been blocked on my personal server. Cause: It had been found guilty of sending spam. As I&amp;rsquo;m not (at least officially) in the spam business, this could only mean one thing: I got hacked.&lt;/p&gt;
+
+&lt;p&gt;I was shocked. If felt to me as though I was having a car accident.&lt;/p&gt;
+
+&lt;p&gt;The first think to do in such situations is to restrict to the bare minimum connections from the outside world to regain control of the machine. In my case, I rebooted the server to rescue mode with only SSH access. This means mail server downtime BUT SMTP protocol is reliable by design. Actually, it has been developed when Internet barely existed and mails where directly hosted on terminals with intermittent connexions. Hence, not an issue.&lt;/p&gt;
+
+&lt;p&gt;Next, inspect postfix queue to get an overview:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;postqueue -p | head
+&lt;/pre&gt;
+
+&lt;p&gt;Dumping a random email from the queue is also a good idea:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;postcat -qv POSTFIX_QUEUE_ID
+&lt;/pre&gt;
+
+&lt;p&gt;This gives a good idea of where the bulk of the emails came from. In this specific scenario, most mail (~55K) were coming from &amp;#8220;@blog.jtlebi.fr&amp;#8221;. Which is a pretty good news since NO legitimate mail is ever sent from this domain. Anyway, at this point, you should be able to infer basic patterns.&lt;/p&gt;
+
+&lt;p&gt;Time to filter out the spam. The film-hacker way: with a shiny progress bar. Actully, this is not about hype but truly about getting feedback. Filtering 10s of thousands of mails using postfix tools takes a &lt;em&gt;very&lt;/em&gt; long time. You need to have an ETA. Here is the command I used:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;CANDIDATES=&#34;grep -rlP &#39;(MAILER-DAEMON|@blog\.jtlebi\.fr)&#39; /var/spool/postfix/deferred/&#34;; (
+    eval $CANDIDATES   # get the list of mails, directly from the pool
+    | tee deleting     # track actions
+    | grep -o &#39;[^/]*$&#39; # extract POSTFIX_QUEUE_ID
+    | pv -lns $(eval $CANDIDATES | wc -l) -i0.1 # compute progress based on processed lines (mails) vs matching files (mails) in the spool.
+    | postadmin -d -   # delete mail by  POSTFIX_QUEUE_ID (1 per line)
+
+) 2&amp;gt;&amp;1
+| dialog --no-lines --no-shadow  --gauge &#34;Delicately filtering away da F*cking spam... &#34; 7 70 # The hype thing
+&lt;/pre&gt;
+
+&lt;p&gt;After that, before re-opening accesses, do not forget to close the holes the hacker came in through. Temporary fix was to upgrade all, disable most plugins. Long term fix ? &lt;strong&gt;KILL WORDPRESS&lt;/strong&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

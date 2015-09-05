@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Mes on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/me/</link>
+    <description>Recent content in Mes on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 19 Sep 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/me/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>About me</title>
+      <link>http://localhost:1313/me/</link>
+      <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/me/</guid>
+      <description>&lt;p&gt;I am a French system developper working in Lille, France in an area nick-named &amp;ldquo;The Roubaix-Valley&amp;rdquo;. I love designing and building infrastructures. I believe in simplicity as a key success factor and ordinariness as a key failure factor.&lt;/p&gt;
+
+&lt;p&gt;Currently working on &lt;a href=&#34;https://github.com/yadutaf/ctop&#34;&gt;Ctop&lt;/a&gt;, a top for containers at night and building &lt;a href=&#34;https://sailabove.com&#34;&gt;Sailabove&lt;/a&gt; Docker Hosting lab &lt;a href=&#34;https://ovh.com&#34;&gt;@OVH.com&lt;/a&gt; during the day&lt;/p&gt;
+
+&lt;p&gt;Need to reach me ?&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://ovh.com&#34;&gt;Tweeter&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://twitter.com/oyadutaf&#34;&gt;Linkedin&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://github.com/yadutaf&#34;&gt;Github&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;E-Mail: jt [AT] yadutaf [DOT] fr&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

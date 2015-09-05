@@ -1,0 +1,471 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    How I shrunk a Docker image by 98.8% – featuring fanotify | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>How I shrunk a Docker image by 98.8% – featuring fanotify</h1>
+      <div class="meta">
+        Apr 25, 2015 &nbsp;
+        
+          #<a href="/tags/docker">docker</a>&nbsp;
+        
+          #<a href="/tags/fanotify">fanotify</a>&nbsp;
+        
+          #<a href="/tags/syscall">syscall</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<p>Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &#8220;diet program for Docker Images&#8221; ?</p>
+
+<p>You can find a couple of pretty decent common-sense powered approach <a href="https://intercityup.com/blog/downsizing-docker-containers.html">on the web</a> like removing well known cache folders, temporary files, installing all superfluous packages and flatten layers if not the full image. There is also the <code>-slim</code> declination of the official language images.</p>
+
+<p>But, thinking at it, do we <em>really</em> need a full consistent base Linux install? Which files do we <em>really</em> need in a given image? I found a radical and pretty efficient approaches with a go binary. It was statically build, almost no external dependency. <a href="http://blog.codeship.com/building-minimal-docker-containers-for-go-applications/">Resulting image</a>: 6.12MB.</p>
+
+<p>Whaou! Is there any chance to do something comparable, deterministic with any random application?</p>
+
+<p>It turns out there could be one. The idea is simple: We could profile the image at run time one way or another to determine which files are ever accessed/opened/&#8230;, then remove all the remaining files. Hmm, sounds promising. Let&rsquo;s PoC it.</p>
+
+<p><strong>Target definition</strong>:</p>
+
+<ul>
+<li><strong>Start image</strong>: Ubuntu (~200MB)</li>
+<li><strong>Application that MUST run</strong>: <code>/bin/ls</code></li>
+<li><strong>Goal</strong>: Build the smallest possible image</li>
+</ul>
+
+<p><code>/bin/ls</code> is a good target: It is simple enough for a PoC with no nasty behavior but still not trivial, it uses dynamic linking.</p>
+
+<p>Now that we have a target, let&rsquo;s pick a tool. As this is a proof of concept, using dynamites where a hole puncher would  be enough <em>IS</em> an option, as long as it does the job.</p>
+
+<p>The base idea it to record all file accesses. Be it a stat or a open. There are a couple of good candidates to help with the task. We could use <a href="http://linux.die.net/man/7/inotify" title="Man Inotify">inotify</a> but it is a pain to setup and watches needs to be attached on every single files, which potentially mean a *lot* of watches. We could use LD_PRELOAD but 1/ it&rsquo;s no fun to use, 2/ it won&rsquo;t catch direct syscalls 3/ it won&rsquo;t work with statically linked programs (who said golang&rsquo;s?). A solution that would work well even for statically linked program would be to use <a href="http://linux.die.net/man/2/ptrace" title="Man ptrace">ptrace</a> to trace all syscalls, in realtime. It is also a pain to setup but, it would be a reliable and flexible option. A lesser known linux syscall is <a href="http://man7.org/linux/man-pages/man7/fanotify.7.html">fanotify</a>. As the title suggests, This is the one we&rsquo;ll go with<sup>1</sup>.</p>
+
+<p><code>fanotify</code> syscall has originally been implemented as &#8220;decent&#8221; mechanism for anti-virus vendors to intercept file access events, potentially on a whole mountpoint at once. Sounds familiar? While it may be used to deny file accesses, it may also just report file access events in a non-blocking fashion, potentially dropping<sup>2</sup> events if the kernel queue overflows. In this last case, a special message will be generated to notify user-land listener about the message loss. This is perfectly what I needed. Non intrusive, a whole mountpoint at once, simple setup (well, provided that you find the documentation, no comment&#8230;). This may seem anecdotal but it has its importance, as a learned after.</p>
+
+<p>Using it is fairly simple:</p>
+
+<p><strong>1/ Init <code>fanotify</code> in <code>FAN_CLASS_NOTIF</code>ication mode using <a href="http://man7.org/linux/man-pages/man2/fanotify_init.2.html"><code>fanotify_init</code> syscall</a></strong></p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">// Open ``fan`` fd for fanotify notifications. Messages will embed a 
+// filedescriptor on accessed file. Expect it to be read-only
+fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+</pre>
+
+<p><strong>2/ Subscribe to <code>FAN_ACCESS</code> and <code>FAN_OPEN</code> events on &#8220;/&#8221; <code>FAN_MARK_MOUNT</code>point using <a href="http://man7.org/linux/man-pages/man2/fanotify_mark.2.html"><code>fanotify_mark</code> syscall</a></strong></p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">// Watch open/access events on root mountpoint
+fanotify_mark(
+    fan, 
+    FAN_MARK_ADD | FAN_MARK_MOUNT, // Add mountpoint mark to fan
+    FAN_ACCESS | FAN_OPEN,         // Report open and access events, non blocking
+    -1, "/"                        // Watch root mountpoint (-1 is ignored for FAN_MARK_MOUNT type calls)
+);
+</pre>
+
+<p><strong><code>3/ read</code> pending event messages from the filedescriptor returned by <code>fanotify_init</code> and iterate using <code>FAN_EVENT_NEXT</code></strong></p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">// Read pending events from ``fan`` into ``buf``
+buflen = read(fan, buf, sizeof(buf));
+
+// Position cursor on first message
+metadata = (struct fanotify_event_metadata*)&buf;
+
+// Loop until we reached the last event
+while(FAN_EVENT_OK(metadata, buflen)) {
+    // Do something interesting with the notification
+    // ``metadata-&gt;fd`` will contain a valid, RO fd to accessed file.
+
+    // Close opened fd, otherwise we'll quickly exhaust the fd pool.
+    close(metadata-&gt;fd);
+
+    // Move to next event in buffer
+    metadata = FAN_EVENT_NEXT(metadata, buflen);
+}
+</pre>
+
+<p>Putting it all together, we&rsquo;ll print the full name of all accessed files and add queue overflow detection. This should be plain enough for us (comments and error checks stripped for the purpose of this illustration):</p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">#include &lt;fcntl.h&gt;
+#include &lt;limits.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;sys/fanotify.h&gt;
+
+int main(int argc, char** argv) {
+    int fan;
+    char buf[4096];
+    char fdpath[32];
+    char path[PATH_MAX + 1];
+    ssize_t buflen, linklen;
+    struct fanotify_event_metadata *metadata;
+
+    // Init fanotify structure
+    fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+
+    // Watch open/access events on root mountpoint
+    fanotify_mark(
+        fan,
+        FAN_MARK_ADD | FAN_MARK_MOUNT,
+        FAN_ACCESS | FAN_OPEN,
+        -1, "/"
+    );
+
+    while(1) {
+        buflen = read(fan, buf, sizeof(buf));
+        metadata = (struct fanotify_event_metadata*)&buf;
+
+        while(FAN_EVENT_OK(metadata, buflen)) {
+            if (metadata-&gt;mask & FAN_Q_OVERFLOW) {
+                printf("Queue overflow!\n");
+                continue;
+            }
+
+            // Resolve path, using automatically opened fd
+            sprintf(fdpath, "/proc/self/fd/%d", metadata-&gt;fd);
+            linklen = readlink(fdpath, path, sizeof(path) - 1);
+            path[linklen] = '&#92;&#48;';
+            printf("%s\n", path);
+
+            close(metadata-&gt;fd);
+            metadata = FAN_EVENT_NEXT(metadata, buflen);
+        }
+    }
+}
+</pre>
+
+<p>To build it, use:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">gcc main.c --static -o fanotify-profiler
+</pre>
+
+<p>We basically now have a tool to report any file access on the active &#8216;/&rsquo; mountpoint in real time. Good.</p>
+
+<p>What now? Let&rsquo;s create an Ubuntu container, start the recorder and run <code>/bin/ls</code>. <code>fanotify</code> requires require the &#8220;<code>CAP_SYS_ADMIN</code>&#8221; capability. This is basically the &#8220;catch-all&#8221; root <a href="http://linux.die.net/man/7/capabilities">capability</a>. Still better than running in <code>--privileged</code> mode though.</p>
+
+<pre class="brush: bash; title: ; notranslate" title=""># Run image
+docker run --name profiler_ls \
+           --volume $PWD:/src \
+           --cap-add SYS_ADMIN \
+           -it ubuntu /src/fanotify-profiler
+
+# Run the command to profile, from another shell
+docker exec -it profiler_ls ls
+
+# Interrupt Running image using
+docker kill profiler_ls # You know, the "dynamite"
+</pre>
+
+<p>This should produce an output like:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">/etc/passwd
+/etc/group
+/etc/passwd
+/etc/group
+/bin/ls
+/bin/ls
+/bin/ls
+/lib/x86_64-linux-gnu/ld-2.19.so
+/lib/x86_64-linux-gnu/ld-2.19.so
+/etc/ld.so.cache
+/lib/x86_64-linux-gnu/libselinux.so.1
+/lib/x86_64-linux-gnu/libacl.so.1.1.0
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libattr.so.1.1.0
+</pre>
+
+<p>Awesome! It worked. We now know for sure what <code>/bin/ls</code> ultimately needs to run.</p>
+
+<p>So we&rsquo;ll just copy-paste-import all this in a &#8220;<code>FROM scratch</code>&#8221; Docker Image and we&rsquo;ll be done. Easy. Well, not so. But let&rsquo;s do it to see by ourselves.</p>
+
+<pre class="brush: bash; title: ; notranslate" title=""># Export base docker image
+mkdir ubuntu_base
+docker export profiler_ls | sudo tar -x -C ubuntu_base
+
+# Create new image
+mkdir ubuntu_lean
+
+# Get the linker (trust me)
+sudo mkdir -p ubuntu_lean/lib64
+sudo cp -a ubuntu_base/lib64/ld-linux-x86-64.so.2 ubuntu_lean/lib64/
+
+# Copy the files
+sudo mkdir -p ubuntu_lean/etc
+sudo mkdir -p ubuntu_lean/bin
+sudo mkdir -p ubuntu_lean/lib/x86_64-linux-gnu/
+
+sudo cp -a ubuntu_base/bin/ls ubuntu_lean/bin/ls
+sudo cp -a ubuntu_base/etc/group ubuntu_lean/etc/group
+sudo cp -a ubuntu_base/etc/passwd ubuntu_lean/etc/passwd
+sudo cp -a ubuntu_base/etc/ld.so.cache ubuntu_lean/etc/ld.so.cache
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libselinux.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libselinux.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1.1.0
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libc-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3.13.1 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libdl-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1.1.0
+
+# Import it back to Docker
+cd ubuntu_lean
+sudo tar -c . | docker import - ubuntu_lean
+</pre>
+
+<p>Run the resulting image:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">docker run --rm -it ubuntu_lean /bin/ls
+</pre>
+
+<p>And, Tadaaaaa:</p>
+
+<pre class="brush: plain; title: ; notranslate" title=""># If you did not trust me with the linker (as it was already loaded when the profiler started, it does not show in the ouput)
+no such file or directoryFATA[0000] Error response from daemon: Cannot start container f318adb174a9e381500431370a245275196a2948828919205524edc107626d78: no such file or directory
+
+# Otherwise
+/bin/ls: error while loading shared libraries: libacl.so.1: cannot open shared object file: No such file or directory
+</pre>
+
+<p>Well, not so&#8230; What went wrong? Remember when I said this syscall was primarily designed with antivirus in mind? The real-time part of the antivirus is supposed to detect that a file is being accessed, run some checks, take a decision. What matters here is the actual, real content of the file. In particular, filesystem races MUST be avoided at all costs. This is the reason why <code>fanotify</code> yields filedescriptors instead of accesses path. Determining the underlying physical file is done by probing <code>/proc/self/fd/[fd]</code>. It does not tell you through which symlink the file being accessed was accessed, only what file it is.</p>
+
+<p>To make this work, we need to find all links to reported files and install them in the filtered image as well. A <code>find</code> command like this will do the job:</p>
+
+<pre class="brush: bash; title: ; notranslate" title=""># Find all files refering to a given one
+find -L -samefile "./lib/x86_64-linux-gnu/libacl.so.1.1.0" 2&gt;/dev/null
+
+# If you want to exclude the target itself from the results
+find -L -samefile "./lib/x86_64-linux-gnu/libacl.so.1.1.0" -a ! -path "./lib/x86_64-linux-gnu/libacl.so.1.1.0" 2&gt;/dev/null
+</pre>
+
+<p>This can easily be automated with a loop like:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">for f in $(cd ubuntu_lean; find)
+do 
+    (
+        cd ubuntu_base
+        find -L -samefile "$f" -a ! -path "$f"
+    ) 2&gt;/dev/null
+done
+</pre>
+
+<p>Which produces the list of missing symlinks. All libs.</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">./lib/x86_64-linux-gnu/libc.so.6
+./lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+./lib/x86_64-linux-gnu/libattr.so.1
+./lib/x86_64-linux-gnu/libdl.so.2
+./lib/x86_64-linux-gnu/libpcre.so.3
+./lib/x86_64-linux-gnu/libacl.so.1
+</pre>
+
+<p>Let&rsquo;s copy them too from the source image and re-create the destination image. (Yeah, could also have created them on the fly).</p>
+
+<pre class="brush: bash; title: ; notranslate" title=""># Copy the links
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc.so.6 ubuntu_lean/lib/x86_64-linux-gnu/libc.so.6
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ubuntu_lean/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl.so.2 ubuntu_lean/lib/x86_64-linux-gnu/libdl.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1
+
+# Import it back to Docker
+cd ubuntu_lean
+docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
+</pre>
+
+<p><strong>Warning</strong>: This method is limited. For example, it won&rsquo;t return links to links to files neither absolute links. The later requiring at least a chroot. Or to be run in the source container itself, provided that find or equivalent is present.</p>
+
+<p>Run the resulting image:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">docker run --rm -it ubuntu_lean /bin/ls
+</pre>
+
+<p>And, Tadaaaaa:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">bin  dev  etc  lib  lib64  proc  sys
+</pre>
+
+<p>It works! <sup>tm</sup></p>
+
+<p>Time is over, let&rsquo;s measure:</p>
+
+<ul>
+<li><p><strong>ubuntu</strong>: 209M</p></li>
+
+<li><p><strong>ubuntu_lean</strong>: 2,5M</p></li>
+</ul>
+
+<p>Resulting Docker image is 83.5 <em>times</em> smaller<sup>3</sup>. That&rsquo;s a 98.8% reduction. Looks good to me, I&rsquo;ll accept it. If you agree.</p>
+
+<h3 id="last-thought:ed6b7f79feba98b85e08740dab416986">Last Thought</h3>
+
+<p>Like all profiling based method, it will only tell you about what&rsquo;s actually done/used in a specific scenario. For example, try to run <code>/bin/ls -l</code> in the resulting image and see by yourself. (spoiler: it does not work. Well it does, but not as expected).</p>
+
+<p>The profiling technique itself is not without flaws. It does not detect how a file was opened but only which file this is. This is a problem for symlinks, especially cross-filesytems (read: cross-volumes). With fanotify, we&rsquo;ll completely miss the original symlink and break the application.</p>
+
+<p>If I were to build a production shrinker, I would probably go for a <code>ptrace</code> based method.</p>
+
+<h3 id="footnotes:ed6b7f79feba98b85e08740dab416986">Footnotes</h3>
+
+<ol>
+<li><p>Let&rsquo;s face the truth: What I really wanted, was experimenting with this syscall. Docker images are more of a (good) pretext.</p></li>
+
+<li><p>Actually, one could use <code>FAN_UNLIMITED_QUEUE</code> well calling <code>fanotify_init</code> to remove this limitation, provided that the calling process is at least <code>CAP_SYS_ADMIN</code></p></li>
+
+<li><p>That&rsquo;s also 2.4 times smaller that the 6.13MB image I mentioned at the beginning of this post. But the comparison is not fair.</p></li>
+</ol>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/" rel="prev">How to run Docker behind an Nginx reverse proxy</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/" rel="next">Force a remote host to reboot via VNC</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

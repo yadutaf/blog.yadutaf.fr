@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Contacts on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/contact/</link>
+    <description>Recent content in Contacts on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 19 Sep 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/contact/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Contact</title>
+      <link>http://localhost:1313/contact/</link>
+      <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/contact/</guid>
+      <description>&lt;p&gt;This used to be a form. I used to be naive, place more trust in forms than plain mails. Anyway. If you want to reach me, that&amp;#8217;s plain easy:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://twitter.com/oyadutaf&#34;&gt;Tweeter&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://fr.linkedin.com/in/yadutaf&#34;&gt;Linkedin&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;E-Mail: jt [AT] yadutaf [DOT] fr&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

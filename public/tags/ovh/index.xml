@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Ovh on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/ovh/</link>
+    <description>Recent content in Ovh on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 30 Nov 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/ovh/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Gérer son site avec GIT sur un serveur mutualisé</title>
+      <link>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
+      <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
+      <description>
+
+&lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Prérequis&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Compte Mutualisé avec accès SSH (&lt;a href=&#34;http://www.ovh.com/fr/hebergement-web/&#34; title=&#34;Hébergement Web chez OVH&#34;&gt;à partir de l&amp;rsquo;offre pro chez OVH par ex&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Connaissance de base de GIT ainsi qu&amp;rsquo;un client fonctionnel (&lt;a href=&#34;http://git-scm.com/documentation&#34; title=&#34;Introduction à GIT&#34;&gt;documentation&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Connaissances de bases de SSH/Bash&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;première-étape-initialiser-un-dépôt-distant:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Première étape: Initialiser un dépôt distant&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Dans votre &amp;#8220;/homez.123/&lt;votre identifiant&gt;&amp;#8221;:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git init --bare site-perso.git
+# Initialized empty Git repository in /homez.123/identifiant/site-perso.git/
+&lt;/pre&gt;
+
+&lt;p&gt;Cette commande initialise un dépôt git &amp;#8220;nue&amp;#8221; (bare) dans le dossier `site-perso.git`. Aucune copie de travail ne sera présente sur le serveur. Et c&amp;rsquo;est probablement ce que vous voulez 😉&lt;/p&gt;
+
+&lt;h2 id=&#34;deuxième-étape-clone-local-et-première-publication:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Deuxième étape: Clone local et première publication&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Clone local:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git clone identifiant@ftp.cluster012.ovh.net:site-perso.git
+# Cloning into &#39;site-perso&#39;...
+# warning: You appear to have cloned an empty repository.
+# Checking connectivity... done
+cd site-perso/
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Création d&amp;rsquo;une première page:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;echo &#34;Bienvenu sur mon nouveau site&#34; &amp;gt; index.html
+git add index.html
+git commit -am &#34;ajoute la page d&#39;accueil&#34;
+# [master (root-commit) 87a0483] ajoute la page d&#39;accueil
+#  1 file changed, 1 insertion(+)
+#  create mode 100644 index.html
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Publication:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git push origin master
+# Counting objects: 3, done.
+# Writing objects: 100% (3/3), 262 bytes | 0 bytes/s, done.
+# Total 3 (delta 0), reused 0 (delta 0)
+# To identifiant@ftp.cluster012.ovh.net:site-perso.git
+#  * [new branch]      master -&amp;gt; master
+&lt;/pre&gt;
+
+&lt;p&gt;On a maintenant un site avec une page statique versionné. Une copie du dépôt GIT se trouve directement sur le serveur web. Toute personne disposant d&amp;rsquo;un accès à ce compte SSH aura la possibilité de contribuer au dépôt.&lt;/p&gt;
+
+&lt;h2 id=&#34;troisième-étape-optionnelle-accès-collaborateurs-et-public:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Troisième étape (optionnelle): Accès collaborateurs et Public&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Accès en écriture pour les collaborateurs, restreint à GIT:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Dans la mesure où l&amp;rsquo;on a pas la main sur le système d&amp;rsquo;authentification système, on va utiliser l&amp;rsquo;authentification par clé publique ssh en forçant la commande &amp;#8220;git-shell&amp;#8221;. De cette manière, on bloque l&amp;rsquo;accès à toutes actions autres que GIT (sftp, shell, tunnel, &amp;#8230;). Pour plus d&amp;rsquo;information sur l&amp;rsquo;authentification par clé publique SSH, je vous invite à consulter &lt;a href=&#34;http://git-scm.com/book/fr/Git-sur-le-serveur-G%C3%A9n%C3%A9ration-des-cl%C3%A9s-publiques-SSH&#34; title=&#34;Manuel GIT - authentification par clé publique SSH&#34;&gt;l’excellent manuel de GIT&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Dans le fichier &lt;code&gt;~/.ssh/authorized_keys&lt;/code&gt;, ajoutez une ligne du type:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;command=&#34;git-shell&#34;,no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-rsa AAAAD3NzaC1yc2EABBBCIwAAAQEAtRFmADxUSCX97CS/Uh7/N0y0vL...
+&lt;/pre&gt;
+
+&lt;p&gt;En utilisant une technique comparable il serait possible de mettre en place un contrôle d&amp;rsquo;autorisation fine mais cela sort du cadre de cet article. Pour plus d&amp;rsquo;informations sur une piste possible, je vous invite à consulter le très complet &lt;a href=&#34;https://github.com/sitaramc/gitolite/&#34;&gt;projet gitolite&lt;/a&gt;. Bien qu&amp;rsquo;il ne soit pas très adapté à un hébergement mutualisé, ses techniques pourront servir de référence.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Accès en public en lecture seule:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Exemple: ouvrir un accès public à &lt;code&gt;site-perso.git&lt;/code&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Dans votre &#34;/homez.123/&amp;lt;votre identifiant&amp;gt;&#34;
+
+# 1/ activer la publication automatique
+mv site-perso.git/hooks/post-update.sample site-perso.git/hooks/post-update
+chmod +x site-perso.git/hooks/post-update
+
+# 2/ publication dans le dossier web `public-git`
+mkdir -p www/public-git
+cd www/public-git
+ln -s ../../site-perso.git ./
+&lt;/pre&gt;
+
+&lt;p&gt;Votre dépôt peut maintenant être cloné avec &lt;code&gt;git clone http://www.example.com/public-git/site-perso.git&lt;/code&gt;. Pour révoquer l&amp;rsquo;accès, il suffit de supprimer le lien dans &lt;code&gt;www/public-git/site-perso.git&lt;/code&gt;. Il n&amp;rsquo;est pas nécessaire de supprimer le &amp;#8220;hook&amp;#8221;. Pour ajouter une authentification minimale, la méthode habituelle par &amp;#8220;htaccess&amp;#8221; pourra être employée.&lt;/p&gt;
+
+&lt;h2 id=&#34;quatrième-étape-optionnelle-déploiement-continue-oh-yeah:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Quatrième étape (optionnelle): Déploiement continue (Oh Yeah !)&lt;/h2&gt;
+
+&lt;p&gt;La crème de la crème avec GIT, ce sont les &amp;#8220;hook&amp;#8221; que je traduirai par &amp;#8220;prises&amp;#8221; en français. Ce sont des points sur lesquels on se branche aisément pour personnaliser un traitement. On a déjà utilisé l&amp;rsquo;un de ceux qui sont fourni à titre d&amp;rsquo;exemple dans tout dépôt GIT pour le rendre disponible en HTTP.&lt;/p&gt;
+
+&lt;p&gt;Ici, nous avons besoin d&amp;rsquo;une &amp;#8220;prise&amp;#8221; sur mesure qui va se charger de mettre à jour &lt;code&gt;site-perso&lt;/code&gt; à chaque fois qu&amp;rsquo;une mise à jour est &amp;#8220;poussée&amp;#8221; (publiée) sur la branche &amp;#8220;prod&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Exemple de &amp;#8220;prise&amp;#8221; GIT assurant la publication automatique:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: site-perso.git/hooks/post-receive; notranslate&#34; title=&#34;site-perso.git/hooks/post-receive&#34;&gt;#!/bin/bash
+
+# Pour chaque branche affectée par un &#34;push&#34;, GIT
+# nous passe sur une ligne et dans cet ordre:
+# &amp;lt;ancienne révision&amp;gt; &amp;lt;nouvelle révision&amp;gt; &amp;lt;~nom de la branche&amp;gt;
+while read oldrev newrev ref
+do
+    branch=`echo $ref | cut -d/ -f3`
+    # mise à jour de la version de production ?
+    if [ &#34;$branch&#34; == &#34;prod&#34; ]
+    then
+        reponame=$(basename `pwd` | sed &#39;s/\.git$//&#39;)
+        # 1/ passer le site en maintenance
+        echo &#34;[$reponame] 1/4 Passage en mode maintenance&#34;
+        # 2/ mettre à jour le code 
+        echo &#34;[$reponame] 2/4 Mise à jour&#34;
+        GIT_WORK_TREE=~/$reponame git checkout -f $branch
+        # 3/ Paramètrage, migration de schéma, ...
+        echo &#34;[$reponame] 3/4 Migration&#34;
+        # 4/ rendre le site à nouveau disponible
+        echo &#34;[$reponame] 4/4 Passage en mode production&#34;
+    fi
+done
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Activer la prise:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;chmod +x site-perso.git/hooks/post-receive&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Exemple de fonctionnement:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: session git locale &amp;#039;site-perso&amp;#039;; notranslate&#34; title=&#34;session git locale &amp;#039;site-perso&amp;#039;&#34;&gt;git checkout master
+# Switched to branch &#39;master&#39;
+
+echo &#34;version 1.2&#34; &amp;gt;&amp;gt; CHANGELOG
+git commit -am &#34;Update CHANGELOG&#34;
+# [master 75c770c] Update CHANGELOG
+#  1 file changed, 1 insertion(+)
+
+git checkout prod
+# Switched to branch &#39;prod&#39;
+
+git merge master
+# Updating 2f8b5ca..75c770c
+# Fast-forward
+#  CHANGELOG | 1 +
+#  1 file changed, 1 insertion(+)
+
+git push
+# Counting objects: 5, done.
+# Delta compression using up to 4 threads.
+# Compressing objects: 100% (2/2), done.
+# Writing objects: 100% (3/3), 312 bytes | 0 bytes/s, done.
+# Total 3 (delta 0), reused 0 (delta 0)
+# remote: [site-perso] 1/4 Passage en mode maintenance
+# remote: [site-perso] 2/4 Mise a jour
+# remote: Switched to branch &#39;prod&#39;
+# remote: [site-perso] 3/4 Migration
+# remote: [site-perso] 4/4 Passage en mode production
+# To lj75593x1@ftp.cluster012.ovh.net:site-perso.git
+#    2f8b5ca..75c770c  master -&amp;gt; master
+#    2f8b5ca..75c770c  prod -&amp;gt; prod
+&lt;/pre&gt;
+
+&lt;h2 id=&#34;conclusion:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;GIT est incroyablement puissant, mais ça vous le saviez déjà. Bien maîtrisé, il permet de mettre en place à moindre frais une véritable solution de déploiement continue et de travail collaboratif pour un site Web. Un grand &amp;#8220;plus&amp;#8221; en terme de professionnalisme. D&amp;rsquo;autre part, cette solution à l&amp;rsquo;immense avantage de fonctionner avec une offre d&amp;rsquo;hébergement mutualisé en disposant d&amp;rsquo;un simple accès SSH+GIT.&lt;/p&gt;
+
+&lt;p&gt;Happy GITing !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Lazy man backup strategy with duplicity</title>
+      <link>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
+      <pubDate>Sat, 08 Sep 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
+      <description>&lt;p&gt;I recently moved to a new dedicated server and decided it also was a good to time do start doing things &amp;#8220;the good way&amp;#8221; &lt;sup&gt;tm&lt;/sup&gt;. A good backup strategy was especially needed.&lt;/p&gt;
+
+&lt;p&gt;Most articles I found on the net explains how to backup your data and they do it well. But they lack something essential that might someday become a real issue in case there is a disaster. Main disk crash ? Yes, you know what I mean &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Let me introduce &lt;a href=&#34;http://duplicity.nongnu.org/&#34; title=&#34;Duplicity backup&#34;&gt;Duplicity&lt;/a&gt; command line utility. It supports multiple storage backends including S3, FTP, SFTP as well as regular mounted folder. It supports incremental backup and automatic older archive removal. Last but not least: all archives are fully encrypted by default !&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s enough words.&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Define &lt;strong&gt;backup&lt;/strong&gt; frequency. I use daily for my server, weekly for my personal computer&lt;/li&gt;
+&lt;li&gt;Define &lt;strong&gt;full backup&lt;/strong&gt; frequency. I use one per month&lt;/li&gt;
+&lt;li&gt;Define &lt;strong&gt;full backup lifetime&lt;/strong&gt;. I use 6 month as this is not too critical&lt;/li&gt;
+&lt;li&gt;Define &lt;strong&gt;incremental backup lifetime&lt;/strong&gt;. I use 1 month&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Lets rephrase all this into plain English: Backup my data every single day. Every month, start backup from scratch. Keep a full month of daily history. For older, you can keep only the monthly full copy.&lt;/p&gt;
+
+&lt;p&gt;Incremental backup helps to save space on the remote storage but slows down the recovery as every intermediate file up to the previous full backup will need to be read.&lt;/p&gt;
+
+&lt;p&gt;Here is my generic backup script. It is fully configurable and will automatically walk into /root/server/backup.d to find target files. These are trivial files containing the full path to a single folder to save. The name of the file determines the target.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;#!/bin/bash
+
+#File: /root/server/backup.sh
+
+# to backup a set of folder, put its name
+# in a file in backup.d. There maybe only
+# one folder per file
+# - enable  the backup with &#39;chmod +x&#39;
+# - disable the backup with &#39;chmod -x&#39;
+
+FTP_URL=&#34;ftp://&amp;lt;login&amp;gt;@&amp;lt;server.tld&amp;gt;/backup&#34;
+FTP_PASS=&#34;&amp;lt;your ftp pass goes here&amp;gt;&#34;
+BK_FULL_FREQ=&#34;1M&#34; # create a new full backup every...
+BK_FULL_LIFE=&#34;6M&#34; # delete any backup older than this
+BK_KEEP_FULL=&#34;1&#34;  # How many full+inc cycle to keep
+BK_PASS=&#34;&amp;lt;your very secret encryption key goes here&amp;gt;&#34;
+
+export APT=&#39;apt-get -q -y&#39;
+export CONF=&#39;/root/conf&#39;
+
+################################
+#        enter section
+################################
+
+function enter_section {
+  echo &#34;&#34;
+  echo &#34;==============================&#34;
+  echo &#34;$1: $2&#34;
+  echo &#34;==============================&#34;
+}
+
+################################
+#         do backup
+################################
+
+function do_backup {
+  enter_section &#34;backing up&#34; &#34;$2 -&amp;gt; $1&#34;
+  export FTP_PASSWORD=$FTP_PASS
+  export PASSPHRASE=&#34;$BK_PASS&#34;
+  duplicity --full-if-older-than $BK_FULL_FREQ $3 &#34;$2&#34; --asynchronous-upload &#34;$FTP_URL/$1&#34;
+  duplicity remove-older-than $BK_FULL_LIFE --force &#34;$FTP_URL/$1&#34;
+  duplicity remove-all-inc-of-but-n-full $BK_KEEP_FULL --force &#34;$FTP_URL/$1&#34;
+  unset PASSPHRASE
+  unset FTP_PASSWORD
+}
+
+################################
+#      run sub-scripts
+################################
+
+# backup should be independant from the system state
+# always make sure the required tools are ready
+$APT install duplicity ncftp &amp;gt; /dev/null
+
+for PARAM in /root/server/backup.d/*
+do
+  if [ -f $PARAM -a -x $PARAM ]
+  then
+    do_backup $(basename &#34;$PARAM&#34;) `cat $PARAM`
+  fi
+done
+
+exit 0
+&lt;/pre&gt;
+
+&lt;p&gt;Example: Backup /root folder to &amp;#8220;42&amp;#8221; subfolder of backup target:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;echo &#34;/root&#34; /root/server/backup.d/42
+chmod +x /root/server/backup.d/42
+&lt;/pre&gt;
+
+&lt;p&gt;Run it daily as root:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;echo &#34;25 2  * * * root /root/backup.sh&#34; &amp;gt;&amp;gt; /etc/crontab
+&lt;/pre&gt;
+
+&lt;p&gt;Beware that there is a major &lt;strong&gt;drawback&lt;/strong&gt; with this method. Backing-up &lt;strong&gt;/var/lib/mysql&lt;/strong&gt; with this method will probably result in &lt;strong&gt;data corruption&lt;/strong&gt; as the tables are not locked. Again, most articles forgets to mention this&amp;#8230; You can workaround this by first running &amp;#8216;mysqldump&amp;rsquo; then archiving the resulting file. This is left as an exercise to the reader 😉&lt;/p&gt;
+
+&lt;p&gt;In a next article, I will try yo address the &lt;strong&gt;restore&lt;/strong&gt; issue.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>IPv6 fails after a certain time</title>
+      <link>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</link>
+      <pubDate>Tue, 10 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</guid>
+      <description>&lt;p&gt;[UPDATE]&lt;/p&gt;
+
+&lt;p&gt;I still did not find the real source of the problem but it seems that both OVH and Ubuntu stock kernel fail to renew the default routes. Good news, it can be manually renewed, including from a Cron job:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;rdisc eth0&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;[ORIGINAL POST]&lt;/p&gt;
+
+&lt;p&gt;This blog as well as a couple other private tools are hosted on a kimsufi 2G OVH server. They&amp;rsquo;ve offered IPv6 on their dedicated boxes for quite a while yet and I&amp;rsquo;m proud to be hosted by such leaders.&lt;/p&gt;
+
+&lt;p&gt;Sadly, they are also famous for screwing it up on lower end servers and I just lost my evening trying to fix the configuration. Curiously my gateway had gone away. This should not have been an issue because of the RA protocol of IPv6.This is strange&lt;/p&gt;
+
+&lt;p&gt;Anyway, the only fix that worked for me was simply to&lt;/p&gt;
+
+&lt;pre&gt;sudo /etc/init.d/networking restart&lt;/pre&gt;
+
+&lt;p&gt;I hope it can help some of you &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Testing X2go on OVH Public Cloud</title>
+      <link>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
+      <pubDate>Tue, 17 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
+      <description>
+
+&lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.x2go.org/&#34; title=&#34;X2go official Website&#34;&gt;X2go&lt;/a&gt; is an open source remote desktop solution based on the very per-formant NX protocol. It feels very much like the remote server is in the same room. After a very quick test, it seems to much lighter and responsive than RDP.&lt;/p&gt;
+
+&lt;h1 id=&#34;remote-instance-setup:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Remote instance setup&lt;/h1&gt;
+
+&lt;p&gt;Subscriptions to the gamma test OVH&amp;rsquo;s Cloud are here: &lt;a href=&#34;http://www.ovh.com/fr/cloud/&#34; title=&#34;OVH public Cloud Subscription&#34;&gt;http://www.ovh.com/fr/cloud/&lt;/a&gt;. They provide us with a nice and easy to use web interface as well as a full SOAP API and a shell script to automate instance and project management.&lt;/p&gt;
+
+&lt;div id=&#34;attachment_104&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;http://blog.jtlebi.fr/wp-content/uploads/2012/01/ovh-manager.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-104&#34; title=&#34;OVH&#39;s instance manager&#34; src=&#34;http://blog.jtlebi.fr/wp-content/uploads/2012/01/ovh-manager-300x144.png&#34; alt=&#34;OVH&#39;s instance manager&#34; width=&#34;300&#34; height=&#34;144&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    OVH&#39;s instance manager
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;As the web interface is pretty intuitive, I&amp;rsquo;ll focus on the shell script usage in this blog post.&lt;/p&gt;
+
+&lt;p&gt;The first command in the script will ask you for your credentials to launch a session. They are the same as the one used to connect to the &amp;#8220;Manager&amp;#8221;.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ wget http://www.ovh.com/fr/cloud/api/ovhcloud #download the script
+$ chmod +x ovhcloud
+$ ./ovhcloud instance addProject --name x2go-ovh # create a new project
+$ ./ovhcloud instance getProjects #Lists all your projects
+&lt;/pre&gt;
+
+&lt;p&gt;Note: each object (Project, Instance, Task, Offer, Zone, &amp;#8230;) are suffixed to actions (get, add, delete, make, &amp;#8230;).&lt;/p&gt;
+
+&lt;p&gt;Next step is to create the instances you need. In this example, I&amp;rsquo;ll create a single one.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance newInstance --projectName x2go-ovh --offerName xs --distributionName ubuntu1004-x64 --zoneName rbx1 --name server&lt;/pre&gt;
+
+&lt;p&gt;TIP: For each parameter &amp;#8220;*name&amp;#8221; of this command, you can get a list of this possible values by issuing this command :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance get* #General command
+$ ./ovhcloud instance getDistributions #example
+Function returned:
+base    name               platform description
+----    ----               -------- -----------
+ubuntu  ubuntu1004-x64     64       OVH Ubuntu 1004 distribution - 64 bits
+windows win2008sp2-std-x64 64       windows 2008sp2 std distribution - 64 bits
+centos  centos5-x64        64       OVH Centos 5 distribution - 64 bits
+debian  debian564          64       OVH Debian 5 distribution - 64 bits
+debian  debian664          64       OVH Debian 6 distribution - 64 bits
+&lt;/pre&gt;
+
+&lt;p&gt;Each command leads to the internal creation of a &amp;#8220;task&amp;#8221; in the remote system. Let&amp;rsquo;s get a list of the tasks related to our project :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance getTasks --projectId ****
+projectId (long): ***
+Function returned:
+instanceId function    status finishDate zone comment lastUpdate                currentDetailedState todoDate                  id
+---------- --------    ------ ---------- ---- ------- ----------                -------------------- --------                  --
+66301      addInstance doing             rbx1         2012-01-16T13:52:08+01:00 installOns           2012-01-16T13:51:52+01:00 14571&lt;/pre&gt;
+
+&lt;p&gt;Sadly the call interface is not consistent between functions. For some, one needs to give a project&amp;rsquo;s name whereas on other, it is the ID&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;You can now use ssh to connect the instance.The following command will launch an interactive menu as the required parameter &amp;#8220;instanceId&amp;#8221; has not been specified. Anyway, it is not possible to specify it since this command is buggy &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/frownie.png&#34; alt=&#34;:(&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance ssh&lt;/pre&gt;
+
+&lt;p&gt;Note: you can also directly grab the credentials and IP and use them to manually ssh. This could be used when tunneling for example.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance getLoginInformations&lt;/pre&gt;
+
+&lt;h1 id=&#34;installing-x2go-on-the-instance:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Installing X2go on the instance&lt;/h1&gt;
+
+&lt;p&gt;This part is (almost) independent from the previous one. I&amp;rsquo;ll assume you are connected to a remote server running Ubuntu 10.04. It should be fine with any supported flavor of Ubuntu but I did not test it.&lt;/p&gt;
+
+&lt;p&gt;On the remote server as well as the local client, install the package repository&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ sudo apt-get install python-software-properties #installation de la commande &#34;add-apt-repository&#34;
+$ sudo add-apt-repository ppa:x2go/stable
+$ sudo apt-get update&lt;/pre&gt;
+
+&lt;p&gt;The installation is as easy as this&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ sudo apt-get install x2goserver
+$ sudo apt-get install ubuntu-desktop
+$ sudo apt-get install x2gognomebindings #brings some integration &lt;/pre&gt;
+
+&lt;p&gt;No additional configuration is required ! Nonetheless, you should create a low privileged user as a client&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;On the client side, just install package &amp;#8220;x2goclient&amp;#8221;.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ sudo apt-get install x2goclient &lt;/pre&gt;
+
+&lt;h1 id=&#34;conclusion:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Conclusion&lt;/h1&gt;
+
+&lt;p&gt;You should now be able to run a Cloud desktop. It is possible to start/stop it on demand with a simple shell command :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$  ./ovhcloud instance stopInstance --instanceID *** &lt;/pre&gt;
+
+&lt;p&gt;This &amp;#8220;Public Cloud&amp;#8221; is still very young. The script lacks consistency and is buggy, no real storage option is yet offered, &amp;#8230; Nonetheless, it looks very promising and the dev team listens well to users feedback &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I encourage the reader to test sound, folder and printer sharing between the client and the remote desktop. My experience is that the sound only works from a theoretical point of view as it uses a huge BP. Folder sharing is OK and I could not manage to make printer sharing work (at the moment).&lt;/p&gt;
+
+&lt;p&gt;Enjoy !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Node.Js reverse proxy</title>
+      <link>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</link>
+      <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</guid>
+      <description>&lt;p&gt;When I rented this OVH server, I wanted to be able to host all my web tools on it on port 80 using both my IPv6 and IPv4 stack. This is usually done with Apache&amp;rsquo;s &amp;#8220;ports.conf&amp;#8221; and VHost feature.&lt;/p&gt;
+
+&lt;p&gt;In fact, most of my favorite applications are written using &lt;a href=&#34;http://nodejs.org/&#34;&gt;Node.Js&lt;/a&gt; and as such embeds there own server logic. It is not possible anymore to bind each of them to *:80.&lt;/p&gt;
+
+&lt;p&gt;The only solution is then to use a reverse-proxy binded to all my real interfaces on port 80 and to forward calls based on the domain to the real applications listening to a random port of the loopback interface.&lt;/p&gt;
+
+&lt;p&gt;I found an impressive 20 line basis on &lt;a href=&#34;http://www.catonmat.net/http-proxy-in-nodejs/&#34;&gt;Peteris Krumins&amp;rsquo; blog&lt;/a&gt; that I forked on Github. You can find &lt;a href=&#34;https://github.com/jtlebi/nodejs-proxy&#34;&gt;my modifications on my github fork&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The basic idea is to decode the &amp;#8220;host&amp;#8221; field of the HTTP 1.1 headers and to forward the requests according to the config file. This solves the &amp;#8220;VHost&amp;#8221; issue. Here are two helpers I use internally:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//decode host and port info from header
+function decode_host(host){
+    out={};
+    host = host.split(&#39;:&#39;);
+    out.host = host[0];
+    out.port = host[1] || 80;
+    return out;
+}
+
+//Find the more precise rule for this request.
+//the actual rule decoding in done in &#34;handle_proxy_rule&#34;
+//which i did not include in this snippet to keep it short 😉
+function handle_proxy_route(host, token) {
+    //extract target host and port
+    action = decode_host(host);
+    action.action=&#34;proxyto&#34;;//default action
+
+    //try to find a matching rule
+    //rule of the form &#34;foo.domain.tld:port&#34;
+    if(action.host+&#39;:&#39;+action.port in hostfilters)
+    {
+         rule=hostfilters[action.host+&#39;:&#39;+action.port];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //rule of the form &#34;foo.domain.tld&#34;
+    else if (action.host in hostfilters)
+    {
+         rule=hostfilters[action.host];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //rule of the form &#34;*:port&#34;
+    else if (&#34;*:&#34;+action.port in hostfilters)
+    {
+         rule=hostfilters[&#39;*:&#39;+action.port];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //default rule
+    else if (&#34;*&#34; in hostfilters)
+    {
+         rule=hostfilters[&#39;*&#39;];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    return action;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;It is then possible to put all this server logic in a separate callback that would be called by multiple listener. This solves the &amp;#8220;Dual stack&amp;#8221; issue.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;interface_to_listen_on = [
+    {&#39;ip&#39;:&#34;0.0.0.0&#34;, &#39;port&#39;:80},//all IPv4 int
+    {&#39;ip&#39;:&#34;::&#34;, &#39;port&#39;:80}//all IPv6 int
+];
+
+interface_to_listen_on.forEach(function(listen)
+{
+    port = listen.port;
+    ip=listen.ip;
+    sys.log(&#34;Starting server on port &#39;&#34; + ip+&#39;:&#39;+port);
+    http.createServer(server_loop).listen(port, ip);
+});&lt;/pre&gt;
+
+&lt;p&gt;What if a malicious packet is forged that makes every thing crash ? Let&amp;rsquo;s add a small security layer. At least filtering based on source address was already done by the bootstrap code. I just added a &amp;#8220;last chance exception catcher&amp;#8221; and an input field check. Here is he last chance exception catcher. The filtering is pretty straight forward. It mostly is a matter of checking headers on by one and taking a decision.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//last chance error handler
+//it catch the exception preventing the application from crashing.
+//I recommend to comment it in a development environment as it
+//&#34;Hides&#34; very interesting bits of debugging informations.
+process.on(&#39;uncaughtException&#39;, function (err) {
+  console.log(&#39;LAST ERROR: Caught exception: &#39; + err);
+});
+&lt;/pre&gt;
+
+&lt;p&gt;What if a redirect rule has an error that causes a loop ? Let&amp;rsquo;s add a special header indicating that a forward already happened. That&amp;rsquo;s all the trick.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;function prevent_loop(request, response)
+{
+    //if request is already tooted =&amp;gt; loop 
+    if(request.headers.proxy==&#34;node.jtlebi&#34;)
+    {
+        sys.log(&#34;Loop detected&#34;);
+        response.writeHead(500);
+        response.write(&#34;Proxy loop !&#34;);
+        response.end();
+        return false;
+    } 
+    //append a tattoo to it
+    else 
+    {
+        request.headers.proxy=&#34;node.jtlebi&#34;;
+        return request;
+    }
+}&lt;/pre&gt;
+
+&lt;p&gt;What if I need authentication for an app that doesn&amp;rsquo;t support it natively ? Let&amp;rsquo;s implement &amp;#8220;basic auth&amp;#8221; as defined in RFC 2617. It is really easy to do:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//1st =&amp;gt; On each request, decode the &#34;authorization&#34; field (easy part)
+function authenticate(request)
+{
+    token={
+            &#34;login&#34;:&#34;anonymous&#34;,
+            &#34;pass&#34;:&#34;&#34;
+        };
+    if (request.headers.authorization &amp;&amp; request.headers.authorization.search(&#39;Basic &#39;) === 0) 
+    {
+        // fetch login and password
+        basic = (new Buffer(request.headers.authorization.split(&#39; &#39;)[1], &#39;base64&#39;).toString());
+        sys.log(&#34;Authentication token received: &#34;+basic);
+        basic = basic.split(&#39;:&#39;);
+        token.login = basic[0];
+        token.pass  = basic[1];//fixme: potential trouble if there is a &#34;:&#34; in the pass
+    }
+    return token;
+}
+
+//2nd =&amp;gt; Somewhere in your application logic, check credentials
+//3rd =&amp;gt; If they are not valid, issue an authentication request (trivial part :p )
+function action_authenticate(response, msg)
+{
+    response.writeHead(401,{
+        &#39;WWW-Authenticate&#39;: &#34;Basic realm=\&#34;&#34;+msg+&#34;\&#34;&#34;
+    });
+    response.end();
+}
+&lt;/pre&gt;
+
+&lt;p&gt;To make it short, this reverse-proxy enables :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;IPv4/IPv6 only application to answer to both IP familly&lt;/li&gt;
+&lt;li&gt;Independent servers to work transparently on the same public interface/port&lt;/li&gt;
+&lt;li&gt;Unsecured application to get very basic user security&lt;/li&gt;
+&lt;li&gt;more to come ? Let me know&amp;#8230;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

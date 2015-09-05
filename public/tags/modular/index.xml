@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Modular on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/modular/</link>
+    <description>Recent content in Modular on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 14 Oct 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/modular/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>[1982] Introducing the UNIX operating System</title>
+      <link>http://localhost:1313/2012/10/15/1982-introducing-the-unix-operating-system/</link>
+      <pubDate>Sun, 14 Oct 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/10/15/1982-introducing-the-unix-operating-system/</guid>
+      <description>&lt;p&gt;1982, AT&amp;amp;T introduces UNIX, a new revolutionary Operating System. Revolutionary because it keeps things simple and modular. They let people build their own solutions.&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;What&amp;rsquo;s the important about the UNIX system is not so what Denis and Ken put inside but what they were able to leave out of it.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;It&amp;rsquo;s old but still a lot to be learnt from.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Non Classé on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/categories/non-class%C3%A9/</link>
+    <description>Recent content in Non Classé on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 12 Apr 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/categories/non-class%C3%A9/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Fetching all messages since last check with Python &#43; Imap</title>
+      <link>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</link>
+      <pubDate>Fri, 12 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</guid>
+      <description>&lt;p&gt;Recently, in a freelance project I had to parse incoming mails wherever they are in the mail account and, preferably, avoid re-parsing the whole mail account only for a couple of new mails.&lt;/p&gt;
+
+&lt;p&gt;Fortunately, there is the low level &lt;a href=&#34;http://docs.python.org/3.2/library/imaplib.html&#34;&gt;imaplib&lt;/a&gt; module in Python&amp;rsquo;s toolbox. But, curiously enough, while the solution is quite simple, I have not been able to find any good solution on the net&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;By default, when you perform a &lt;a href=&#34;http://tools.ietf.org/html/rfc3501#section-6.4.4&#34;&gt;SEARCH&lt;/a&gt; on an IMAP folder, it will provide you will &lt;em&gt;relative&lt;/em&gt; identifiers in the folder meaning that any operation on the folder might alter them. Another option, not obvious for an IMAP newcommer is to use UIDs instead. These constants IDs uniquely identifies a given during its lifetime in the mail account and are allocated in a strictly growing manner. This basically means that you can rely on this information to affirm that a given mail arrived in the mailbox after another one.&lt;/p&gt;
+
+&lt;p&gt;Last interesting property, the IMAP SEARCH command return all mails whose UID is in a given range, &lt;em&gt;wildcard included&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;For this projects, I also wrote it as a generator so that it yields at each new mail, if any. Here is a stripped down code snippet highlighting the main steps from connection negotiation to yielding individual mail bodies:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: python; title: ; notranslate&#34; title=&#34;&#34;&gt;# -*- coding: utf-8 -*-
+
+import imaplib
+
+# new mail generator --&amp;gt; yield after each mail to save resources
+def new_mail(last_uid, host, port, login, password):
+    # connect
+    mail_server = imaplib.IMAP4(host, port)
+
+    # authenticate
+    mail_server.login(login, password)
+
+    # issue the search command of the form &#34;SEARCH UID 42:*&#34;
+    command = &#34;UID {}:*&#34;.format(last_uid)
+    result, data = mail_server.uid(&#39;search&#39;, None, command)
+    messages = data[0].split()
+
+    # yield mails
+    for message_uid in messages:
+        # SEARCH command *always* returns at least the most
+        # recent message, even if it has already been synced
+        if int(message_uid) &amp;gt; last_uid:
+            result, data = mail_server.uid(&#39;fetch&#39;, message_uid, &#39;(RFC822)&#39;)
+            # yield raw mail body
+            yield data[0][1]
+
+# usage example
+for mail in new_mail_generator(last_uid=42,
+                               host=&#34;imap.example.com&#34;, port=143,
+                               login=&#34;user@exampl.com&#34;,
+                               password=&#34;password&#34;):
+    # do something useful with raw mail
+    pass
+
+&lt;/pre&gt;
+
+&lt;p&gt;Going further:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Loop over all folders. (hint: see &amp;#8220;list&amp;#8221; method to get a folder list)&lt;/li&gt;
+&lt;li&gt;Save sync status to a persistent storage like a database&lt;/li&gt;
+&lt;li&gt;Parse mail body&lt;/li&gt;
+&lt;li&gt;Handle secure connections&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;If you need any help in your Python/Imap related project, &lt;a href=&#34;https://blog.jtlebi.fr/contact/&#34; title=&#34;Contact&#34;&gt;feel free to get in touch&lt;/a&gt; &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Mounting Nexus 4 device under Ubuntu</title>
+      <link>http://localhost:1313/2013/03/04/mounting-nexus-4-device-under-ubuntu/</link>
+      <pubDate>Mon, 04 Mar 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/03/04/mounting-nexus-4-device-under-ubuntu/</guid>
+      <description>&lt;p&gt;I&amp;rsquo;ve not posted here in a while as I&amp;rsquo;m now full time busy with my startup project. More on this later &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;m also now the lucky owner of a brand new Google Nexus 4 phone. Sadly, it does not work out of the box with Ubuntu yet and most forums recommends some kind of manual hacking/mounting. Luckily, there is a much easiest solution.&lt;/p&gt;
+
+&lt;p&gt;Ubuntu 13.04 will see an updated MTP GVFS stack which Philip Langdale back-ported in a PPA. To get it on your Ubuntu box, just enter this in a terminal:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo add-apt-repository ppa:langdalepl/gvfs-mtp
+sudo apt-get update
+sudo apt-get upgrade
+&lt;/pre&gt;
+
+&lt;p&gt;Enjoy!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

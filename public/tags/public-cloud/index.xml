@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Public Cloud on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/public-cloud/</link>
+    <description>Recent content in Public Cloud on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 17 Jan 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/public-cloud/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Testing X2go on OVH Public Cloud</title>
+      <link>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
+      <pubDate>Tue, 17 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
+      <description>
+
+&lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.x2go.org/&#34; title=&#34;X2go official Website&#34;&gt;X2go&lt;/a&gt; is an open source remote desktop solution based on the very per-formant NX protocol. It feels very much like the remote server is in the same room. After a very quick test, it seems to much lighter and responsive than RDP.&lt;/p&gt;
+
+&lt;h1 id=&#34;remote-instance-setup:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Remote instance setup&lt;/h1&gt;
+
+&lt;p&gt;Subscriptions to the gamma test OVH&amp;rsquo;s Cloud are here: &lt;a href=&#34;http://www.ovh.com/fr/cloud/&#34; title=&#34;OVH public Cloud Subscription&#34;&gt;http://www.ovh.com/fr/cloud/&lt;/a&gt;. They provide us with a nice and easy to use web interface as well as a full SOAP API and a shell script to automate instance and project management.&lt;/p&gt;
+
+&lt;div id=&#34;attachment_104&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;http://blog.jtlebi.fr/wp-content/uploads/2012/01/ovh-manager.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-104&#34; title=&#34;OVH&#39;s instance manager&#34; src=&#34;http://blog.jtlebi.fr/wp-content/uploads/2012/01/ovh-manager-300x144.png&#34; alt=&#34;OVH&#39;s instance manager&#34; width=&#34;300&#34; height=&#34;144&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    OVH&#39;s instance manager
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;As the web interface is pretty intuitive, I&amp;rsquo;ll focus on the shell script usage in this blog post.&lt;/p&gt;
+
+&lt;p&gt;The first command in the script will ask you for your credentials to launch a session. They are the same as the one used to connect to the &amp;#8220;Manager&amp;#8221;.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ wget http://www.ovh.com/fr/cloud/api/ovhcloud #download the script
+$ chmod +x ovhcloud
+$ ./ovhcloud instance addProject --name x2go-ovh # create a new project
+$ ./ovhcloud instance getProjects #Lists all your projects
+&lt;/pre&gt;
+
+&lt;p&gt;Note: each object (Project, Instance, Task, Offer, Zone, &amp;#8230;) are suffixed to actions (get, add, delete, make, &amp;#8230;).&lt;/p&gt;
+
+&lt;p&gt;Next step is to create the instances you need. In this example, I&amp;rsquo;ll create a single one.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance newInstance --projectName x2go-ovh --offerName xs --distributionName ubuntu1004-x64 --zoneName rbx1 --name server&lt;/pre&gt;
+
+&lt;p&gt;TIP: For each parameter &amp;#8220;*name&amp;#8221; of this command, you can get a list of this possible values by issuing this command :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance get* #General command
+$ ./ovhcloud instance getDistributions #example
+Function returned:
+base    name               platform description
+----    ----               -------- -----------
+ubuntu  ubuntu1004-x64     64       OVH Ubuntu 1004 distribution - 64 bits
+windows win2008sp2-std-x64 64       windows 2008sp2 std distribution - 64 bits
+centos  centos5-x64        64       OVH Centos 5 distribution - 64 bits
+debian  debian564          64       OVH Debian 5 distribution - 64 bits
+debian  debian664          64       OVH Debian 6 distribution - 64 bits
+&lt;/pre&gt;
+
+&lt;p&gt;Each command leads to the internal creation of a &amp;#8220;task&amp;#8221; in the remote system. Let&amp;rsquo;s get a list of the tasks related to our project :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance getTasks --projectId ****
+projectId (long): ***
+Function returned:
+instanceId function    status finishDate zone comment lastUpdate                currentDetailedState todoDate                  id
+---------- --------    ------ ---------- ---- ------- ----------                -------------------- --------                  --
+66301      addInstance doing             rbx1         2012-01-16T13:52:08+01:00 installOns           2012-01-16T13:51:52+01:00 14571&lt;/pre&gt;
+
+&lt;p&gt;Sadly the call interface is not consistent between functions. For some, one needs to give a project&amp;rsquo;s name whereas on other, it is the ID&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;You can now use ssh to connect the instance.The following command will launch an interactive menu as the required parameter &amp;#8220;instanceId&amp;#8221; has not been specified. Anyway, it is not possible to specify it since this command is buggy &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/frownie.png&#34; alt=&#34;:(&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance ssh&lt;/pre&gt;
+
+&lt;p&gt;Note: you can also directly grab the credentials and IP and use them to manually ssh. This could be used when tunneling for example.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance getLoginInformations&lt;/pre&gt;
+
+&lt;h1 id=&#34;installing-x2go-on-the-instance:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Installing X2go on the instance&lt;/h1&gt;
+
+&lt;p&gt;This part is (almost) independent from the previous one. I&amp;rsquo;ll assume you are connected to a remote server running Ubuntu 10.04. It should be fine with any supported flavor of Ubuntu but I did not test it.&lt;/p&gt;
+
+&lt;p&gt;On the remote server as well as the local client, install the package repository&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ sudo apt-get install python-software-properties #installation de la commande &#34;add-apt-repository&#34;
+$ sudo add-apt-repository ppa:x2go/stable
+$ sudo apt-get update&lt;/pre&gt;
+
+&lt;p&gt;The installation is as easy as this&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ sudo apt-get install x2goserver
+$ sudo apt-get install ubuntu-desktop
+$ sudo apt-get install x2gognomebindings #brings some integration &lt;/pre&gt;
+
+&lt;p&gt;No additional configuration is required ! Nonetheless, you should create a low privileged user as a client&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;On the client side, just install package &amp;#8220;x2goclient&amp;#8221;.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ sudo apt-get install x2goclient &lt;/pre&gt;
+
+&lt;h1 id=&#34;conclusion:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Conclusion&lt;/h1&gt;
+
+&lt;p&gt;You should now be able to run a Cloud desktop. It is possible to start/stop it on demand with a simple shell command :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$  ./ovhcloud instance stopInstance --instanceID *** &lt;/pre&gt;
+
+&lt;p&gt;This &amp;#8220;Public Cloud&amp;#8221; is still very young. The script lacks consistency and is buggy, no real storage option is yet offered, &amp;#8230; Nonetheless, it looks very promising and the dev team listens well to users feedback &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;I encourage the reader to test sound, folder and printer sharing between the client and the remote desktop. My experience is that the sound only works from a theoretical point of view as it uses a huge BP. Folder sharing is OK and I could not manage to make printer sharing work (at the moment).&lt;/p&gt;
+
+&lt;p&gt;Enjoy !&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

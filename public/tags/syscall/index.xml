@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Syscall on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/syscall/</link>
+    <description>Recent content in Syscall on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 25 Apr 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/syscall/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How I shrunk a Docker image by 98.8% – featuring fanotify</title>
+      <link>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
+      <pubDate>Sat, 25 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
+      <description>
+
+&lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
+
+&lt;p&gt;You can find a couple of pretty decent common-sense powered approach &lt;a href=&#34;https://intercityup.com/blog/downsizing-docker-containers.html&#34;&gt;on the web&lt;/a&gt; like removing well known cache folders, temporary files, installing all superfluous packages and flatten layers if not the full image. There is also the &lt;code&gt;-slim&lt;/code&gt; declination of the official language images.&lt;/p&gt;
+
+&lt;p&gt;But, thinking at it, do we &lt;em&gt;really&lt;/em&gt; need a full consistent base Linux install? Which files do we &lt;em&gt;really&lt;/em&gt; need in a given image? I found a radical and pretty efficient approaches with a go binary. It was statically build, almost no external dependency. &lt;a href=&#34;http://blog.codeship.com/building-minimal-docker-containers-for-go-applications/&#34;&gt;Resulting image&lt;/a&gt;: 6.12MB.&lt;/p&gt;
+
+&lt;p&gt;Whaou! Is there any chance to do something comparable, deterministic with any random application?&lt;/p&gt;
+
+&lt;p&gt;It turns out there could be one. The idea is simple: We could profile the image at run time one way or another to determine which files are ever accessed/opened/&amp;#8230;, then remove all the remaining files. Hmm, sounds promising. Let&amp;rsquo;s PoC it.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Target definition&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Start image&lt;/strong&gt;: Ubuntu (~200MB)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Application that MUST run&lt;/strong&gt;: &lt;code&gt;/bin/ls&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Goal&lt;/strong&gt;: Build the smallest possible image&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;code&gt;/bin/ls&lt;/code&gt; is a good target: It is simple enough for a PoC with no nasty behavior but still not trivial, it uses dynamic linking.&lt;/p&gt;
+
+&lt;p&gt;Now that we have a target, let&amp;rsquo;s pick a tool. As this is a proof of concept, using dynamites where a hole puncher would  be enough &lt;em&gt;IS&lt;/em&gt; an option, as long as it does the job.&lt;/p&gt;
+
+&lt;p&gt;The base idea it to record all file accesses. Be it a stat or a open. There are a couple of good candidates to help with the task. We could use &lt;a href=&#34;http://linux.die.net/man/7/inotify&#34; title=&#34;Man Inotify&#34;&gt;inotify&lt;/a&gt; but it is a pain to setup and watches needs to be attached on every single files, which potentially mean a *lot* of watches. We could use LD_PRELOAD but 1/ it&amp;rsquo;s no fun to use, 2/ it won&amp;rsquo;t catch direct syscalls 3/ it won&amp;rsquo;t work with statically linked programs (who said golang&amp;rsquo;s?). A solution that would work well even for statically linked program would be to use &lt;a href=&#34;http://linux.die.net/man/2/ptrace&#34; title=&#34;Man ptrace&#34;&gt;ptrace&lt;/a&gt; to trace all syscalls, in realtime. It is also a pain to setup but, it would be a reliable and flexible option. A lesser known linux syscall is &lt;a href=&#34;http://man7.org/linux/man-pages/man7/fanotify.7.html&#34;&gt;fanotify&lt;/a&gt;. As the title suggests, This is the one we&amp;rsquo;ll go with&lt;sup&gt;1&lt;/sup&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;fanotify&lt;/code&gt; syscall has originally been implemented as &amp;#8220;decent&amp;#8221; mechanism for anti-virus vendors to intercept file access events, potentially on a whole mountpoint at once. Sounds familiar? While it may be used to deny file accesses, it may also just report file access events in a non-blocking fashion, potentially dropping&lt;sup&gt;2&lt;/sup&gt; events if the kernel queue overflows. In this last case, a special message will be generated to notify user-land listener about the message loss. This is perfectly what I needed. Non intrusive, a whole mountpoint at once, simple setup (well, provided that you find the documentation, no comment&amp;#8230;). This may seem anecdotal but it has its importance, as a learned after.&lt;/p&gt;
+
+&lt;p&gt;Using it is fairly simple:&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1/ Init &lt;code&gt;fanotify&lt;/code&gt; in &lt;code&gt;FAN_CLASS_NOTIF&lt;/code&gt;ication mode using &lt;a href=&#34;http://man7.org/linux/man-pages/man2/fanotify_init.2.html&#34;&gt;&lt;code&gt;fanotify_init&lt;/code&gt; syscall&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Open ``fan`` fd for fanotify notifications. Messages will embed a 
+// filedescriptor on accessed file. Expect it to be read-only
+fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ Subscribe to &lt;code&gt;FAN_ACCESS&lt;/code&gt; and &lt;code&gt;FAN_OPEN&lt;/code&gt; events on &amp;#8220;/&amp;#8221; &lt;code&gt;FAN_MARK_MOUNT&lt;/code&gt;point using &lt;a href=&#34;http://man7.org/linux/man-pages/man2/fanotify_mark.2.html&#34;&gt;&lt;code&gt;fanotify_mark&lt;/code&gt; syscall&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Watch open/access events on root mountpoint
+fanotify_mark(
+    fan, 
+    FAN_MARK_ADD | FAN_MARK_MOUNT, // Add mountpoint mark to fan
+    FAN_ACCESS | FAN_OPEN,         // Report open and access events, non blocking
+    -1, &#34;/&#34;                        // Watch root mountpoint (-1 is ignored for FAN_MARK_MOUNT type calls)
+);
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;3/ read&lt;/code&gt; pending event messages from the filedescriptor returned by &lt;code&gt;fanotify_init&lt;/code&gt; and iterate using &lt;code&gt;FAN_EVENT_NEXT&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Read pending events from ``fan`` into ``buf``
+buflen = read(fan, buf, sizeof(buf));
+
+// Position cursor on first message
+metadata = (struct fanotify_event_metadata*)&amp;buf;
+
+// Loop until we reached the last event
+while(FAN_EVENT_OK(metadata, buflen)) {
+    // Do something interesting with the notification
+    // ``metadata-&amp;gt;fd`` will contain a valid, RO fd to accessed file.
+
+    // Close opened fd, otherwise we&#39;ll quickly exhaust the fd pool.
+    close(metadata-&amp;gt;fd);
+
+    // Move to next event in buffer
+    metadata = FAN_EVENT_NEXT(metadata, buflen);
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Putting it all together, we&amp;rsquo;ll print the full name of all accessed files and add queue overflow detection. This should be plain enough for us (comments and error checks stripped for the purpose of this illustration):&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;limits.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sys/fanotify.h&amp;gt;
+
+int main(int argc, char** argv) {
+    int fan;
+    char buf[4096];
+    char fdpath[32];
+    char path[PATH_MAX + 1];
+    ssize_t buflen, linklen;
+    struct fanotify_event_metadata *metadata;
+
+    // Init fanotify structure
+    fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+
+    // Watch open/access events on root mountpoint
+    fanotify_mark(
+        fan,
+        FAN_MARK_ADD | FAN_MARK_MOUNT,
+        FAN_ACCESS | FAN_OPEN,
+        -1, &#34;/&#34;
+    );
+
+    while(1) {
+        buflen = read(fan, buf, sizeof(buf));
+        metadata = (struct fanotify_event_metadata*)&amp;buf;
+
+        while(FAN_EVENT_OK(metadata, buflen)) {
+            if (metadata-&amp;gt;mask &amp; FAN_Q_OVERFLOW) {
+                printf(&#34;Queue overflow!\n&#34;);
+                continue;
+            }
+
+            // Resolve path, using automatically opened fd
+            sprintf(fdpath, &#34;/proc/self/fd/%d&#34;, metadata-&amp;gt;fd);
+            linklen = readlink(fdpath, path, sizeof(path) - 1);
+            path[linklen] = &#39;&amp;#92;&amp;#48;&#39;;
+            printf(&#34;%s\n&#34;, path);
+
+            close(metadata-&amp;gt;fd);
+            metadata = FAN_EVENT_NEXT(metadata, buflen);
+        }
+    }
+}
+&lt;/pre&gt;
+
+&lt;p&gt;To build it, use:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;gcc main.c --static -o fanotify-profiler
+&lt;/pre&gt;
+
+&lt;p&gt;We basically now have a tool to report any file access on the active &amp;#8216;/&amp;rsquo; mountpoint in real time. Good.&lt;/p&gt;
+
+&lt;p&gt;What now? Let&amp;rsquo;s create an Ubuntu container, start the recorder and run &lt;code&gt;/bin/ls&lt;/code&gt;. &lt;code&gt;fanotify&lt;/code&gt; requires require the &amp;#8220;&lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&amp;#8221; capability. This is basically the &amp;#8220;catch-all&amp;#8221; root &lt;a href=&#34;http://linux.die.net/man/7/capabilities&#34;&gt;capability&lt;/a&gt;. Still better than running in &lt;code&gt;--privileged&lt;/code&gt; mode though.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Run image
+docker run --name profiler_ls \
+           --volume $PWD:/src \
+           --cap-add SYS_ADMIN \
+           -it ubuntu /src/fanotify-profiler
+
+# Run the command to profile, from another shell
+docker exec -it profiler_ls ls
+
+# Interrupt Running image using
+docker kill profiler_ls # You know, the &#34;dynamite&#34;
+&lt;/pre&gt;
+
+&lt;p&gt;This should produce an output like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;/etc/passwd
+/etc/group
+/etc/passwd
+/etc/group
+/bin/ls
+/bin/ls
+/bin/ls
+/lib/x86_64-linux-gnu/ld-2.19.so
+/lib/x86_64-linux-gnu/ld-2.19.so
+/etc/ld.so.cache
+/lib/x86_64-linux-gnu/libselinux.so.1
+/lib/x86_64-linux-gnu/libacl.so.1.1.0
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libattr.so.1.1.0
+&lt;/pre&gt;
+
+&lt;p&gt;Awesome! It worked. We now know for sure what &lt;code&gt;/bin/ls&lt;/code&gt; ultimately needs to run.&lt;/p&gt;
+
+&lt;p&gt;So we&amp;rsquo;ll just copy-paste-import all this in a &amp;#8220;&lt;code&gt;FROM scratch&lt;/code&gt;&amp;#8221; Docker Image and we&amp;rsquo;ll be done. Easy. Well, not so. But let&amp;rsquo;s do it to see by ourselves.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Export base docker image
+mkdir ubuntu_base
+docker export profiler_ls | sudo tar -x -C ubuntu_base
+
+# Create new image
+mkdir ubuntu_lean
+
+# Get the linker (trust me)
+sudo mkdir -p ubuntu_lean/lib64
+sudo cp -a ubuntu_base/lib64/ld-linux-x86-64.so.2 ubuntu_lean/lib64/
+
+# Copy the files
+sudo mkdir -p ubuntu_lean/etc
+sudo mkdir -p ubuntu_lean/bin
+sudo mkdir -p ubuntu_lean/lib/x86_64-linux-gnu/
+
+sudo cp -a ubuntu_base/bin/ls ubuntu_lean/bin/ls
+sudo cp -a ubuntu_base/etc/group ubuntu_lean/etc/group
+sudo cp -a ubuntu_base/etc/passwd ubuntu_lean/etc/passwd
+sudo cp -a ubuntu_base/etc/ld.so.cache ubuntu_lean/etc/ld.so.cache
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libselinux.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libselinux.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1.1.0
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libc-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3.13.1 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libdl-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1.1.0
+
+# Import it back to Docker
+cd ubuntu_lean
+sudo tar -c . | docker import - ubuntu_lean
+&lt;/pre&gt;
+
+&lt;p&gt;Run the resulting image:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run --rm -it ubuntu_lean /bin/ls
+&lt;/pre&gt;
+
+&lt;p&gt;And, Tadaaaaa:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;# If you did not trust me with the linker (as it was already loaded when the profiler started, it does not show in the ouput)
+no such file or directoryFATA[0000] Error response from daemon: Cannot start container f318adb174a9e381500431370a245275196a2948828919205524edc107626d78: no such file or directory
+
+# Otherwise
+/bin/ls: error while loading shared libraries: libacl.so.1: cannot open shared object file: No such file or directory
+&lt;/pre&gt;
+
+&lt;p&gt;Well, not so&amp;#8230; What went wrong? Remember when I said this syscall was primarily designed with antivirus in mind? The real-time part of the antivirus is supposed to detect that a file is being accessed, run some checks, take a decision. What matters here is the actual, real content of the file. In particular, filesystem races MUST be avoided at all costs. This is the reason why &lt;code&gt;fanotify&lt;/code&gt; yields filedescriptors instead of accesses path. Determining the underlying physical file is done by probing &lt;code&gt;/proc/self/fd/[fd]&lt;/code&gt;. It does not tell you through which symlink the file being accessed was accessed, only what file it is.&lt;/p&gt;
+
+&lt;p&gt;To make this work, we need to find all links to reported files and install them in the filtered image as well. A &lt;code&gt;find&lt;/code&gt; command like this will do the job:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Find all files refering to a given one
+find -L -samefile &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; 2&amp;gt;/dev/null
+
+# If you want to exclude the target itself from the results
+find -L -samefile &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; -a ! -path &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; 2&amp;gt;/dev/null
+&lt;/pre&gt;
+
+&lt;p&gt;This can easily be automated with a loop like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;for f in $(cd ubuntu_lean; find)
+do 
+    (
+        cd ubuntu_base
+        find -L -samefile &#34;$f&#34; -a ! -path &#34;$f&#34;
+    ) 2&amp;gt;/dev/null
+done
+&lt;/pre&gt;
+
+&lt;p&gt;Which produces the list of missing symlinks. All libs.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;./lib/x86_64-linux-gnu/libc.so.6
+./lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+./lib/x86_64-linux-gnu/libattr.so.1
+./lib/x86_64-linux-gnu/libdl.so.2
+./lib/x86_64-linux-gnu/libpcre.so.3
+./lib/x86_64-linux-gnu/libacl.so.1
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s copy them too from the source image and re-create the destination image. (Yeah, could also have created them on the fly).&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Copy the links
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc.so.6 ubuntu_lean/lib/x86_64-linux-gnu/libc.so.6
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ubuntu_lean/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl.so.2 ubuntu_lean/lib/x86_64-linux-gnu/libdl.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1
+
+# Import it back to Docker
+cd ubuntu_lean
+docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Warning&lt;/strong&gt;: This method is limited. For example, it won&amp;rsquo;t return links to links to files neither absolute links. The later requiring at least a chroot. Or to be run in the source container itself, provided that find or equivalent is present.&lt;/p&gt;
+
+&lt;p&gt;Run the resulting image:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run --rm -it ubuntu_lean /bin/ls
+&lt;/pre&gt;
+
+&lt;p&gt;And, Tadaaaaa:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;bin  dev  etc  lib  lib64  proc  sys
+&lt;/pre&gt;
+
+&lt;p&gt;It works! &lt;sup&gt;tm&lt;/sup&gt;&lt;/p&gt;
+
+&lt;p&gt;Time is over, let&amp;rsquo;s measure:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;&lt;strong&gt;ubuntu&lt;/strong&gt;: 209M&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;strong&gt;ubuntu_lean&lt;/strong&gt;: 2,5M&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Resulting Docker image is 83.5 &lt;em&gt;times&lt;/em&gt; smaller&lt;sup&gt;3&lt;/sup&gt;. That&amp;rsquo;s a 98.8% reduction. Looks good to me, I&amp;rsquo;ll accept it. If you agree.&lt;/p&gt;
+
+&lt;h3 id=&#34;last-thought:ed6b7f79feba98b85e08740dab416986&#34;&gt;Last Thought&lt;/h3&gt;
+
+&lt;p&gt;Like all profiling based method, it will only tell you about what&amp;rsquo;s actually done/used in a specific scenario. For example, try to run &lt;code&gt;/bin/ls -l&lt;/code&gt; in the resulting image and see by yourself. (spoiler: it does not work. Well it does, but not as expected).&lt;/p&gt;
+
+&lt;p&gt;The profiling technique itself is not without flaws. It does not detect how a file was opened but only which file this is. This is a problem for symlinks, especially cross-filesytems (read: cross-volumes). With fanotify, we&amp;rsquo;ll completely miss the original symlink and break the application.&lt;/p&gt;
+
+&lt;p&gt;If I were to build a production shrinker, I would probably go for a &lt;code&gt;ptrace&lt;/code&gt; based method.&lt;/p&gt;
+
+&lt;h3 id=&#34;footnotes:ed6b7f79feba98b85e08740dab416986&#34;&gt;Footnotes&lt;/h3&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;Let&amp;rsquo;s face the truth: What I really wanted, was experimenting with this syscall. Docker images are more of a (good) pretext.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Actually, one could use &lt;code&gt;FAN_UNLIMITED_QUEUE&lt;/code&gt; well calling &lt;code&gt;fanotify_init&lt;/code&gt; to remove this limitation, provided that the calling process is at least &lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;That&amp;rsquo;s also 2.4 times smaller that the 6.13MB image I mentioned at the beginning of this post. But the comparison is not fair.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

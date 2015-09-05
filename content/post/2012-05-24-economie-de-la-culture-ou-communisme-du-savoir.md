@@ -1,0 +1,35 @@
+---
+title: Économie de la culture ou communisme du savoir ?
+author: Jean-Tiare Le Bigot
+layout: post
+date: 2012-05-24
+url: /2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/
+categories:
+  - Essai
+tags:
+  - Cloud
+  - communisme
+  - économie
+  - hubic
+  - location
+  - savoir
+---
+« La preuve de la faillite du système communiste, c'est sa condition de survie. Pour survivre, ils doivent adopter un modèle économique libérale. » Combien de fois ai-je entendu cette affirmation pompeuse ?
+
+Quoi qu’étant, à titre strictement personnel, fermement opposé au communisme, je ne voudrais certainement pas que cette opposition se fasse au prix de ma lucidité et de ma capacité à prendre du recul.
+
+Avez-vous observé la tendance actuelle en matière de modèles économiques dans le domaine des services ? À vrai dire, nous avons tellement le nez dessus que nous ne le voyons même plus. <!--more-->
+
+Si le système politique communiste doit, pour survivre se doter d'un système économique libérale, J'ai bien peur que, pour sa survie, notre système économique ait crût indispensable de se doter d'une politique digne des pires régimes communistes.
+
+Comment oser porter une telle affirmation ? Quand j'étais enfant, mon grand père me décrivait le système soviétique en ces termes : « Le système soviétique, c'est &#8220;Donne moi ta montre et je te donne l'heure&#8221; ». Pourquoi nous semble t-il évident que cette phrase est une aberration  alors que nous nous dirigeons vers un système dans lequel ce sera « Donne moi tes biens dématérialisés et je te vends une licence d'utilisation »
+
+La plupart du temps, lorsqu'on utilise un système de stockage de fichiers en ligne, on concède tous les droits sur le fichiers que l'on dépose. On reçoit en échange (dans le meilleur des cas) une reconnaissance de propriété intellectuelle ainsi qu'un droit d'utilisation. Ces systèmes sont Dropbox, Google Drive, Microsoft SkyDrive. Je mets volontairement de coté Hubic d'OVH qui a expressément exclue ces pratiques de ses contrats alors même qu'il est le plus généreux en terme d'espace gratuit !
+
+Il en est de même avec le marché du livre sur liseuse. Depuis longtemps dénoncé, c'est en train de devenir une réalité. Lorsque vous souhaitez lire un livre en version papier, deux options s'offrent à vous. La première est de l'acheter tandis que la seconde est de l'emprunter, que ce soit à un amis où dans une bibliothèque. En aucun cas, il ne viendrait à l'idée d'un libraire de vous reprendre le livre qu'il vous aurait vendu de manière parfaitement régulière. Même contre remboursement. Il ne lui viendrait jamais à l'idée non plus de vous en interdire le prêt. Après tout, s'il est libraire, c'est peut être parce qu'il aime les livres et il semble évident qu'il est plus difficile de transférer cette passion si on perd le droit de prêter le livre. Pourtant, c'est ce qui est pratiqué avec le livre électronique. Vous n'achetez plus un livre mais un droit de lire. C'est un peu comme une bibliothèque où vous devriez payer pour chaque emprunt ! Ce livre est attaché à votre compte client. Le seul moyen de le prêter est de le prêter avec votre liseuse c'est à dire avec votre bibliothèque personnelle. Sans commentaire. Je ne viendrai pas ajouter à cette liste la possibilité d'_effacer_ à distance l'un de ces ouvrage sur simple demande. Un mécontent, et le livre n'a jamais existé&#8230;
+
+Qu'en est- il dans le domaine de la musique et des films ? Au contraire des livres qui sont encore traditionnellement attachés au libraire, la musique et les films me semblent plus associés d'une part à la grande distribution et au piratage d'autre part. Je n'ai pas le sentiment que le commerce de proximité y soit encore attaché. C'est au contraire une véritable industrie qui nous les propose à la vente. En ce qui concerne la musique, le principal vecteur d'écoute légale, en dehors des plate-forme de type deezer ou spotify, reste l'acquisition du morceau. Cependant la location d'un droit d'écoute tend à ce généraliser sur les plates-formes que je viens d'exclure. Cesser de s’acquitter de cette redevance mensuelle implique de facto la fin de l'accès à l'_ensemble_ de la musique disponible. Il est bien entendu que ce droit d'écoute n'est pas cessible. En revanche, dans le domaine de la musique, il reste encore possible de la prêter. Si cela est évident pour les supports physiques tels que les CDs, ce droit n'a  pût être conquis que de longue lutte pour son homologue numérique. Si le format standard de la musique est maintenant le .mp3, nombreuses ont été les tentatives d'imposer un format qui assurerait un contrôle parfait à chaque écoute. Outre toutes les implications en terme de verrouillage des marchés connexes comme ceux des lecteurs de musiques et autre baladeurs, ce système présentait une caractéristique inattendue par ces concepteurs. Ce moyen de diffuser de la musique avait, par essence, un fort effet dissuasif. En effet, lors de l'acquisition d'un morceau, il vous fallait auparavant vous assurer de disposer de tout l'attirail de lecture. Exit les systèmes ouverts comme linux (qui héberge ce Blog et propulse l'ordinateur personnel de l'auteur). Exit, la diffusion de la culture. Bienvenu dans un monde où seules les idées réputées &#8220;sûres&#8221; auront l'opportunité de se propager. Depuis cette ré-ouverture de la musique, je n'hésite plus à acheter de la musique en ligne.
+
+Du coté de la vidéo rien n'est gagné encore. S'il est encore possible de partager les supports physiques, il s'en est fallu de peu pour que ce droit ne survive pas à l'arrivée du blueray. En effet, il était initialement prévu que les platines déclarent auprès d'un service centralisée toute tentative de lecture. Celles-ci seraient automatiquement refusées si ce même support avait déjà été joué sur une autre platine et cela même si son propriétaire était la même personne. On imagine également les conséquences en termes de potentialité de censure à posteriori. Si ce système a été abandonné pour ces supports, il n'en est pas moins utilisé dans les consoles de jeux, mais c'est encore une autre histoire.
+
+L'arrivée du numérique dans le domaine du partage de la connaissance et de la culture a permis d' accélérer grandement sa diffusion et c'est  une chose vraiment  remarquable. Je trouve également qu'il est juste que l'auteur d'une œuvre, fut -elle numérique, puisse être rémunéré à hauteur de son travail s'il en exprime le souhait. Pour cela, encore faudrait- il qu'on cesse de multiplier les barrières à l’achat tel que le prix ou les contraintes techniques imposées par les verrous numériques (DRM). La grande majorité des gens ne sont pas des voleurs. Si l'on cesse de multiplier les barrières de l'offre légale, peut être pourra elle enfin se développer. Au fond, j'ai d'abord besoin que l'on me fasse confiance et  qu'on me laisse respirer.

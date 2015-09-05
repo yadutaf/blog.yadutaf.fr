@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Introduction to Linux namespaces - Part 3: PID | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Introduction to Linux namespaces - Part 3: PID</h1>
+      <div class="meta">
+        Jan 5, 2014 &nbsp;
+        
+          #<a href="/tags/linux">linux</a>&nbsp;
+        
+          #<a href="/tags/namespace">namespace</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>Following the <a href="https://blog.jtlebi.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/" title="Introduction to Linux namespaces – Part 2: IPC">previous post on IPC namespace</a> (Inter Process Communication isolation), I would now like to introduce my personal favorite one (as sysadmin): PID namespaces. If you haven&rsquo;t done so already, I encourage you to read <a href="https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/" title="Introduction to Linux namespaces – Part 1: UTS">the first post of this series for an introduction to linux namespace isolation mechanism</a>.</p>
+
+<p>[EDIT 2014-01-08] A Chinese translation of this post is available <a href="http://blog.lucode.net/linux/intro-Linux-namespace-3.html">here</a></p>
+
+<p>Yes, that&rsquo;s it, with this namespace it is possible to restart PID numbering and get your own &#8220;1&#8221; process. This could be seen as a &#8220;chroot&#8221; in the process identifier tree. It&rsquo;s extremely handy when you need to deal with pids in day to day work and are stuck with 4 digits numbers&#8230;</p>
+
+<p>Activating it is only a matter of adding &#8220;CLONE_NEWPID&#8221; to the &#8220;clone&#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.</p>
+
+<p>Once activated, the result of getpid() from child process will invariably be &#8220;1&#8221;.</p>
+
+<p>But, WAIT! I know have to &#8220;1&#8221; process right ? What about process management ?</p>
+
+<p>Well, actually, this *really* is much like a &#8220;chroot&#8221;. That is to say, a change of view point.</p>
+
+<ul>
+<li>Host: <em>all</em> processes are visible, <em>global</em> PIDs (init=1, &#8230;, child=xxx, &#8230;.)</li>
+<li>Container: <em>only child + descendant</em> are visible, local PIDs (child=1, &#8230;)</li>
+</ul>
+
+<p>Here is an illustration:</p>
+
+<pre class="brush: cpp; highlight: [29,41,44]; title: ; notranslate" title="">#define _GNU_SOURCE
+#include &lt;sys/types.h&gt;
+#include &lt;sys/wait.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;sched.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;unistd.h&gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  "/bin/bash",
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+  // wait...
+  read(checkpoint[0], &c, 1);
+
+  printf(" - [%5d] World !\n", getpid());
+  sethostname("In Namespace", 12);
+  execv(child_args[0], child_args);
+  printf("Ooops\n");
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(" - [%5d] Hello ?\n", getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | SIGCHLD, NULL);
+
+  // further init here (nothing yet)
+
+  // signal "done"
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+</pre>
+
+<p>And an example run:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns && sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# echo "=&gt; My PID: $$"
+=&gt; My PID: 1
+root@In Namespace:~/blog# exit
+</pre>
+
+<p>As expected, even thought the parent process as a PID of &#8220;7823&#8221;, the child&rsquo;s PID is &#8220;1&#8221;. If you are playfull, you could try to &#8220;kill -KILL 7823&#8221; the parent process. It would do exactly&#8230; nothing:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns && sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# kill -KILL 7823
+bash: kill: (7823) - No such process
+root@In Namespace:~/blog# exit
+</pre>
+
+<p>The isolation is working as expected. And, as written earlier, this behaves much like a &#8220;chroot&#8221; meaning that with a &#8220;top&#8221; or &#8220;ps exf&#8221; from the parent process will show the child process with its real un-mapped PID. This is an essential feature for process control like &#8220;kill&#8221;, &#8220;cgroups&#8221;, &#8230; and various policies.</p>
+
+<p>Wait! Speaking of &#8220;top&#8221; and &#8220;ps exf&#8221;, I just ran them from the child and saw exactly the same as from the parent. You lied to me about isolation !</p>
+
+<p>Well, not at all. This is because these tools get their informations from the virtual &#8220;/proc&#8221; filesystem which is not (yet) isolated. This is the purpose of the next article.</p>
+
+<p>In the mean time, an easy workaround could be:</p>
+
+<pre class="brush: plain; highlight: [3,5]; title: ; notranslate" title=""># from child
+root@In Namespace:~/blog# mkdir -p proc
+root@In Namespace:~/blog# mount -t proc proc proc
+root@In Namespace:~/blog# ls proc
+1          dma          key-users      net            sysvipc
+80         dri          kmsg           pagetypeinfo   timer_list
+acpi       driver       kpagecount     partitions     timer_stats
+asound     execdomains  kpageflags     sched_debug    tty
+buddyinfo  fb           latency_stats  schedstat      uptime
+bus        filesystems  loadavg        scsi           version
+cgroups    fs           locks          self           version_signature
+cmdline    interrupts   mdstat         slabinfo       vmallocinfo
+consoles   iomem        meminfo        softirqs       vmstat
+cpuinfo    ioports      misc           stat           zoneinfo
+crypto     irq          modules        swaps
+devices    kallsyms     mounts         sys
+diskstats  kcore        mtrr           sysrq-trigger
+</pre>
+
+<p>Everything seems reasonable again. As expected, you get PID &#8220;1&#8221; for /bin/bash itself and &#8220;80&#8221; corresponds to the running &#8220;/bin/ls proc&#8221; command. Much nicer to read than usual /proc, isn&rsquo;t it ? That&rsquo;s why I love it.</p>
+
+<p>If you attempt to run this command directly on the &#8220;/proc&#8221; from the namespace, it will <em>seem</em> to work in the child but BREAK your main namespace. Example:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">jean-tiare@jeantiare-Ubuntu:~/blog$ ps aux
+Error, do this: mount -t proc proc /proc
+</pre>
+
+<p>That&rsquo;s all for PID namespace. With the next article, we&rsquo;ll be able to re-mount /proc itself and hence fix &#8220;top&#8221; and any similar tools without breaking the parent namespace. Thanks for reading !</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/" rel="prev">Introduction to Linux namespaces - Part 2: IPC</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/" rel="next">Introduction to Linux namespaces - Part 4: NS (FS)</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

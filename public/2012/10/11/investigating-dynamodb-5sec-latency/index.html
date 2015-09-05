@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Investigating DynamoDB 5sec latency | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Investigating DynamoDB 5sec latency</h1>
+      <div class="meta">
+        Oct 11, 2012 &nbsp;
+        
+          #<a href="/tags/amazon">amazon</a>&nbsp;
+        
+          #<a href="/tags/boto">boto</a>&nbsp;
+        
+          #<a href="/tags/dynamodb">dynamodb</a>&nbsp;
+        
+          #<a href="/tags/dynamodb-mapper">dynamodb-mapper</a>&nbsp;
+        
+          #<a href="/tags/investigation">investigation</a>&nbsp;
+        
+          #<a href="/tags/latency">latency</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>It goes without saying that a 5000ms latency is&#8230; <em>unacceptable</em> in a real-time environment. Honestly, we first blamed our <a href="http://pypi.python.org/pypi/dynamodb-mapper" title="(Python) DynamoDB Mapper">home-grown DynamoDB-Mapper</a> and, indeed found, and fixed, a nasty design. <a href="https://bitbucket.org/Ludia/dynamodb-mapper/changeset/059791c53426e92556a9c20a3376db298be38a37" title="commit about always filling transactions">Here is the specific commit</a> for those liking juicy details <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+<p>Ok, so &#8220;case closed&#8221; you might think. Sadly not, it did not change anything but since this behavior was random and the application still under very low load (development environment) it took some time to spot it again.</p>
+
+<p>Case re-opened.</p>
+
+<p>Diving deeper in CloudWatch, I saw these pick latency in the stat. Interestingly enough, this was always like 5000 + n milliseconds. Where &#8216;n&rsquo; is small and pretty close to the normal average latency observed on DynamoDB. After mailing directly Amazon&rsquo;s support about this specific issue, it appeared that this intuition was right. 5 sec it the failure timeout on their side.</p>
+
+<p>We already know that data is spread over partitions. But this &#8220;partitions&#8221; might simply be instances running as part of a cluster. This cluster would then be exposed by an ELB with failure timeout set to 5sec. From my early tests, I noticed that there is 2 exposed partitions on a nearly empty table at a throughput of 1000. It now appears that both partition contains the whole dataset. Good!</p>
+
+<p>Mystery solved ? Dunno. I have no clue how DynamoDB is actually built and all this is jealously kept as an &#8216;IP&rsquo; secret, which I can understand.</p>
+
+<p>So, most of the time DynamoDB is indeed a great choice. But, sometimes, you may experience unusual latencies. In this case, feel free to tell the support so that they can drop an eye.</p>
+
+<p>Last advice: always keep profiling informations. I was asked for the &#8216;TransactionID&rsquo; and suddenly felt stupid as we have none. Bad luck. If you use the great <a href="http://docs.pythonboto.org/en/latest/index.html" title="Python Boto library">Boto library</a>, do not forget to configure &#8216;boto.perflog&rsquo;, I contributed it for this very purpose <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+<p>Oh, If you read this down to that point, you may be interested in some <a href="https://blog.jtlebi.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/" title="Common DynamoDB questions/misconceptions/recipes">common DynamoDB recipies</a> too.</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/" rel="prev">Common DynamoDB questions/misconceptions/recipes</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2012/10/15/1982-introducing-the-unix-operating-system/" rel="next">[1982] Introducing the UNIX operating System</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

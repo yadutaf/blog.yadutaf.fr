@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Testing X2go on OVH Public Cloud | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Testing X2go on OVH Public Cloud</h1>
+      <div class="meta">
+        Jan 17, 2012 &nbsp;
+        
+          #<a href="/tags/automation">automation</a>&nbsp;
+        
+          #<a href="/tags/cloud">Cloud</a>&nbsp;
+        
+          #<a href="/tags/ovh">OVH</a>&nbsp;
+        
+          #<a href="/tags/public-cloud">Public Cloud</a>&nbsp;
+        
+          #<a href="/tags/remote-desktop">remote desktop</a>&nbsp;
+        
+          #<a href="/tags/ssh">ssh</a>&nbsp;
+        
+          #<a href="/tags/test">test</a>&nbsp;
+        
+          #<a href="/tags/tutorial">tutorial</a>&nbsp;
+        
+          #<a href="/tags/x2go">X2go</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<p>About 1 month ago, <a href="http://www.ovh.com/" title="OVH website">OVH</a> launched its &#8220;Public Cloud&#8221;. This basically is a solution taking inspiration from Amazon&rsquo;s AWS without being subject to the Patriot Act. At the moment, the &#8220;Public Cloud&#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&rsquo;s on the way.</p>
+
+<p><a href="http://www.x2go.org/" title="X2go official Website">X2go</a> is an open source remote desktop solution based on the very per-formant NX protocol. It feels very much like the remote server is in the same room. After a very quick test, it seems to much lighter and responsive than RDP.</p>
+
+<h1 id="remote-instance-setup:9bf64dc3af8100b999fc0a9936364179">Remote instance setup</h1>
+
+<p>Subscriptions to the gamma test OVH&rsquo;s Cloud are here: <a href="http://www.ovh.com/fr/cloud/" title="OVH public Cloud Subscription">http://www.ovh.com/fr/cloud/</a>. They provide us with a nice and easy to use web interface as well as a full SOAP API and a shell script to automate instance and project management.</p>
+
+<div id="attachment_104" style="width: 310px" class="wp-caption aligncenter">
+  <a href="http://blog.jtlebi.fr/wp-content/uploads/2012/01/ovh-manager.png"><img class="size-medium wp-image-104" title="OVH's instance manager" src="http://blog.jtlebi.fr/wp-content/uploads/2012/01/ovh-manager-300x144.png" alt="OVH's instance manager" width="300" height="144" /></a>
+  
+  <p class="wp-caption-text">
+    OVH's instance manager
+  </p>
+</div>
+
+<p>As the web interface is pretty intuitive, I&rsquo;ll focus on the shell script usage in this blog post.</p>
+
+<p>The first command in the script will ask you for your credentials to launch a session. They are the same as the one used to connect to the &#8220;Manager&#8221;.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ wget http://www.ovh.com/fr/cloud/api/ovhcloud #download the script
+$ chmod +x ovhcloud
+$ ./ovhcloud instance addProject --name x2go-ovh # create a new project
+$ ./ovhcloud instance getProjects #Lists all your projects
+</pre>
+
+<p>Note: each object (Project, Instance, Task, Offer, Zone, &#8230;) are suffixed to actions (get, add, delete, make, &#8230;).</p>
+
+<p>Next step is to create the instances you need. In this example, I&rsquo;ll create a single one.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ ./ovhcloud instance newInstance --projectName x2go-ovh --offerName xs --distributionName ubuntu1004-x64 --zoneName rbx1 --name server</pre>
+
+<p>TIP: For each parameter &#8220;*name&#8221; of this command, you can get a list of this possible values by issuing this command :</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ ./ovhcloud instance get* #General command
+$ ./ovhcloud instance getDistributions #example
+Function returned:
+base    name               platform description
+----    ----               -------- -----------
+ubuntu  ubuntu1004-x64     64       OVH Ubuntu 1004 distribution - 64 bits
+windows win2008sp2-std-x64 64       windows 2008sp2 std distribution - 64 bits
+centos  centos5-x64        64       OVH Centos 5 distribution - 64 bits
+debian  debian564          64       OVH Debian 5 distribution - 64 bits
+debian  debian664          64       OVH Debian 6 distribution - 64 bits
+</pre>
+
+<p>Each command leads to the internal creation of a &#8220;task&#8221; in the remote system. Let&rsquo;s get a list of the tasks related to our project :</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ ./ovhcloud instance getTasks --projectId ****
+projectId (long): ***
+Function returned:
+instanceId function    status finishDate zone comment lastUpdate                currentDetailedState todoDate                  id
+---------- --------    ------ ---------- ---- ------- ----------                -------------------- --------                  --
+66301      addInstance doing             rbx1         2012-01-16T13:52:08+01:00 installOns           2012-01-16T13:51:52+01:00 14571</pre>
+
+<p>Sadly the call interface is not consistent between functions. For some, one needs to give a project&rsquo;s name whereas on other, it is the ID&#8230;</p>
+
+<p>You can now use ssh to connect the instance.The following command will launch an interactive menu as the required parameter &#8220;instanceId&#8221; has not been specified. Anyway, it is not possible to specify it since this command is buggy <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/frownie.png" alt=":(" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ ./ovhcloud instance ssh</pre>
+
+<p>Note: you can also directly grab the credentials and IP and use them to manually ssh. This could be used when tunneling for example.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ ./ovhcloud instance getLoginInformations</pre>
+
+<h1 id="installing-x2go-on-the-instance:9bf64dc3af8100b999fc0a9936364179">Installing X2go on the instance</h1>
+
+<p>This part is (almost) independent from the previous one. I&rsquo;ll assume you are connected to a remote server running Ubuntu 10.04. It should be fine with any supported flavor of Ubuntu but I did not test it.</p>
+
+<p>On the remote server as well as the local client, install the package repository</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ sudo apt-get install python-software-properties #installation de la commande "add-apt-repository"
+$ sudo add-apt-repository ppa:x2go/stable
+$ sudo apt-get update</pre>
+
+<p>The installation is as easy as this</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ sudo apt-get install x2goserver
+$ sudo apt-get install ubuntu-desktop
+$ sudo apt-get install x2gognomebindings #brings some integration </pre>
+
+<p>No additional configuration is required ! Nonetheless, you should create a low privileged user as a client&#8230;</p>
+
+<p>On the client side, just install package &#8220;x2goclient&#8221;.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$ sudo apt-get install x2goclient </pre>
+
+<h1 id="conclusion:9bf64dc3af8100b999fc0a9936364179">Conclusion</h1>
+
+<p>You should now be able to run a Cloud desktop. It is possible to start/stop it on demand with a simple shell command :</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">$  ./ovhcloud instance stopInstance --instanceID *** </pre>
+
+<p>This &#8220;Public Cloud&#8221; is still very young. The script lacks consistency and is buggy, no real storage option is yet offered, &#8230; Nonetheless, it looks very promising and the dev team listens well to users feedback <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+<p>I encourage the reader to test sound, folder and printer sharing between the client and the remote desktop. My experience is that the sound only works from a theoretical point of view as it uses a huge BP. Folder sharing is OK and I could not manage to make printer sharing work (at the moment).</p>
+
+<p>Enjoy !</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/" rel="prev">Understanding MVC with Express/Node.js and mongo.db</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2012/04/24/pourquoi-je-soutiens-lafnic/" rel="next">Pourquoi je soutiens l&#39;AFNIC</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

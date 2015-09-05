@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Quickndirty on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/categories/quickndirty/</link>
+    <description>Recent content in Quickndirty on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 04 May 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/categories/quickndirty/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Force a remote host to reboot via VNC</title>
+      <link>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
+      <pubDate>Mon, 04 May 2015 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
+      <description>&lt;p&gt;Yesterday, dealt with a machine in a pretty bad state:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;SSH was Down&lt;/li&gt;
+&lt;li&gt;Memory was exhausted (OOM)&lt;/li&gt;
+&lt;li&gt;Ctrl + Alt + Del from VNC was not responding&lt;/li&gt;
+&lt;li&gt;A background operation on the OpenStack API was preventing any &lt;code&gt;nova reboot --hard zombie-essential-instance.my-infra.net&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;In such situations, the last resort is &lt;code&gt;Alt+SysRQ+b&lt;/code&gt; to force the host into immediate reboot, possible loosing or corrupting data data in the way.&lt;/p&gt;
+
+&lt;p&gt;The trick is that, obviously, you can not type this sequence on your laptop as usual, or the machine that will reboot will not be the one you expect&amp;#8230; Hence to goal is to feed the relevant keycodes directly to VNC. &lt;a href=&#34;http://www.realvnc.com/docs/rfbproto.pdf&#34;&gt;As VNC has originally been built specifically for X11&lt;/a&gt;, the keycodes you need to send are the one X11 itself uses internally. Which are found &lt;a href=&#34;http://www.cl.cam.ac.uk/~mgk25/ucs/keysymdef.h&#34;&gt;in the source code&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Long story short, the codes you are looking for are:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;0xffe9&lt;/code&gt;: Alt&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;0xff15&lt;/code&gt;: SySRq&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;0x0062&lt;/code&gt;: b&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;If you are viewing the console through NoVNC, you may feed theses codes to the guest by opening a console in your browser (&lt;code&gt;F12&lt;/code&gt; in most browser) and typing:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;rfb.sendKey(0xffe9, 1);
+rfb.sendKey(0xff15, 1);
+rfb.sendKey(0x0062, 1);
+rfb.sendKey(0x0062, 0);
+rfb.sendKey(0xff15, 0);
+rfb.sendKey(0xffe9, 0);
+&lt;/pre&gt;
+
+&lt;p&gt;This will send the relevant key down events then the key up in reverse order. This is roughly how the &amp;#8220;Send CtrlAltDel&amp;#8221; button works.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

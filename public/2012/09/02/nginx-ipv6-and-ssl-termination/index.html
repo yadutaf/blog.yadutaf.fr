@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Nginx: IPv6 and SSL termination | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Nginx: IPv6 and SSL termination</h1>
+      <div class="meta">
+        Sep 2, 2012 &nbsp;
+        
+          #<a href="/tags/https">https</a>&nbsp;
+        
+          #<a href="/tags/ipv6">IPv6</a>&nbsp;
+        
+          #<a href="/tags/nginx">nginx</a>&nbsp;
+        
+          #<a href="/tags/ssl">ssl</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>I just installed the beautiful NGINX reverse proxy on my personal server. I use it to run various personal web-based services like this blog, Etherpad or Gitlab. That&rsquo;s 3 different programming languages, PHP, JS, Ruby. Wow.</p>
+
+<p>Sadly, none of them handles natively HTTPS nor IPv6 moreover, they all require a standalone port to run on. Hopefully, reverse proxies are here to solve the problem. And I chose NGINX. I was previously using a home grown one which is much, much easier to configure but not really state of the art. So Bye Bye <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+<p>I want to to enforce HTTPS connections and allow both IPv4 and IPv6.</p>
+
+<p>Add this to the top of each &#8220;server&#8221; block:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">listen   80;
+listen   [::]:80;
+listen   443 ssl;
+listen   [::]:443 ssl;
+</pre>
+
+<p>Add this right after the previous or directly in the &#8220;http&#8221; block if &#8220;nginx.conf&#8221; if you have wildcard certificate:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">ssl_certificate /etc/ssl/private/ssl-full-chain.crt;
+ssl_certificate_key /etc/ssl/private/ssl-main.key;
+</pre>
+
+<p>Note that Nginx expects the whole certificate chain to be in the .crt or .pem file that is you actual certificate followed by the whole certification chain up to the root CA at the end.</p>
+
+<p>The last step is now to &#8220;force&#8221; HTTPS. The idea is to read an ssl variable. If unset, redirect to the HTTPS version of the page:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">if ($ssl_protocol = "") {
+    rewrite ^   https://$server_name$request_uri? permanent;
+}
+</pre>
+
+<p>If Nginx complains with &#8220;nginx: [emerg] bind() to [::]:443 failed (98: Address already in use)&#8221;, try appending &#8220;ipv6only=on&#8221; to the the faulty config line.</p>
+
+<p>Try on this blog, it should only be accessible with HTTPS <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/" rel="prev">IPv6 fails after a certain time</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2012/09/07/google-https-seo-nginx/" rel="next">Google HTTPS SEO (Nginx)</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

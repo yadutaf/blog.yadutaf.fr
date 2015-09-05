@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Kimsufi on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/kimsufi/</link>
+    <description>Recent content in Kimsufi on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 10 Jul 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/kimsufi/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>IPv6 fails after a certain time</title>
+      <link>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</link>
+      <pubDate>Tue, 10 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</guid>
+      <description>&lt;p&gt;[UPDATE]&lt;/p&gt;
+
+&lt;p&gt;I still did not find the real source of the problem but it seems that both OVH and Ubuntu stock kernel fail to renew the default routes. Good news, it can be manually renewed, including from a Cron job:&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;rdisc eth0&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;[ORIGINAL POST]&lt;/p&gt;
+
+&lt;p&gt;This blog as well as a couple other private tools are hosted on a kimsufi 2G OVH server. They&amp;rsquo;ve offered IPv6 on their dedicated boxes for quite a while yet and I&amp;rsquo;m proud to be hosted by such leaders.&lt;/p&gt;
+
+&lt;p&gt;Sadly, they are also famous for screwing it up on lower end servers and I just lost my evening trying to fix the configuration. Curiously my gateway had gone away. This should not have been an issue because of the RA protocol of IPv6.This is strange&lt;/p&gt;
+
+&lt;p&gt;Anyway, the only fix that worked for me was simply to&lt;/p&gt;
+
+&lt;pre&gt;sudo /etc/init.d/networking restart&lt;/pre&gt;
+
+&lt;p&gt;I hope it can help some of you &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

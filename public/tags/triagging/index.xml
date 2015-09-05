@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Triagging on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/triagging/</link>
+    <description>Recent content in Triagging on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 27 Sep 2014 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/triagging/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using Docker to triage Nasty-Bugs(tm)</title>
+      <link>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
+      <pubDate>Sat, 27 Sep 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
+      <description>&lt;p&gt;Docker is the container system for reproducible builds. This is precisely what you want when dealing with bugs, especially the nastiest one: an environment where to reproduce it in a fully deterministic way.&lt;/p&gt;
+
+&lt;p&gt;Not long ago, I had to troubleshoot the install process of a new cool piece of software. The weird and really uncool thing with this bug is that it only occurred on the first install install attempt. Even with a full (well, in theory) wipe, there still remained some kind of side effect on the system causing the subsequents install attempts to succeed. Anyone who has ever dealt with Q/A will know what I mean when I say this is pretty damn frustrating. (1)&lt;/p&gt;
+
+&lt;p&gt;Traditional approach: use a smart combination of script and snapshots.&lt;/p&gt;
+
+&lt;p&gt;Wait, isn&amp;rsquo;t it exactly what Docker those ? Sure it is !&lt;/p&gt;
+
+&lt;p&gt;Even better than that: Docker saves one snapshot for each step. This is awesome&lt;/p&gt;
+
+&lt;p&gt;when iterating.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s build a &lt;code&gt;Dockerfile&lt;/code&gt; for a Python project (Whoops, did I just name the perpetrator?):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;dockerfile&#34;&gt;# start from clean, minimalist system
+FROM debian:stable
+
+# step 1: make it less minimalist
+RUN apt-get update &amp;&amp; apt-get install -y git vim python-pip
+
+# step 2: grab code from GIT repo + switch to dev branch
+RUN mkdir -p /usr/src &amp;&amp; git clone http://some-server/my-project /usr/src/my-project --branch fix-nastybugtm
+
+# step 3: change workdir so it spares me one &#39;cd&#39; one each attempt
+WORKDIR /usr/src/my-project
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As recommended by &lt;a href=&#34;https://docs.docker.com/articles/dockerfile_best-practices/&#34;&gt;Docker&amp;rsquo;s best practices&lt;/a&gt;, each logical step is grouped on its own dedicated line so that we keep the number of intermediate snapshots reasonable.&lt;/p&gt;
+
+&lt;p&gt;Speaking of snapshots, let&amp;rsquo;s build our lab environment:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker build -t my-project-lab .
+&lt;/pre&gt;
+
+&lt;p&gt;And work on it!&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run -t -i –rm my-project-lab /bin/bash
+&lt;/pre&gt;
+
+&lt;p&gt;This is where all the magic happens. We tell Docker to fire our &lt;code&gt;my-project-lab&lt;/code&gt; env from a clean copy in interactive mode (&lt;code&gt;-i&lt;/code&gt;) and do not attempt to retain data for later use, we won&amp;rsquo;t need it (&lt;code&gt;--rm&lt;/code&gt;). As we&amp;rsquo;re interactive, we&amp;rsquo;ll need a shell. I use &lt;code&gt;/bin/bash&lt;/code&gt; but given recent security context, I may want to be a better hipster and user &lt;code&gt;/bin/zsh&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;See how easy it is to industrialize bug fighting with Docker!&lt;/p&gt;
+
+&lt;p&gt;Any time you&amp;rsquo;ve come closer to you bug, feel free to update your &lt;code&gt;Dockerfile&lt;/code&gt; and rebuild the image. That&amp;rsquo;s one less step to do manually.&lt;/p&gt;
+
+&lt;p&gt;(1) actually, it was even more fun: the bug only occurred when installing from&lt;/p&gt;
+
+&lt;p&gt;release website. Installing from GIT was always successful.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

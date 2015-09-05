@@ -1,0 +1,588 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Namespace on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/namespace/</link>
+    <description>Recent content in Namespace on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 19 Jan 2014 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/namespace/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Introduction to Linux namespaces – Part 5: NET</title>
+      <link>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
+      <pubDate>Sun, 19 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/&#34; title=&#34;Introduction to Linux namespaces – Part 4: PID&#34;&gt;previous post on PID namespace&lt;/a&gt; (Restart process numbering to &amp;#8220;1&amp;#8221;), would like to go further and fly eve closer to full-featured VMs ? Great ! The two last posts of this series will precisely focus on this. Isolate network interfaces with the &amp;#8220;NET&amp;#8221; namespace (Yes, really) and user/group identifier for even more transparency. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-5.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;For once we won&amp;rsquo;t start with the addition of the &amp;#8220;CLONE_NEWNET&amp;#8221; flag to the &amp;#8220;clone&amp;#8221; syscall. I keep it for later. For now, IMHO, the best way to get started with this namespace is the incredibly mighty &amp;#8220;&lt;a href=&#34;http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2&#34; title=&#34;IPRoute2 official website&#34;&gt;iproute2&lt;/a&gt;&amp;#8221; net-admin swiss army knife. If you don&amp;rsquo;t have it (yet) I highly encourage you to install it. Nonetheless, if don&amp;rsquo;t want to / can&amp;rsquo;t, you may as well skip the explanation part and go straight to the full code sample.&lt;/p&gt;
+
+&lt;p&gt;First, let&amp;rsquo;s see what network interfaces we have at the moment:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;ip link list&lt;/pre&gt;
+
+&lt;p&gt;Which outputs something like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: &amp;lt;NO-CARRIER,BROADCAST,MULTICAST,UP&amp;gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+3: wlan0: &amp;lt;BROADCAST,MULTICAST,UP,LOWER_UP&amp;gt; mtu 1500 qdisc mq state UP mode DORMANT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+# ...
+&lt;/pre&gt;
+
+&lt;p&gt;Nothing unexpected here. I have a working loopback, UP (Yeah, &amp;#8216;UNKNOWN&amp;rsquo; means &amp;#8216;UP&amp;rsquo;&amp;#8230;) and am connected to my wireless network + a couple of extra connections eclipsed for this article.&lt;/p&gt;
+
+&lt;p&gt;Now, let&amp;rsquo;s create a network namespace and run the same from inside:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# create a network namespace called &#34;demo&#34;
+ip netns add demo
+# exec &#34;ip link list&#34; inside the namespace
+ip netns exec demo ip link list
+&lt;/pre&gt;
+
+&lt;p&gt;Output is now:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK&amp;gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+&lt;/pre&gt;
+
+&lt;p&gt;Huuu, not only is there only a loopback but also it is &amp;#8220;DOWN&amp;#8221;. Even more interesting, it is fully isolated from the main loopback. That is to say, any application inside the namespace binding on &amp;#8220;the&amp;#8221; loopback would only be able to communicate with applications inside the same namespace. Exactly the same level of isolation as with the IPC namespace. Neat, isnt&amp;rsquo;t ?&lt;/p&gt;
+
+&lt;p&gt;Right, but how do I communicate with the interwebz now ?&lt;/p&gt;
+
+&lt;p&gt;There are multiple solutions. The easiest and most common one is to create a Point-to-Point tunnel between your &amp;#8220;Host&amp;#8221; and &amp;#8220;Guest&amp;#8221; system. Once, again, the Linux Kernel provides multiple alternatives. I recommend to use the &amp;#8220;veth&amp;#8221; interfaces as these are the best integrated in the ecosystem especially with iproute2. This is also an extremely well tested piece of code as it is used by LXC and actually comes from the &lt;a href=&#34;http://openvz.org&#34; title=&#34;OpenVZ offical website&#34;&gt;OpenVZ project&lt;/a&gt;. Another alternative could be the &amp;#8220;etun&amp;#8221; driver. It conceptually is the same with another name but I&amp;rsquo;m not aware of any project using it.&lt;/p&gt;
+
+&lt;p&gt;Both &amp;#8220;veth&amp;#8221; and &amp;#8220;etun&amp;#8221; create a pair of virtual interfaces linked on with the other in the current namespace. You can then pick one and move it in the target namespace to get a communication channel. You could think of it as intricate particles if it makes it easier to understand ;).&lt;/p&gt;
+
+&lt;p&gt;The next step is to give them an IP, set them up and ping ! Here is an example bash session doing just that:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Create a &#34;demo&#34; namespace
+ip netns add demo
+
+# create a &#34;veth&#34; pair
+ip link add veth0 type veth peer name veth1
+
+# and move one to the namespace
+ip link set veth1 netns demo
+
+# configure the interfaces (up + IP)
+ip netns exec demo ip link set lo up
+ip netns exec demo ip link set veth1 up
+ip netns exec demo ip addr add 169.254.1.2/30 dev veth1
+ip link set veth0 up
+ip addr add 169.254.1.1/30 dev veth0
+&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s it ! Nothing scary.&lt;/p&gt;
+
+&lt;p&gt;If you need to get Internet access from the &amp;#8220;guest&amp;#8221; system using the &amp;#8220;veth&amp;#8221; technique, you could setup masquerding, commonly known as &amp;#8220;NAT&amp;#8221;. In the same way, to make a webserver listening on the :80 inside the namespace appear to listen directly on the main interface, one could use &amp;#8220;DNAT&amp;#8221; commonly known as port &amp;#8220;forwarding&amp;#8221;. I&amp;rsquo;ll leave this up to the reader.&lt;/p&gt;
+
+&lt;p&gt;Here is a basic example to quickly get started:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# make sure ip forwarding is enabled
+echo 1 &amp;gt; /proc/sys/net/ipv4/ip_forward
+# enable Internet access for the namespace, assuming you ran the previous example
+iptables -t nat -A POSTROUTING -i veth0 -j  MASQUERADE
+# Forward main &#34;:80&#34; to guest &#34;:80&#34;
+iptables -t nat -A PREROUTING -d &amp;lt;your main ip&amp;gt;/32 -p tcp --dport 80 -j  DNAT --to-destination  169.254.1.2:80
+&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s put it all together and finally append the &lt;code&gt;CLONE_NEWNET&lt;/code&gt; flag to the &lt;code&gt;clone&lt;/code&gt; syscall. For the sake of simplicity we&amp;rsquo;ll simply stick with direct calls to &amp;#8220;ip&amp;#8221; using the &lt;code&gt;system()&lt;/code&gt; syscall.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [9,40,41,42,57,60,61,62,63,64,65,66]; title: main-5-net.c; notranslate&#34; title=&#34;main-5-net.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;sys/mount.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+
+  // setup hostname
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+
+  // remount &#34;/proc&#34; to get accurate &#34;top&#34; &amp;&amp; &#34;ps&#34; output
+  mount(&#34;proc&#34;, &#34;/proc&#34;, &#34;proc&#34;, 0, NULL);
+
+  // wait for network setup in parent
+  read(checkpoint[0], &amp;c, 1);
+
+  // setup network
+  system(&#34;ip link set lo up&#34;);
+  system(&#34;ip link set veth1 up&#34;);
+  system(&#34;ip addr add 169.254.1.2/30 dev veth1&#34;);
+
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, NULL);
+
+  // further init: create a veth pair
+  char* cmd;
+  asprintf(&amp;cmd, &#34;ip link set veth1 netns %d&#34;, child_pid);
+  system(&#34;ip link add veth0 type veth peer name veth1&#34;);
+  system(cmd);
+  system(&#34;ip link set veth0 up&#34;);
+  system(&#34;ip addr add 169.254.1.1/30 dev veth0&#34;);
+  free(cmd);
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s give it a test run !&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns &amp;&amp; sudo ./ns
+ - [22094] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog$ # run a super-powerful server, fully isolated
+root@In Namespace:~/blog$ nc -l 4242
+Hi !
+Bye...
+root@In Namespace:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
+&lt;/pre&gt;
+
+&lt;p&gt;This is what you would have seen if, from another terminal, you had:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
+Hi !    
+Bye...
+jean-tiare@jeantiare-Ubuntu:~$ 
+&lt;/pre&gt;
+
+&lt;p&gt;To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;If you feel that running a bunch of &lt;code&gt;system()&lt;/code&gt; calls into a production system is a dirty hack (and it is !), you could have look at the &lt;code&gt;rtnetlink&lt;/code&gt; kernel communication interface. This is the barely documented API used by iproute under the hood.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NET&amp;#8221; namespace. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. With the next article we&amp;rsquo;ll explore the last and most tricky namespace &amp;#8220;USER&amp;#8221;. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 4: NS (FS)</title>
+      <link>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
+      <pubDate>Sun, 12 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/&#34; title=&#34;Introduction to Linux namespaces – Part 4: NS (FS)&#34;&gt;previous post on FS namespace&lt;/a&gt; (mountpoints table isolation), we will now have a look at an amazing one: isolated mount table. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-4.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;In the previous post we &amp;#8220;chrooted&amp;#8221; the PID namespace and got a new &amp;#8220;1&amp;#8221; process. But even with this namespace activated, there still lacked isolation for tools like &amp;#8220;top&amp;#8221; because they rely on the &amp;#8220;/proc&amp;#8221; virtual filesystem which is still shared (identical) between namespaces. In this post, let me introduce the namespace that will solve this: &amp;#8220;NS&amp;#8221;. This is historically the first Linux Namespace, hence the name.&lt;/p&gt;
+
+&lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWNS&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, any (un)mount operations from the child will only affect the child and vice-versa.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start experimenting. In the previous example, just activate the NS:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; first-line: 43; title: activate-ns-snippet.c; notranslate&#34; title=&#34;activate-ns-snippet.c&#34;&gt;int child_pid = clone(child_main, child_stack+STACK_SIZE, 
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
+&lt;/pre&gt;
+
+&lt;p&gt;Now, if we run it, we finally can fix the issue from the previous post on PID:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; highlight: [4,7,8]; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall ns.c -o ns &amp;&amp; sudo ./ns
+ - [14472] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# mount -t proc proc /proc
+root@In Namespace:~/blog# ps aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  1.0  0.0  23620  4680 pts/4    S    00:07   0:00 /bin/bash
+root        79  0.0  0.0  18492  1328 pts/4    R+   00:07   0:00 ps aux
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;Tadaaa ! &amp;#8220;/proc&amp;#8221; is now working as expected from the container, without breaking the parent.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s automate it to finalize previous post&amp;rsquo;s example:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [4,33,51]; title: main-4-ns.c; notranslate&#34; title=&#34;main-4-ns.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;sys/mount.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+
+  // setup hostname
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+
+  // remount &#34;/proc&#34; to get accurate &#34;top&#34; &amp;&amp; &#34;ps&#34; output
+  mount(&#34;proc&#34;, &#34;/proc&#34;, &#34;proc&#34;, 0, NULL);
+
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
+
+  // further init here (nothing yet)
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;If you run this snippet, you should get exactly the same behavior as the previous test without manually remounting &amp;#8220;/proc&amp;#8221; neither messing with your real parent&amp;rsquo;s &amp;#8220;/proc&amp;#8221;. Neat isn&amp;rsquo;t it ?&lt;/p&gt;
+
+&lt;p&gt;To leverage the power of this technique you could now prepare and enter a chroot to further enhance the isolation. Steps involved would be to prepare a &amp;#8220;debootstrap&amp;#8221;, remount some essentials filesystems like &amp;#8220;/tmp&amp;#8221;, &amp;#8220;/dev/shm&amp;#8221;, &amp;#8220;/proc&amp;#8221;, optionally all or part of &amp;#8220;/dev&amp;#8221; and &amp;#8220;/sys&amp;#8221; and then &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/2/chdir&#34; title=&#34;man chdir&#34;&gt;chdir&lt;/a&gt;&amp;#8221; + &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/1/chroot&#34; title=&#34;man Chroot&#34;&gt;chroot&lt;/a&gt;&amp;#8220;. I&amp;rsquo;ll leave it as an exercise for the reader.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NS&amp;#8221; namespace. With the next article we&amp;rsquo;ll explore an incredibly powerful namespace &amp;#8220;NET&amp;#8221;. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 3: PID</title>
+      <link>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
+      <pubDate>Sun, 05 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/&#34; title=&#34;Introduction to Linux namespaces – Part 2: IPC&#34;&gt;previous post on IPC namespace&lt;/a&gt; (Inter Process Communication isolation), I would now like to introduce my personal favorite one (as sysadmin): PID namespaces. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-3.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Yes, that&amp;rsquo;s it, with this namespace it is possible to restart PID numbering and get your own &amp;#8220;1&amp;#8221; process. This could be seen as a &amp;#8220;chroot&amp;#8221; in the process identifier tree. It&amp;rsquo;s extremely handy when you need to deal with pids in day to day work and are stuck with 4 digits numbers&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWPID&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, the result of getpid() from child process will invariably be &amp;#8220;1&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;But, WAIT! I know have to &amp;#8220;1&amp;#8221; process right ? What about process management ?&lt;/p&gt;
+
+&lt;p&gt;Well, actually, this *really* is much like a &amp;#8220;chroot&amp;#8221;. That is to say, a change of view point.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Host: &lt;em&gt;all&lt;/em&gt; processes are visible, &lt;em&gt;global&lt;/em&gt; PIDs (init=1, &amp;#8230;, child=xxx, &amp;#8230;.)&lt;/li&gt;
+&lt;li&gt;Container: &lt;em&gt;only child + descendant&lt;/em&gt; are visible, local PIDs (child=1, &amp;#8230;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Here is an illustration:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [29,41,44]; title: ; notranslate&#34; title=&#34;&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | SIGCHLD, NULL);
+
+  // further init here (nothing yet)
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;And an example run:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns &amp;&amp; sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# echo &#34;=&amp;gt; My PID: $$&#34;
+=&amp;gt; My PID: 1
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;As expected, even thought the parent process as a PID of &amp;#8220;7823&amp;#8221;, the child&amp;rsquo;s PID is &amp;#8220;1&amp;#8221;. If you are playfull, you could try to &amp;#8220;kill -KILL 7823&amp;#8221; the parent process. It would do exactly&amp;#8230; nothing:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns &amp;&amp; sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# kill -KILL 7823
+bash: kill: (7823) - No such process
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;The isolation is working as expected. And, as written earlier, this behaves much like a &amp;#8220;chroot&amp;#8221; meaning that with a &amp;#8220;top&amp;#8221; or &amp;#8220;ps exf&amp;#8221; from the parent process will show the child process with its real un-mapped PID. This is an essential feature for process control like &amp;#8220;kill&amp;#8221;, &amp;#8220;cgroups&amp;#8221;, &amp;#8230; and various policies.&lt;/p&gt;
+
+&lt;p&gt;Wait! Speaking of &amp;#8220;top&amp;#8221; and &amp;#8220;ps exf&amp;#8221;, I just ran them from the child and saw exactly the same as from the parent. You lied to me about isolation !&lt;/p&gt;
+
+&lt;p&gt;Well, not at all. This is because these tools get their informations from the virtual &amp;#8220;/proc&amp;#8221; filesystem which is not (yet) isolated. This is the purpose of the next article.&lt;/p&gt;
+
+&lt;p&gt;In the mean time, an easy workaround could be:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; highlight: [3,5]; title: ; notranslate&#34; title=&#34;&#34;&gt;# from child
+root@In Namespace:~/blog# mkdir -p proc
+root@In Namespace:~/blog# mount -t proc proc proc
+root@In Namespace:~/blog# ls proc
+1          dma          key-users      net            sysvipc
+80         dri          kmsg           pagetypeinfo   timer_list
+acpi       driver       kpagecount     partitions     timer_stats
+asound     execdomains  kpageflags     sched_debug    tty
+buddyinfo  fb           latency_stats  schedstat      uptime
+bus        filesystems  loadavg        scsi           version
+cgroups    fs           locks          self           version_signature
+cmdline    interrupts   mdstat         slabinfo       vmallocinfo
+consoles   iomem        meminfo        softirqs       vmstat
+cpuinfo    ioports      misc           stat           zoneinfo
+crypto     irq          modules        swaps
+devices    kallsyms     mounts         sys
+diskstats  kcore        mtrr           sysrq-trigger
+&lt;/pre&gt;
+
+&lt;p&gt;Everything seems reasonable again. As expected, you get PID &amp;#8220;1&amp;#8221; for /bin/bash itself and &amp;#8220;80&amp;#8221; corresponds to the running &amp;#8220;/bin/ls proc&amp;#8221; command. Much nicer to read than usual /proc, isn&amp;rsquo;t it ? That&amp;rsquo;s why I love it.&lt;/p&gt;
+
+&lt;p&gt;If you attempt to run this command directly on the &amp;#8220;/proc&amp;#8221; from the namespace, it will &lt;em&gt;seem&lt;/em&gt; to work in the child but BREAK your main namespace. Example:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ ps aux
+Error, do this: mount -t proc proc /proc
+&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for PID namespace. With the next article, we&amp;rsquo;ll be able to re-mount /proc itself and hence fix &amp;#8220;top&amp;#8221; and any similar tools without breaking the parent namespace. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 2: IPC</title>
+      <link>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
+      <pubDate>Sat, 28 Dec 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;previous post on UTS namespace&lt;/a&gt; (hostname isolation), we will now go deeper and look at a more security oriented namespace: IPC, Inter-Process Communications. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-2.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Activating the IPC namespace is only a matter of adding &amp;#8220;CLONE_NEWIPC&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, you are free to create any IPC as usual, even named one, without any risk of collision with other applications.&lt;/p&gt;
+
+&lt;p&gt;But, WAIT! My &amp;#8220;parent process&amp;#8221; is now isolated from my &amp;#8220;child process&amp;#8221; right ? What if I need to do some kind of communication between them ?&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s a good question. A common use case for this is you need some additional setup from the parent before letting the child take full control. Fortunately, not everything is isolated and clone shares memory space with its parent so that you can still use:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;signal&lt;/li&gt;
+&lt;li&gt;poll memory&lt;/li&gt;
+&lt;li&gt;sockets&lt;/li&gt;
+&lt;li&gt;use files and file-descriptors&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Because of it&amp;rsquo;s context changes, signaling is probably not the most practical one while polling memory is damn inefficient way of communicating !&lt;/p&gt;
+
+&lt;p&gt;If you don&amp;rsquo;t plan to fully isolate the network stack, you could go with sockets. Same remark applies with filesystem. But, in the case of this series this is precisely what we intend to do: isolate everything, step by step.&lt;/p&gt;
+
+&lt;p&gt;A little known / rarely used solution is to watch events on a pipe pair. In fact this is the technique used (with no explanation) by Lennart Poettering in &lt;a href=&#34;http://cgit.freedesktop.org/systemd/systemd/tree/src/nspawn/nspawn.c&#34; title=&#34;systemd nspawn - git&#34;&gt;Systemd&amp;rsquo;s &amp;#8220;nspawn&amp;#8221;&lt;/a&gt; command. This is an extremely powerful technique that I would like to introduce here. This is also the one we will rely upon in the next articles.&lt;/p&gt;
+
+&lt;p&gt;We first need to init a pair of pipes. Let&amp;rsquo;s call them a &amp;#8220;checkpoint&amp;#8221;.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-global-init.c; notranslate&#34; title=&#34;checkpoint-global-init.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// global status:
+int checkpoint[2];
+
+// [parent] init:
+pipe(checkpoint);
+&lt;/pre&gt;
+
+&lt;p&gt;The idea is to trigger a &amp;#8220;close&amp;#8221; event from the parent and wait for &amp;#8220;EOF&amp;#8221; to be received on the reading end, in the child. Something crucial to understand is that *all* writing file-descriptors must be closed for an EOF to be received. Hence, the first thing to do before waiting in the child is to close our own write fd copy.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-child-init.c; notranslate&#34; title=&#34;checkpoint-child-init.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// [child] init:
+close(checkpoint[1]);
+&lt;/pre&gt;
+
+&lt;p&gt;Actual &amp;#8220;signaling&amp;#8221; is now straightforward:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;close write fd in parent&lt;/li&gt;
+&lt;li&gt;wait for EOF from child&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-signal.c; notranslate&#34; title=&#34;checkpoint-signal.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// [child] wait:
+char c; // stub char
+read(checkpoint[0], &amp;c, 1);
+
+// [parent] signal ready code:
+close(checkpoint[1]);
+&lt;/pre&gt;
+
+&lt;p&gt;If we put it together the first example on UTS namespace, it could look like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [7,12,25,27,39,49]; title: main-2-ipc.c; notranslate&#34; title=&#34;main-2-ipc.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  printf(&#34; - World !\n&#34;);
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - Hello ?\n&#34;);
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD, NULL);
+
+  // some damn long init job
+  sleep(4);
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;As this requires advanced capabilities, this snippets needs root or equivalent privileges to run. Obviously, there is no need to keep &amp;#8220;CLONE_NEWUTS&amp;#8221; in this example. I kept it only to show that multiple namespaces may be used together.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for IPC. IPC in itself is nothing complicated. It just becomes tricky when it comes to parent/child synchronization as we will do later. This is where the &amp;#8220;pipe&amp;#8221; technique comes as a handy solution. It actually works and is used in production.&lt;/p&gt;
+
+&lt;p&gt;The next article will be on my favorite one (as sysadmin): PID namespaces.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

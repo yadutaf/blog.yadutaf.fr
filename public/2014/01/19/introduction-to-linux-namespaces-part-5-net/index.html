@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Introduction to Linux namespaces – Part 5: NET | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Introduction to Linux namespaces – Part 5: NET</h1>
+      <div class="meta">
+        Jan 19, 2014 &nbsp;
+        
+          #<a href="/tags/linux">linux</a>&nbsp;
+        
+          #<a href="/tags/namespace">namespace</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>Following the <a href="https://blog.jtlebi.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/" title="Introduction to Linux namespaces – Part 4: PID">previous post on PID namespace</a> (Restart process numbering to &#8220;1&#8221;), would like to go further and fly eve closer to full-featured VMs ? Great ! The two last posts of this series will precisely focus on this. Isolate network interfaces with the &#8220;NET&#8221; namespace (Yes, really) and user/group identifier for even more transparency. If you haven&rsquo;t done so already, I encourage you to read <a href="https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/" title="Introduction to Linux namespaces – Part 1: UTS">the first post of this series for an introduction to linux namespace isolation mechanism</a>.</p>
+
+<p>[EDIT 2014-01-08] A Chinese translation of this post is available <a href="http://blog.lucode.net/linux/intro-Linux-namespace-5.html">here</a></p>
+
+<p>For once we won&rsquo;t start with the addition of the &#8220;CLONE_NEWNET&#8221; flag to the &#8220;clone&#8221; syscall. I keep it for later. For now, IMHO, the best way to get started with this namespace is the incredibly mighty &#8220;<a href="http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2" title="IPRoute2 official website">iproute2</a>&#8221; net-admin swiss army knife. If you don&rsquo;t have it (yet) I highly encourage you to install it. Nonetheless, if don&rsquo;t want to / can&rsquo;t, you may as well skip the explanation part and go straight to the full code sample.</p>
+
+<p>First, let&rsquo;s see what network interfaces we have at the moment:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">ip link list</pre>
+
+<p>Which outputs something like:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+3: wlan0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc mq state UP mode DORMANT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+# ...
+</pre>
+
+<p>Nothing unexpected here. I have a working loopback, UP (Yeah, &#8216;UNKNOWN&rsquo; means &#8216;UP&rsquo;&#8230;) and am connected to my wireless network + a couple of extra connections eclipsed for this article.</p>
+
+<p>Now, let&rsquo;s create a network namespace and run the same from inside:</p>
+
+<pre class="brush: bash; title: ; notranslate" title=""># create a network namespace called "demo"
+ip netns add demo
+# exec "ip link list" inside the namespace
+ip netns exec demo ip link list
+</pre>
+
+<p>Output is now:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK&gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</pre>
+
+<p>Huuu, not only is there only a loopback but also it is &#8220;DOWN&#8221;. Even more interesting, it is fully isolated from the main loopback. That is to say, any application inside the namespace binding on &#8220;the&#8221; loopback would only be able to communicate with applications inside the same namespace. Exactly the same level of isolation as with the IPC namespace. Neat, isnt&rsquo;t ?</p>
+
+<p>Right, but how do I communicate with the interwebz now ?</p>
+
+<p>There are multiple solutions. The easiest and most common one is to create a Point-to-Point tunnel between your &#8220;Host&#8221; and &#8220;Guest&#8221; system. Once, again, the Linux Kernel provides multiple alternatives. I recommend to use the &#8220;veth&#8221; interfaces as these are the best integrated in the ecosystem especially with iproute2. This is also an extremely well tested piece of code as it is used by LXC and actually comes from the <a href="http://openvz.org" title="OpenVZ offical website">OpenVZ project</a>. Another alternative could be the &#8220;etun&#8221; driver. It conceptually is the same with another name but I&rsquo;m not aware of any project using it.</p>
+
+<p>Both &#8220;veth&#8221; and &#8220;etun&#8221; create a pair of virtual interfaces linked on with the other in the current namespace. You can then pick one and move it in the target namespace to get a communication channel. You could think of it as intricate particles if it makes it easier to understand ;).</p>
+
+<p>The next step is to give them an IP, set them up and ping ! Here is an example bash session doing just that:</p>
+
+<pre class="brush: bash; title: ; notranslate" title=""># Create a "demo" namespace
+ip netns add demo
+
+# create a "veth" pair
+ip link add veth0 type veth peer name veth1
+
+# and move one to the namespace
+ip link set veth1 netns demo
+
+# configure the interfaces (up + IP)
+ip netns exec demo ip link set lo up
+ip netns exec demo ip link set veth1 up
+ip netns exec demo ip addr add 169.254.1.2/30 dev veth1
+ip link set veth0 up
+ip addr add 169.254.1.1/30 dev veth0
+</pre>
+
+<p>That&rsquo;s it ! Nothing scary.</p>
+
+<p>If you need to get Internet access from the &#8220;guest&#8221; system using the &#8220;veth&#8221; technique, you could setup masquerding, commonly known as &#8220;NAT&#8221;. In the same way, to make a webserver listening on the :80 inside the namespace appear to listen directly on the main interface, one could use &#8220;DNAT&#8221; commonly known as port &#8220;forwarding&#8221;. I&rsquo;ll leave this up to the reader.</p>
+
+<p>Here is a basic example to quickly get started:</p>
+
+<pre class="brush: bash; title: ; notranslate" title=""># make sure ip forwarding is enabled
+echo 1 &gt; /proc/sys/net/ipv4/ip_forward
+# enable Internet access for the namespace, assuming you ran the previous example
+iptables -t nat -A POSTROUTING -i veth0 -j  MASQUERADE
+# Forward main ":80" to guest ":80"
+iptables -t nat -A PREROUTING -d &lt;your main ip&gt;/32 -p tcp --dport 80 -j  DNAT --to-destination  169.254.1.2:80
+</pre>
+
+<p>Now let&rsquo;s put it all together and finally append the <code>CLONE_NEWNET</code> flag to the <code>clone</code> syscall. For the sake of simplicity we&rsquo;ll simply stick with direct calls to &#8220;ip&#8221; using the <code>system()</code> syscall.</p>
+
+<pre class="brush: cpp; highlight: [9,40,41,42,57,60,61,62,63,64,65,66]; title: main-5-net.c; notranslate" title="main-5-net.c">#define _GNU_SOURCE
+#include &lt;sys/types.h&gt;
+#include &lt;sys/wait.h&gt;
+#include &lt;sys/mount.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;sched.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;stdlib.h&gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  "/bin/bash",
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+
+  // setup hostname
+  printf(" - [%5d] World !\n", getpid());
+  sethostname("In Namespace", 12);
+
+  // remount "/proc" to get accurate "top" && "ps" output
+  mount("proc", "/proc", "proc", 0, NULL);
+
+  // wait for network setup in parent
+  read(checkpoint[0], &c, 1);
+
+  // setup network
+  system("ip link set lo up");
+  system("ip link set veth1 up");
+  system("ip addr add 169.254.1.2/30 dev veth1");
+
+  execv(child_args[0], child_args);
+  printf("Ooops\n");
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(" - [%5d] Hello ?\n", getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, NULL);
+
+  // further init: create a veth pair
+  char* cmd;
+  asprintf(&cmd, "ip link set veth1 netns %d", child_pid);
+  system("ip link add veth0 type veth peer name veth1");
+  system(cmd);
+  system("ip link set veth0 up");
+  system("ip addr add 169.254.1.1/30 dev veth0");
+  free(cmd);
+
+  // signal "done"
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+</pre>
+
+<p>Let&rsquo;s give it a test run !</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns && sudo ./ns
+ - [22094] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog$ # run a super-powerful server, fully isolated
+root@In Namespace:~/blog$ nc -l 4242
+Hi !
+Bye...
+root@In Namespace:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
+</pre>
+
+<p>This is what you would have seen if, from another terminal, you had:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
+Hi !    
+Bye...
+jean-tiare@jeantiare-Ubuntu:~$ 
+</pre>
+
+<p>To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &#8230;</p>
+
+<p>If you feel that running a bunch of <code>system()</code> calls into a production system is a dirty hack (and it is !), you could have look at the <code>rtnetlink</code> kernel communication interface. This is the barely documented API used by iproute under the hood.</p>
+
+<p>That&rsquo;s all for &#8220;NET&#8221; namespace. It&rsquo;s so powerful that it&rsquo;s used as the foundation of the <a href="http://cs.itd.nrl.navy.mil/work/core/index.php">&#8220;CORE&#8221; lightweight network simulator</a>. With the next article we&rsquo;ll explore the last and most tricky namespace &#8220;USER&#8221;. Thanks for reading !</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/" rel="prev">Introduction to Linux namespaces - Part 4: NS (FS)</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/" rel="next">Introduction to seccomp: BPF linux syscall filter</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

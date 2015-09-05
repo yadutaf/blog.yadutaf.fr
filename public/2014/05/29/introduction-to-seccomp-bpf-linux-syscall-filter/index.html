@@ -1,0 +1,390 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Introduction to seccomp: BPF linux syscall filter | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Introduction to seccomp: BPF linux syscall filter</h1>
+      <div class="meta">
+        May 29, 2014 &nbsp;
+        
+          #<a href="/tags/containers">containers</a>&nbsp;
+        
+          #<a href="/tags/linux">linux</a>&nbsp;
+        
+          #<a href="/tags/seccomp">seccomp</a>&nbsp;
+        
+          #<a href="/tags/security">security</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>Seccomp is basic yet efficient way to filter syscalls issued by a program. It is especially useful when running untrusted third party programs. Actually, it was first <a href="http://git.kernel.org/cgit/linux/kernel/git/tglx/history.git/commit/?id=d949d0ec9c601f2b148bed3cdb5f87c052968554" title="Initial seccomp commit">introduced in linux 2.6.12</a> as an essential building block of <a href="http://mashable.com/2005/12/21/cpushare-distributed-computing-marketplace/">&#8220;cpushare&#8221; program</a>. The idea behind this project was to allow anyone with the proper agent installed to rent cpu cycles to third parties, without compromising its the security.</p>
+
+<p>The initial implementation, also known as &#8220;mode 1 seccomp&#8221; only allowed &#8216;<code>read</code>&#8216;, &#8216;<code>write</code>&#8216;, &#8216;<code>_exit</code>&#8216; and &#8216;<code>sigreturn</code>&#8216; syscalls to be issued making it only possible to read/write to already opened files and to exit. It is also trivial get started with:</p>
+
+<pre class="brush: cpp; highlight: [2,3,10]; title: 01-nothing.c; notranslate" title="01-nothing.c">#include &lt;stdio.h&gt;         /* printf */
+#include &lt;sys/prctl.h&gt;     /* prctl */
+#include &lt;linux/seccomp.h&gt; /* seccomp's constants */
+#include &lt;unistd.h&gt;        /* dup2: just for test */
+
+int main() {
+  printf("step 1: unrestricted\n");
+
+  // Enable filtering
+  prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT);
+  printf("step 2: only 'read', 'write', '_exit' and 'sigreturn' syscalls\n");
+  
+  // Redirect stderr to stdout
+  dup2(1, 2);
+  printf("step 3: !! YOU SHOULD NOT SEE ME !!\n");
+
+  // Success (well, not so in this case...)
+  return 0; 
+}
+</pre>
+
+<p><strong>Build, run, test:</strong></p>
+
+<pre class="brush: bash; title: ; notranslate" title="">gcc 01-nothing.c -o 01-nothing && ./01-nothing; echo "Status: $?"</pre>
+
+<p><strong>Output:</strong></p>
+
+<pre class="brush: plain; title: ; notranslate" title="">step 1: unrestricted
+step 2: only 'read', 'write', '_exit' and 'sigreturn' syscalls
+Processus arrêté
+Status: 137        &lt;------ 128+9 ==&gt; SIGKILL
+</pre>
+
+<p>See the return status ? Whenever a forbidden syscall is issued, the program is immediately killed.</p>
+
+<p>While this is really cool, this is also somewhat over-restrictive. This is the reason why it saw such a little adoption. Linus Torvald even suggested to ax it out of the kernel!</p>
+
+<p>Fortunately, since linux 3.5, it is also possible to define advanced custom filters based on the BPF (Berkley Packet Filters). These filters may apply on any of the syscall argument but only on their value. In other words, a filter won&rsquo;t be able to dereference a pointer. For example one could write a rule to forbid any call to &#8216;<code>dup2</code>&#8216; as long as it targets &#8216;<code>stderr</code>&#8216; (fd=2) but would not be able to restrict &#8216;<code>open</code>&#8216; to a given set of files neither bind to a specific interface or port number.</p>
+
+<p>Once installed, each syscall is sent to the filter which tells what action to take:</p>
+
+<ul>
+<li><code>SECCOMP_RET_KILL</code>: Immediate kill with SIGSYS</li>
+<li><code>SECCOMP_RET_TRAP</code>: Send a catchable SIGSYS, giving a chance to emulate the syscall</li>
+<li><code>SECCOMP_RET_ERRNO</code>: Force <code>errno</code> value</li>
+<li><code>SECCOMP_RET_TRACE</code>: Yield decision to ptracer or set <code>errno</code> to <code>-ENOSYS</code></li>
+<li><code>SECCOMP_RET_ALLOW</code>: Allow</li>
+</ul>
+
+<p>Enough words. Let&rsquo;s allow the program to redirect its <code>stderr</code> to <code>stdout</code> but nothing else. Writing BPF directly is cumbersome and far beyond the scope of this post, we&rsquo;ll use the <code>libseccomp</code> helper to make the code easier to write&#8230; and read. Error checking stripped for brevity.</p>
+
+<p><strong>Grab the library:</strong></p>
+
+<pre class="brush: bash; title: ; notranslate" title="">sudo apt-get install libseccomp-dev</pre>
+
+<p><strong>Write the code:</strong></p>
+
+<pre class="brush: cpp; title: 02-bpf-only-dup-sudo.c; notranslate" title="02-bpf-only-dup-sudo.c">#include &lt;stdio.h&gt;   /* printf */
+#include &lt;unistd.h&gt;  /* dup2: just for test */
+#include &lt;seccomp.h&gt; /* libseccomp */
+
+int main() {
+  printf("step 1: unrestricted\n");
+
+  // Init the filter
+  scmp_filter_ctx ctx;
+  ctx = seccomp_init(SCMP_ACT_KILL); // default action: kill
+
+  // setup basic whitelist
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+  
+  // setup our rule
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(dup2), 2, 
+                        SCMP_A0(SCMP_CMP_EQ, 1),
+                        SCMP_A1(SCMP_CMP_EQ, 2));
+
+  // build and load the filter
+  seccomp_load(ctx);
+  printf("step 2: only 'write' and dup2(1, 2) syscalls\n");
+  
+  // Redirect stderr to stdout
+  dup2(1, 2);
+  printf("step 3: stderr redirected to stdout\n");
+
+  // Duplicate stderr to arbitrary fd
+  dup2(2, 42);
+  printf("step 4: !! YOU SHOULD NOT SEE ME !!\n");
+
+  // Success (well, not so in this case...)
+  return 0; 
+}
+</pre>
+
+<p><strong>Build, run, test:</strong></p>
+
+<pre class="brush: bash; title: ; notranslate" title="">gcc 02-bpf-only-dup-sudo.c -o 02-bpf-only-dup-sudo -lseccomp && sudo ./02-bpf-only-dup-sudo; echo "Status: $?"</pre>
+
+<p><strong>Output:</strong></p>
+
+<pre class="brush: plain; title: ; notranslate" title="">step 1: unrestricted
+step 2: only 'write' and dup2(1, 2) syscalls
+step 3: stderr redirected to stdout
+Appel système erroné
+Status: 159        &lt;------ 128+31 ==&gt; SIGSYS
+</pre>
+
+<p>Just as expected.</p>
+
+<p>As you probably noticed, we ran the previous example as root which somewhat limits the security benefice of syscall filtering as we actually have MORE privileges than before&#8230;</p>
+
+<p>This is where it really gets interesting: filters are inherited by child processes so that one could technically apply syscall filters to &#8216;sudo&rsquo; and maybe defeat some of its security measures and gain root on the machine ? To prevent this, one must either be &#8216;<code>CAP_SYS_ADMIN</code>&#8216; (read: root), either explicitly accept to never get any more privileges. For example the &#8216;<code>setuid</code>&#8216; bit of &#8216;<code>sudo</code>&#8216; would not be honored.</p>
+
+<p>This can easily be achieved by adding this snippet <em>before</em> installing the filter:</p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">prctl(PR_SET_NO_NEW_PRIVS, 1);</pre>
+
+<p>Another security note, remember the <code>SECCOMP_RET_TRACE</code> filter return value ? It instructs the kernel to notify the ptracer program, if any, to take the final decision. Hence the &#8220;secured&#8221; program could be run under a malicious ptracer possibly defeating the security measures. This is why another <code>prctl</code> is highly recommended to forbid any attempt to attach a ptracer:</p>
+
+<pre class="brush: cpp; title: ; notranslate" title="">prctl(PR_SET_DUMPABLE, 0);</pre>
+
+<p>Putting it all together we get:</p>
+
+<pre class="brush: cpp; title: 03-bpf-only-dup.c; notranslate" title="03-bpf-only-dup.c">#include &lt;stdio.h&gt;     /* printf */
+#include &lt;unistd.h&gt;    /* dup2: just for test */
+#include &lt;seccomp.h&gt;   /* libseccomp */
+#include &lt;sys/prctl.h&gt; /* prctl */
+
+int main() {
+  printf("step 1: unrestricted\n");
+
+  // ensure none of our children will ever be granted more priv
+  // (via setuid, capabilities, ...)
+  prctl(PR_SET_NO_NEW_PRIVS, 1);
+  // ensure no escape is possible via ptrace
+  prctl(PR_SET_DUMPABLE, 0);
+
+  // Init the filter
+  scmp_filter_ctx ctx;
+  ctx = seccomp_init(SCMP_ACT_KILL); // default action: kill
+
+  // setup basic whitelist
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+  
+  // setup our rule
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(dup2), 2, 
+                        SCMP_A0(SCMP_CMP_EQ, 1),
+                        SCMP_A1(SCMP_CMP_EQ, 2));
+
+  // build and load the filter
+  seccomp_load(ctx);
+  printf("step 2: only 'write' and dup2(1, 2) syscalls\n");
+  
+  // Redirect stderr to stdout
+  dup2(1, 2);
+  printf("step 3: stderr redirected to stdout\n");
+
+  // Duplicate stderr to arbitrary fd
+  dup2(2, 42);
+  printf("step 4: !! YOU SHOULD NOT SEE ME !!\n");
+
+  // Success (well, not so in this case...)
+  return 0;
+}
+</pre>
+
+<p><strong>Build, run, test:</strong></p>
+
+<pre class="brush: bash; title: ; notranslate" title="">gcc 03-bpf-only-dup.c -o 03-bpf-only-dup -lseccomp && ./03-bpf-only-dup; echo "Status: $?"</pre>
+
+<p><strong>Output:</strong></p>
+
+<pre class="brush: plain; title: ; notranslate" title="">step 1: unrestricted
+step 2: only 'write' and dup2(1, 2) syscalls
+step 3: stderr redirected to stdout
+Appel système erroné
+Status: 159        &lt;------ 128+31 ==&gt; SIGSYS
+</pre>
+
+<p>There we are: no more &#8220;sudo&#8221; to run it <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+<p>Linux&rsquo;s seccomp is an extremely powerful tool when dealing with untrusted program&rsquo;s on Linux. (who said in &#8220;shared hosting environment&#8221;?). And we only scratched its surface. Please, keep in mind that seccomp is only a tool and should be used in combination with other Linux&rsquo;s security building blocks such as <a href="https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/" title="Introduction to Linux namespaces – Part 1: UTS">namespaces</a> and capabilities to unleash its full power.</p>
+
+<p>Example applications:</p>
+
+<ul>
+<li>prevent &#8220;virtual priv esc&#8221; -&gt; clone &amp;&amp; unshare CLONE_NEW_USER</li>
+<li>prevent std{in,out,err} escape -&gt; block <code>close</code>, <code>dup2</code></li>
+<li>restrict read/write to std{in,out,err}</li>
+<li>change limits (rlimits)</li>
+<li>&#8230; -&gt; see man 2 syscalls for more ideas 😉</li>
+</ul>
+
+<p>What you still can&rsquo;t do:</p>
+
+<ul>
+<li><p>filter base on filename: no pointer dereference</p></li>
+
+<li><p>filter base on port/ip: same reason</p></li>
+</ul>
+
+<p>Going further:</p>
+
+<ul>
+<li><p><a href="http://sourceforge.net/p/libseccomp/libseccomp/ci/master/tree/tests/">libseccomp tests</a></p></li>
+
+<li><p>kernel seccomp <a href="https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt">documentation</a> and <a href="https://github.com/torvalds/linux/tree/master/samples/seccomp">samples</a> (low level BPF)</p></li>
+
+<li><p>ptrace interaction: overcome the &#8220;What you still can&rsquo;t do&#8221; section.</p></li>
+</ul>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/" rel="prev">Introduction to Linux namespaces – Part 5: NET</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/" rel="next">Using Docker to triage Nasty-Bugs(tm)</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

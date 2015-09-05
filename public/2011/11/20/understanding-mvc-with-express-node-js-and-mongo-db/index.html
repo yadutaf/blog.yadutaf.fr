@@ -1,0 +1,417 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Understanding MVC with Express/Node.js and mongo.db | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Understanding MVC with Express/Node.js and mongo.db</h1>
+      <div class="meta">
+        Nov 20, 2011 &nbsp;
+        
+          #<a href="/tags/express">express</a>&nbsp;
+        
+          #<a href="/tags/jade">jade</a>&nbsp;
+        
+          #<a href="/tags/mongo.db">mongo.db</a>&nbsp;
+        
+          #<a href="/tags/mongoose">mongoose</a>&nbsp;
+        
+          #<a href="/tags/mvc">mvc</a>&nbsp;
+        
+          #<a href="/tags/node.js">Node.js</a>&nbsp;
+        
+          #<a href="/tags/registration-form">registration form</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<p>Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight <a href="http://codeigniter.com/">CodeIgniter</a> or the very complete  <a href="http://symfony.com/">Symfony</a> and I missed clean MVC coding. My previous node.js app barely stand in a single controller <a href="http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/" title="Node.Js reverse proxy">as it was a reverse proxy</a>. This time, I wondered how I could write a bare minimum clean registration form.</p>
+
+<p>For this &#8220;application&#8221;, the goals were to</p>
+
+<ul>
+<li>Provide users with a registration form</li>
+<li>Provide us with a registered user list and a CSV exporter</li>
+<li>Store the registrations in a Mongo.DB collection</li>
+</ul>
+
+<p>As this post is pretty long, not all the source code will be provided in this post. You can download them as well as to test a simplified version of a real-world&trade; app I did to provide visitors in an event to register and leave their contact on my company&rsquo;s stand.</p>
+
+<ul>
+<li>Demo application: <a href="http://test1.jtlebi.fr/">http://test1.jtlebi.fr/</a></li>
+<li>Full source Code: <a href="http://blog.jtlebi.fr/wp-content/uploads/2011/11/inscrit-demo.zip">inscrit-demo.zip</a></li>
+</ul>
+
+<p>To use the source code directly, you will need to run these 2 commands from the zip root directory :</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">npm install
+node app.js</pre>
+
+<p>The following parts of this post will assume that you start from scratch, without this archive.</p>
+
+<h1 id="setup:37973bb4341bd246a575a1b01ee2d703">Setup</h1>
+
+<p>If not yet done, go to <a href="http://nodejs.org/">http://nodejs.org/</a> and download the Node.JS installer for your platform. For linux users, I recommend you to build it from source as this is a fast moving project and most distributions packages are outdated.</p>
+
+<p>You will also need Mongo.DB, which is available from this page: <a href="http://www.mongodb.org/">http://www.mongodb.org/</a>. For those not already familiar with it, Mongo.DB is a document oriented Database Engine. Unlike relational databases no schema is required and the query are done with a DSL (Domain Specific Language). This make this engine very fast and easy to replicate to the cost of managing yourself data coherence.</p>
+
+<p>The last thing you will need is the Node.JS package manager. To install it on UNIX like Operating System is pretty easy :</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">curl http://npmjs.org/install.sh | sh</pre>
+
+<p>Users of Windows will sadly need to follow a pretty tedious procedure which is documented here : <a href="http://npmjs.org/doc/README.html">http://npmjs.org/doc/README.html</a>.</p>
+
+<p>You are now ready to start building your application</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">npm install -g express #get the framework
+express . #setup the project with default settings</pre>
+
+<p>Edit the Manifest :</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">//file package.json
+{
+"name": "MyRegistrationApp"
+, "version": "1.0.0-pre"   /* Version number. No Space nor special chars */
+, "private": true
+, "dependencies": {
+"express": "2.5.0"     /* Framework */
+, "jade": "&gt;= 0.0.1"     /* Template engine */
+, "mongoose": "&gt;=2.3.13" /* Node.JS Mongo.DB API */
+}
+}</pre>
+
+<p>Please note that comments in JSON  are NOT legal. You must strip them out of this snippet to use it !</p>
+
+<p>Now that the project is ready we can install all the dependencies. Unlike Express installation, we skip the &#8220;-g packageName&#8221;. &#8220;-g&#8221; stands for &#8220;global&#8221;. In this case we install them in the project scope only. This way, we can have multiple projects with different versions of the libraries. When &#8220;packageName&#8221; is not provided, NPM will automatically look for the &#8220;dependencies section&#8221; in the &#8220;package.json&#8221; file.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">npm install</pre>
+
+<p>The resulting directory structure should look like this. If some directories are missing, do not hesitate to create them manually <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":-)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
+
+<pre>project_root/
+    - public/
+        - javascripts/
+        - stylesheets/
+        - images/
+    - models/
+    - views/
+    - routes/
+    - config/
+    - node_modules/
+        ...</pre>
+
+<p>In order to spare some time and focus on the development work, I suggest you to use the twitter css bootstrap. It will provide you with a nice and clean stylesheet. In the following code snippets of this article, I&rsquo;ll assume you are using this framework.</p>
+
+<h1 id="the-model:37973bb4341bd246a575a1b01ee2d703">The Model</h1>
+
+<p>The model is the place where the data type is defined. The first step is to identify the required fields and their constraints. To keep the example minimal, I&rsquo;ll use just a little subset :</p>
+
+<ul>
+<li>Title. Mandatory. Must be one of
+
+<ul>
+<li>Mr</li>
+<li>Ms</li>
+<li>Miss</li>
+<li>Mrs</li>
+</ul></li>
+<li>Firstname. Mandatory.</li>
+<li>Lastname. Mandatory.</li>
+<li>E-Mail. Mandatory.</li>
+<li>Date. Mandatory. Auto-generated.</li>
+</ul>
+
+<p>This leads to the following schema :</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">var MemberSchema = new Schema({
+    id        : ObjectId,
+    title     : { type: String, required: true, enum: ['Mr', 'Mrs', 'Mme', 'Miss'] },
+    lastname  : { type: String, required: true, uppercase: true, trim: true},
+    firstname : { type: String, required: true},
+    mail      : { type: String, required: true, trim: true, index: { unique: true, sparse: true } },
+    date      : Date
+});</pre>
+
+<p>Let&rsquo;s write it in file models/MemberModel.js. To get it to work, we need to import Mongoose API in the file header :</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">var mongoose = require('mongoose'),
+    Schema = mongoose.Schema,
+    ObjectId = Schema.ObjectId;</pre>
+
+<p>You noticed that the &#8220;date&#8221; field should be auto-generated. This can be achieved with a default value. This time, although this could be done in the schema, we will do it separately to show how to decorate an existing schema. Please note that another extremely powerful tool is available in Mongoose. These are the middleware.</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">// Date setter
+MemberSchema.path('date')
+    .default(function(){
+        return new Date()
+    })
+    .set(function(v){
+        return v == 'now' ? new Date() : v;
+    });</pre>
+
+<p>The last step for the model is to expose it to the application chunk :</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">module.exports = mongoose.model('Members', MemberSchema);</pre>
+
+<h1 id="the-view:37973bb4341bd246a575a1b01ee2d703">The view</h1>
+
+<p>The view is the place where the actual web page you see is generated from data computed in the controller. In small projects such as this one, I usually code the controller at last since it is the &#8220;glue&#8221; between the Model and the View.</p>
+
+<p>For this example, I did 2 views. The first one is the registration form while the second one displays a list of registered members.</p>
+
+<p>Since the header of theses pages are common, we will put it in a separate file called &#8220;views/layout.jade&#8221;. The first line of this templates tells the template engine to insert the HTML5 DOCTYPE. As in python, there is no closing tags but the indentation is semantical. This helps to keep the code readable ! The first CSS file is provided by the bootstrap CSS framework maintained on Github by Twitter. An &#8220;=&#8221; sign tells Jade to load a variable, attribute list is between &#8220;(&#8221; and &#8220;)&#8221; and the text to put write is what follows.</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">!!! 5
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/bootstrap.css')
+    link(rel='stylesheet', href='/stylesheets/styles.css')
+    //if lt IE 9
+        script(src="http://html5shim.googlecode.com/svn/trunk/html5.js", language="text/javascript")
+  body!= body</pre>
+
+<p>The conditional tag &#8220;lt IE 9&#8221; allows us to use HTML 5 tags in our layout. The other half of this trick takes place in style.css :</p>
+
+<pre class="brush: css; title: ; notranslate" title="">/*[...]*/
+/*HTML 5 compat*/
+header, section, article, nav, footer, aside, hgroup{
+    display: block;
+}
+/*[...]*/</pre>
+
+<p>We will then define our 2 views: views/index.jade and views/list.jade They both contain the same header and same footer. You also can notice the use of &#8220;header&#8221; and &#8220;footer&#8221; tags. These are 2 new HTML tags adding some semantic to the web.</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">.container
+    .content
+        header.page-header
+            h1 Title text
+                small.subtitle Subtitle text
+[...]
+    footer
+        p © Illyse 2011</pre>
+
+<p>The first part of views/index.jade uses a loop to print messages and errors, if need be, right after the title :</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">.row
+            article.span10
+                - if (errors.length)
+                    - errors.forEach(function(error){
+                        .alert-message.error= error
+                    - })
+                - if (messages.length)
+                    - messages.forEach(function(message){
+                        .alert-message.success= message
+                    - })</pre>
+
+<p>The remaining parts of this file basically defines a form using the new HTML 5 fields such as &#8220;phone&#8221;, &#8220;url&#8221; and &#8220;email&#8221; and new attributes such as &#8220;required&#8221; helping to perform some basic validation before the submission. As this is a very verbose part, I will skip it on this post.</p>
+
+<p>The body of views/list.jade basically loops over the members structures and displays all members in a table.</p>
+
+<h1 id="the-controller:37973bb4341bd246a575a1b01ee2d703">The controller</h1>
+
+<p>The controller is the part that glues the views and the models together. It takes the input from the user, routes it, handle it and then triggers the render of the view.</p>
+
+<p>For simplicity sake, I kept a single default controller &#8220;routes/index.js&#8221; with all the routing logic in the auto-generated &#8220;app.js&#8221;. It&rsquo;s probably not the best and cleanest way to do it but it&rsquo;s enough yet ;-).</p>
+
+<p>The only added part to &#8220;app.js&#8221;</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">// Routes
+
+app.get('/', routes.index);
+app.get('/list', routes.list);
+app.get('/csv', routes.csv);
+app.post('/', routes.index_post);</pre>
+
+<p>The file &#8220;routes/index.js&#8221; has two parts. In the first, it loads dependencies such as the database driver, connection and model.</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">// loads model file and engine
+var mongoose    = require('mongoose'),
+    memberModel = require('../models/MemberModel');
+
+// Open DB connection
+mongoose.connect('mongodb://localhost/mymembers');</pre>
+
+<p>The second part exports all function used by the router. The easiest one is the index page as it only triggers the render of the registration form.</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">// Home page =&gt; registration form
+exports.index = function(req, res){
+    res.render('index.jade', { title: 'My Registration App', messages: [], errors: [] });
+};</pre>
+
+<p>This snippets tells express (the framework) to send the rendered version of template &#8220;index.jade&#8221; with this title, no message and no errors.</p>
+
+<p>The other routes of this controller are all build on the same model. Nonetheless, an interesting one is the &#8220;csv&#8221; export because it both uses database access and an &#8220;advanced&#8221; render feature: the ability to specify the content type and so trigger a download to the proper application instead of just displaying plain text.</p>
+
+<pre class="brush: jscript; title: ; notranslate" title="">// Member list quick-and-dirty(tm) CSV export
+exports.csv = function(req, res){
+    memberModel.find({},function(err, docs){
+        str = "";
+        docs.forEach(function (member) {
+            str += member.title;
+            str += "; " + member.firstname;
+            str += "; " + member.lastname;
+            str += "; " + member.mail;
+            str += "; " + member.date;
+            str += "\n";
+        });
+        res.header('Content-type', 'text/csv');
+        res.send(str);
+    });
+};</pre>
+
+<h1 id="conclusion:37973bb4341bd246a575a1b01ee2d703">Conclusion</h1>
+
+<p>This (long) post demonstrated and demystified quite a lot of modern technologies at once which may be a little confusing for a newcomer. Sadly, I could not get an in depth overview of these tools. It would have required many books ! Nonetheless, I hope it has been useful to you and help you getting started. have fun !</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/" rel="prev">About proxying wget http 1.0 using http 1.1 headers</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/" rel="next">Testing X2go on OVH Public Cloud</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Vhost on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/vhost/</link>
+    <description>Recent content in Vhost on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 19 Sep 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/vhost/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Node.Js reverse proxy</title>
+      <link>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</link>
+      <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</guid>
+      <description>&lt;p&gt;When I rented this OVH server, I wanted to be able to host all my web tools on it on port 80 using both my IPv6 and IPv4 stack. This is usually done with Apache&amp;rsquo;s &amp;#8220;ports.conf&amp;#8221; and VHost feature.&lt;/p&gt;
+
+&lt;p&gt;In fact, most of my favorite applications are written using &lt;a href=&#34;http://nodejs.org/&#34;&gt;Node.Js&lt;/a&gt; and as such embeds there own server logic. It is not possible anymore to bind each of them to *:80.&lt;/p&gt;
+
+&lt;p&gt;The only solution is then to use a reverse-proxy binded to all my real interfaces on port 80 and to forward calls based on the domain to the real applications listening to a random port of the loopback interface.&lt;/p&gt;
+
+&lt;p&gt;I found an impressive 20 line basis on &lt;a href=&#34;http://www.catonmat.net/http-proxy-in-nodejs/&#34;&gt;Peteris Krumins&amp;rsquo; blog&lt;/a&gt; that I forked on Github. You can find &lt;a href=&#34;https://github.com/jtlebi/nodejs-proxy&#34;&gt;my modifications on my github fork&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The basic idea is to decode the &amp;#8220;host&amp;#8221; field of the HTTP 1.1 headers and to forward the requests according to the config file. This solves the &amp;#8220;VHost&amp;#8221; issue. Here are two helpers I use internally:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//decode host and port info from header
+function decode_host(host){
+    out={};
+    host = host.split(&#39;:&#39;);
+    out.host = host[0];
+    out.port = host[1] || 80;
+    return out;
+}
+
+//Find the more precise rule for this request.
+//the actual rule decoding in done in &#34;handle_proxy_rule&#34;
+//which i did not include in this snippet to keep it short 😉
+function handle_proxy_route(host, token) {
+    //extract target host and port
+    action = decode_host(host);
+    action.action=&#34;proxyto&#34;;//default action
+
+    //try to find a matching rule
+    //rule of the form &#34;foo.domain.tld:port&#34;
+    if(action.host+&#39;:&#39;+action.port in hostfilters)
+    {
+         rule=hostfilters[action.host+&#39;:&#39;+action.port];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //rule of the form &#34;foo.domain.tld&#34;
+    else if (action.host in hostfilters)
+    {
+         rule=hostfilters[action.host];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //rule of the form &#34;*:port&#34;
+    else if (&#34;*:&#34;+action.port in hostfilters)
+    {
+         rule=hostfilters[&#39;*:&#39;+action.port];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //default rule
+    else if (&#34;*&#34; in hostfilters)
+    {
+         rule=hostfilters[&#39;*&#39;];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    return action;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;It is then possible to put all this server logic in a separate callback that would be called by multiple listener. This solves the &amp;#8220;Dual stack&amp;#8221; issue.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;interface_to_listen_on = [
+    {&#39;ip&#39;:&#34;0.0.0.0&#34;, &#39;port&#39;:80},//all IPv4 int
+    {&#39;ip&#39;:&#34;::&#34;, &#39;port&#39;:80}//all IPv6 int
+];
+
+interface_to_listen_on.forEach(function(listen)
+{
+    port = listen.port;
+    ip=listen.ip;
+    sys.log(&#34;Starting server on port &#39;&#34; + ip+&#39;:&#39;+port);
+    http.createServer(server_loop).listen(port, ip);
+});&lt;/pre&gt;
+
+&lt;p&gt;What if a malicious packet is forged that makes every thing crash ? Let&amp;rsquo;s add a small security layer. At least filtering based on source address was already done by the bootstrap code. I just added a &amp;#8220;last chance exception catcher&amp;#8221; and an input field check. Here is he last chance exception catcher. The filtering is pretty straight forward. It mostly is a matter of checking headers on by one and taking a decision.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//last chance error handler
+//it catch the exception preventing the application from crashing.
+//I recommend to comment it in a development environment as it
+//&#34;Hides&#34; very interesting bits of debugging informations.
+process.on(&#39;uncaughtException&#39;, function (err) {
+  console.log(&#39;LAST ERROR: Caught exception: &#39; + err);
+});
+&lt;/pre&gt;
+
+&lt;p&gt;What if a redirect rule has an error that causes a loop ? Let&amp;rsquo;s add a special header indicating that a forward already happened. That&amp;rsquo;s all the trick.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;function prevent_loop(request, response)
+{
+    //if request is already tooted =&amp;gt; loop 
+    if(request.headers.proxy==&#34;node.jtlebi&#34;)
+    {
+        sys.log(&#34;Loop detected&#34;);
+        response.writeHead(500);
+        response.write(&#34;Proxy loop !&#34;);
+        response.end();
+        return false;
+    } 
+    //append a tattoo to it
+    else 
+    {
+        request.headers.proxy=&#34;node.jtlebi&#34;;
+        return request;
+    }
+}&lt;/pre&gt;
+
+&lt;p&gt;What if I need authentication for an app that doesn&amp;rsquo;t support it natively ? Let&amp;rsquo;s implement &amp;#8220;basic auth&amp;#8221; as defined in RFC 2617. It is really easy to do:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//1st =&amp;gt; On each request, decode the &#34;authorization&#34; field (easy part)
+function authenticate(request)
+{
+    token={
+            &#34;login&#34;:&#34;anonymous&#34;,
+            &#34;pass&#34;:&#34;&#34;
+        };
+    if (request.headers.authorization &amp;&amp; request.headers.authorization.search(&#39;Basic &#39;) === 0) 
+    {
+        // fetch login and password
+        basic = (new Buffer(request.headers.authorization.split(&#39; &#39;)[1], &#39;base64&#39;).toString());
+        sys.log(&#34;Authentication token received: &#34;+basic);
+        basic = basic.split(&#39;:&#39;);
+        token.login = basic[0];
+        token.pass  = basic[1];//fixme: potential trouble if there is a &#34;:&#34; in the pass
+    }
+    return token;
+}
+
+//2nd =&amp;gt; Somewhere in your application logic, check credentials
+//3rd =&amp;gt; If they are not valid, issue an authentication request (trivial part :p )
+function action_authenticate(response, msg)
+{
+    response.writeHead(401,{
+        &#39;WWW-Authenticate&#39;: &#34;Basic realm=\&#34;&#34;+msg+&#34;\&#34;&#34;
+    });
+    response.end();
+}
+&lt;/pre&gt;
+
+&lt;p&gt;To make it short, this reverse-proxy enables :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;IPv4/IPv6 only application to answer to both IP familly&lt;/li&gt;
+&lt;li&gt;Independent servers to work transparently on the same public interface/port&lt;/li&gt;
+&lt;li&gt;Unsecured application to get very basic user security&lt;/li&gt;
+&lt;li&gt;more to come ? Let me know&amp;#8230;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

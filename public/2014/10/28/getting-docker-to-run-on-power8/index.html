@@ -1,0 +1,481 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Getting Docker to run on Power8 | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Getting Docker to run on Power8</h1>
+      <div class="meta">
+        Oct 28, 2014 &nbsp;
+        
+          #<a href="/tags/docker">docker</a>&nbsp;
+        
+          #<a href="/tags/power8">power8</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<p>Last Week-End, I wanted to play around with Docker on a <a href="http://en.wikipedia.org/wiki/POWER8">Power8 processor</a>. Unfortunately, there no &#8220;ready-to-use&#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of <a href="http://dave.cheney.net/">Dave Cheney</a> from Canonical who did the hard work of <a href="http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1">porting the go command line to Power8</a> and IBM&rsquo;s who is working with Docker to bring necessary fixes to gccgo.</p>
+
+<p>[UPDATE 2014-11-19]: IBM is currently porting Docker to gccgo/Power8, see the comments below for more informations.</p>
+
+<p>Power8 is the name of a 64bits RISC processor micro-architecture of the same family as the G5 for example. This was the processor powering the venerable Mac G5. It is extremely parallel with up to 8 threads per core. This makes it especially good at running databases. Notably, <a href="https://www.flamingspork.com/blog/2014/06/03/1-million-sql-queries-per-second-mysql-5-7-on-power8/">Stewart Smith tuned MySQL 7 to get up to 1M request per seconds</a>. This is just amazing!</p>
+
+<p>Docker is a tool helping developers to build, ship and run code anywhere just like containers helps shipping anything anywhere. It is increasingly used in production to cleanly isolate processes on a same physical machine without the overhead of a Virtual Machine.</p>
+
+<p>So, let&rsquo;s get started. My goal was to get docker running and, if possible the latest version (it turns out it actually **is** the latest version). The goal was not to make it the shiniest way. That&rsquo;s for later.</p>
+
+<p>Here is the state of the art:</p>
+
+<ul>
+<li>Docker depends on Go and cgo 1.2.1 until version 1.1.1</li>
+<li>Docker depends on Go and cgo 1.3+ after then</li>
+<li>gccgo 4.9, shipped with Ubuntu 14.04 supports go 1.2.1 but lacks some reflexivity implementation for Power8 and Elf parsing for Power8 in libcgo</li>
+<li>gccgo trunk supports go 1.4 (yes), fixes the reflexivity but still lacks the Elf parsing</li>
+<li>golang 1.3 has no support for Power8</li>
+<li>golang dev.power64 is still very work in progress but supports ELF parsing for Power8 (hint, hint)</li>
+</ul>
+
+<p>As you can see, this is not <span class="span9">attempting to square the circle but not so close.</span></p>
+
+<p>It is also worth noting that gccgo is only the compiler parts. It brings no support for the &#8220;go&#8221; command line itself (which is written in pure go) neither for cgo (which bridges the gap between Go and C worlds). Fortunately, Dave Cheney, of Canonical, did the hard work of getting &#8220;go&#8221; to build with gccgo and in turn seamlessly work with gccgo backend by default. His work is now available through &#8216;apt-get&rsquo;. He also did a great presentation of his work which is available online <a href="http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide">http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide</a>. And, honestly, after a full week-end battling to get it right, I totally share his opinions when he writes &#8220;ʕ╯◔ϖ◔ʔ╯︵ ┻━┻&#8221;.</p>
+
+<p>Among the discarded, aborted, failed attempts: cross compile from my laptop, find ready to use instructions, use stock gcc 4.9, build dev.power64 Go branch (it&rsquo;s completely broken / Work in progress), fly a unicorn.</p>
+
+<p>Anyway, let&rsquo;s start over. What we&rsquo;ll do:</p>
+
+<ol>
+<li>get a Power8 machine. No cross build sorry.</li>
+<li>grab latest version of GCC from trunk (SVN, that&rsquo;s 1 VCS)</li>
+<li>grab latest WIP version of Power8 from dev.power64 (Mercurial, that&rsquo;s a 2nd VCS)</li>
+<li>copy required bits from go to gccgo, namely the ELF parser of libcgo</li>
+<li>patch, build and install gccgo in /opt/gcc-trunk</li>
+<li>build &#8220;go&#8221; and &#8220;cgo&#8221; commands to use our updated libgo.so.6 instead of libgo.so.5</li>
+<li>grab lastest version of Docker from master (Git, that&rsquo;s a 3rd VCS)</li>
+<li>patch, build, install Docker</li>
+<li>celebrate</li>
+</ol>
+
+<h3 id="1-get-a-power8-machine:843e6337e67e60d94f17e70050c565c9">1. Get a Power8 Machine</h3>
+
+<p>The easiest way to get one is to <a href="http://labs.runabove.com/power8/">join RunAbove&rsquo;s public beta</a> which comes with a $32 Voucher. That&rsquo;s one month worth of Power8.</p>
+
+<p>Common setup:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">sudo locale-gen
+sudo apt-get -y update
+sudo apt-get -y install subversion mercurial git build-essential gccgo-go
+</pre>
+
+<h3 id="2-grab-gcc:843e6337e67e60d94f17e70050c565c9">2. Grab GCC</h3>
+
+<pre class="brush: bash; title: ; notranslate" title="">cd
+svn checkout svn://gcc.gnu.org/svn/gcc/trunk gcc
+# Be *very* patient
+</pre>
+
+<h3 id="3-grab-go-dev-power64:843e6337e67e60d94f17e70050c565c9">3. Grab Go dev.power64</h3>
+
+<pre class="brush: bash; title: ; notranslate" title="">cd
+hg clone -u release https://code.google.com/p/go
+cd go
+hg update dev.power64
+</pre>
+
+<h3 id="4-patch-gcc:843e6337e67e60d94f17e70050c565c9">4. Patch GCC</h3>
+
+<p>GCC&rsquo;s libcgo implementation lakes elf parsing supporting for PPC64 instruction set. As this is required by <code>cgo</code>, we&rsquo;ll get it from Go itself.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">cd
+cp go/src/debug/elf/file.go gcc/libgo/go/debug/elf/
+cp go/src/debug/elf/elf.go gcc/libgo/go/debug/elf/
+</pre>
+
+<p>It also lacks some termios related symbols required to build docker command line interface. They&rsquo;re easily added with this patch (extracted from `svn diff`):</p>
+
+<p>[UPDATE 2014-11-11]: This patch is no longer needed thanks to IBM&rsquo;s upstream work.</p>
+
+<pre class="brush: diff; title: ; notranslate" title="">--- libgo/mksysinfo.sh  (revision 216693)
++++ libgo/mksysinfo.sh  (working copy)
+@@ -174,6 +174,15 @@
+ #ifdef TIOCGWINSZ
+   TIOCGWINSZ_val = TIOCGWINSZ,
+ #endif
++#ifdef TIOCSWINSZ
++  TIOCSWINSZ_val = TIOCSWINSZ,
++#endif
++#ifdef TCGETS
++  TCGETS_val = TCGETS,
++#endif
++#ifdef TCSETS
++  TCSETS_val = TCSETS,
++#endif
+ #ifdef TIOCNOTTY
+   TIOCNOTTY_val = TIOCNOTTY,
+ #endif
+@@ -790,6 +799,21 @@
+     echo 'const TIOCGWINSZ = _TIOCGWINSZ_val' &gt;&gt; ${OUT}
+   fi
+ fi
++if ! grep '^const TIOCSWINSZ' ${OUT} &gt;/dev/null 2&gt;&1; then
++  if grep '^const _TIOCSWINSZ_val' ${OUT} &gt;/dev/null 2&gt;&1; then
++    echo 'const TIOCSWINSZ = _TIOCSWINSZ_val' &gt;&gt; ${OUT}
++  fi
++fi
++if ! grep '^const TCGETS' ${OUT} &gt;/dev/null 2&gt;&1; then
++  if grep '^const _TCGETS_val' ${OUT} &gt;/dev/null 2&gt;&1; then
++    echo 'const TCGETS = _TCGETS_val' &gt;&gt; ${OUT}
++  fi
++fi
++if ! grep '^const TCSETS' ${OUT} &gt;/dev/null 2&gt;&1; then
++  if grep '^const _TCSETS_val' ${OUT} &gt;/dev/null 2&gt;&1; then
++    echo 'const TCSETS = _TCSETS_val' &gt;&gt; ${OUT}
++  fi
++fi
+ if ! grep '^const TIOCNOTTY' ${OUT} &gt;/dev/null 2&gt;&1; then
+   if grep '^const _TIOCNOTTY_val' ${OUT} &gt;/dev/null 2&gt;&1; then
+     echo 'const TIOCNOTTY = _TIOCNOTTY_val' &gt;&gt; ${OUT}
+</pre>
+
+<p>If you&rsquo;re planning on making a break, just wait one more minute. We&rsquo;ll launch GCC&rsquo;s build&#8230;</p>
+
+<h3 id="5-build-gcc:843e6337e67e60d94f17e70050c565c9">5. Build GCC</h3>
+
+<p>As usual, except that we built it out of tree.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">cd
+mkdir build-gcc
+cd build-gcc
+sudo apt-get install -y libgmp-dev libmpfr-dev libmpc-dev flex bison
+../gcc/configure --enable-languages=go --disable-multilib --prefix=/opt/gcc-trunk
+make -j200 # if using the big instance
+sudo make install
+</pre>
+
+<p>Be patient, read a book, watch a movie, go visit friends&#8230; It takes a while. On the &#8216;S&rsquo; instance, it took me around 98 minutes.</p>
+
+<p>Once done, we have some additional setup:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">export PATH=/opt/gcc-trunk/bin:$PATH
+echo "/opt/gcc-trunk/lib64" | sudo tee /etc/ld.so.conf.d/gcc-trunk.conf
+sudo ldconfig
+</pre>
+
+<h3 id="6-build-and-install-cgo:843e6337e67e60d94f17e70050c565c9">6. Build (and install) CGO</h3>
+
+<p>Cgo is the component bridging the gap between Go and C world. It is notably required to build the devmapper driver of Docker.</p>
+
+<p>As we won&rsquo;t attempt to build the full go toolchain (it does&rsquo;nt work yet), we&rsquo;ll need to patch &#8220;gcc.go&#8220; to insert `const defaultCC = &#8220;gcc&#8221;` near the top of the file.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">cd go/src/cmd/cgo
+go build
+</pre>
+
+<p>You can now install it. It&rsquo;s hackish but it does the job. But I still can&rsquo;t figure out why I needed to copy the source files to `/usr/src/cmd/cgo`. Anyway, it&rsquo;s working.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">sudo mkdir -p /usr/pkg/tool/linux_ppc64
+sudo mkdir -p /usr/src/cmd/cgo
+sudo cp cgo /usr/pkg/tool/linux_ppc64/cgo
+sudo cp * /usr/src/cmd/cgo
+</pre>
+
+<p>One more thing: to let `go build` know we prepared to using cgo, we need to switch `CGO_ENABLED` environment variable on.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">export CGO_ENABLED=1
+</pre>
+
+<h3 id="7-grab-docker-1-3-0:843e6337e67e60d94f17e70050c565c9">7. Grab Docker 1.3.0</h3>
+
+<p>This is the last stable release at the time of writing. Let&rsquo;s use it.</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">cd
+git clone https://github.com/docker/docker.git
+cd docker
+git checkout v1.3.1
+</pre>
+
+<p>We&rsquo;ll also need to prepare a little the build environment:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">sudo mkdir -p /go/src/github.com/docker/
+sudo ln -s $HOME/docker /go/src/github.com/docker/docker
+export PATH=/opt/gcc-trunk/bin/:$PATH
+export GOPATH=/go:/go/src/github.com/docker/docker/vendor
+</pre>
+
+<h3 id="8-build-docker:843e6337e67e60d94f17e70050c565c9">8. Build Docker</h3>
+
+<p>Just issue &#8216;docker build&rsquo;. I&rsquo;m kidding.</p>
+
+<p>This is the trickiest part of the job as all the full build systems assumes a working docker environment. So we&rsquo;ll mostly emulate it.</p>
+
+<p>First, let&rsquo;s apply a couple of patches.</p>
+
+<p>Remove a runtime (?!) check preventing Docker to run on non amd64 platforms:</p>
+
+<pre class="brush: diff; title: ; notranslate" title="">diff --git a/daemon/daemon.go b/daemon/daemon.go
+index 235788c..b75a94e 100644
+--- a/daemon/daemon.go
++++ b/daemon/daemon.go
+@@ -1104,9 +1104,9 @@ func (daemon *Daemon) ImageGetCached(imgID string, config *runconfig.Config) (*i
+ 
+ func checkKernelAndArch() error {
+    // Check for unsupported architectures
+-   if runtime.GOARCH != "amd64" {
+-       return fmt.Errorf("The Docker runtime currently only supports amd64 (not %s). This will change in the future. Aborting.", runtime.GOARCH)
+-   }
++   //if runtime.GOARCH != "amd64" {
++   //  return fmt.Errorf("The Docker runtime currently only supports amd64 (not %s). This will change in the future. Aborting.", runtime.GOARCH)
++   //}
+    // Check for unsupported kernel versions
+    // FIXME: it would be cleaner to not test for specific versions, but rather
+    // test for specific functionalities.
+</pre>
+
+<p>Next, we need to workaround hard-coded references to official go compiler:</p>
+
+<pre class="brush: diff; title: ; notranslate" title="">diff --git a/vendor/src/github.com/kr/pty/pty_linux.go b/vendor/src/github.com/kr/pty/pty_linux.go
+index 6e5a042..8525f80 100644
+--- a/vendor/src/github.com/kr/pty/pty_linux.go
++++ b/vendor/src/github.com/kr/pty/pty_linux.go
+@@ -7,6 +7,11 @@ import (
+    "unsafe"
+ )
+ 
++type (
++        _C_int  int32
++        _C_uint uint32
++)
++
+ var (
+    ioctl_TIOCGPTN   = _IOR('T', 0x30, unsafe.Sizeof(_C_uint(0))) /* Get Pty Number (of pty-mux device) */
+    ioctl_TIOCSPTLCK = _IOW('T', 0x31, unsafe.Sizeof(_C_int(0)))  /* Lock/unlock Pty */
+</pre>
+
+<p>And, finally, change the link flags. Note that for some reason `-static` breaks network communication. It seems to be related to name resolution but I did not investigate further as dynamic linking works just fine.</p>
+
+<pre class="brush: diff; title: ; notranslate" title="">diff --git a/hack/make/binary b/hack/make/binary
+index b97069a..f5398ae 100755
+--- a/hack/make/binary
++++ b/hack/make/binary
+@@ -6,9 +6,8 @@ DEST=$1
+ go build \
+    -o "$DEST/docker-$VERSION" \
+    "${BUILDFLAGS[@]}" \
+-   -ldflags "
+-       $LDFLAGS
+-       $LDFLAGS_STATIC_DOCKER
++   -gccgoflags "
++       -static-libgo -static-libgcc
+    " \
+    ./docker
+ echo "Created binary: $DEST/docker-$VERSION"
+</pre>
+
+<p>Let&rsquo;s start to build. Most of the following steps are normally handled by the Dockerfile but&#8230; we don&rsquo;t have a working Docker yet.</p>
+
+<p>Grab the dependencies:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">sudo apt-get install -y \
+        aufs-tools \
+        automake \
+        btrfs-tools \
+        build-essential \
+        curl \
+        dpkg-sig \
+        git \
+        iptables \
+        libapparmor-dev \
+        libcap-dev \
+        libsqlite3-dev \
+        lxc=1.0* \
+        mercurial \
+        parallel \
+        reprepro \
+        ruby1.9.1 \
+        ruby1.9.1-dev \
+        s3cmd=1.1.0* \
+        --no-install-recommends
+</pre>
+
+<p>Docker needs a pretty recent devmapper build to run. Get it.</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">cd
+git clone --no-checkout https://git.fedorahosted.org/git/lvm2.git
+cd lvm2
+git checkout -q v2_02_103
+</pre>
+
+<p>Now we&rsquo;ll hit an outdated file `config.guess`, overload it.</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">mkdir -p autoconf
+wget 'http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD' -O autoconf/config.guess
+</pre>
+
+<p>Build it:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">./configure --enable-static_link
+make device-mapper
+sudo make install_device-mapper
+</pre>
+
+<p>Make sure you have the the ldconfig, PATH and CGO_ENABLED tricks then:</p>
+
+<pre class="brush: plain; title: ; notranslate" title="">cd
+cd docker
+./hack/make.sh binary
+sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
+</pre>
+
+<p>And we&rsquo;re done !</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/" rel="prev">Using Docker to triage Nasty-Bugs(tm)</a></span>
+    
+    
+      <span class="next"><a href="http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/" rel="next">How to run Docker behind an Nginx reverse proxy</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+

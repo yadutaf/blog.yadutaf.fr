@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Node.Js on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/node/index.js/</link>
+    <description>Recent content in Node.Js on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 20 Nov 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/node.js/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Understanding MVC with Express/Node.js and mongo.db</title>
+      <link>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</link>
+      <pubDate>Sun, 20 Nov 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
+      <description>
+
+&lt;p&gt;Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight &lt;a href=&#34;http://codeigniter.com/&#34;&gt;CodeIgniter&lt;/a&gt; or the very complete  &lt;a href=&#34;http://symfony.com/&#34;&gt;Symfony&lt;/a&gt; and I missed clean MVC coding. My previous node.js app barely stand in a single controller &lt;a href=&#34;http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/&#34; title=&#34;Node.Js reverse proxy&#34;&gt;as it was a reverse proxy&lt;/a&gt;. This time, I wondered how I could write a bare minimum clean registration form.&lt;/p&gt;
+
+&lt;p&gt;For this &amp;#8220;application&amp;#8221;, the goals were to&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Provide users with a registration form&lt;/li&gt;
+&lt;li&gt;Provide us with a registered user list and a CSV exporter&lt;/li&gt;
+&lt;li&gt;Store the registrations in a Mongo.DB collection&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As this post is pretty long, not all the source code will be provided in this post. You can download them as well as to test a simplified version of a real-world&amp;trade; app I did to provide visitors in an event to register and leave their contact on my company&amp;rsquo;s stand.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Demo application: &lt;a href=&#34;http://test1.jtlebi.fr/&#34;&gt;http://test1.jtlebi.fr/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Full source Code: &lt;a href=&#34;http://blog.jtlebi.fr/wp-content/uploads/2011/11/inscrit-demo.zip&#34;&gt;inscrit-demo.zip&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;To use the source code directly, you will need to run these 2 commands from the zip root directory :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;npm install
+node app.js&lt;/pre&gt;
+
+&lt;p&gt;The following parts of this post will assume that you start from scratch, without this archive.&lt;/p&gt;
+
+&lt;h1 id=&#34;setup:37973bb4341bd246a575a1b01ee2d703&#34;&gt;Setup&lt;/h1&gt;
+
+&lt;p&gt;If not yet done, go to &lt;a href=&#34;http://nodejs.org/&#34;&gt;http://nodejs.org/&lt;/a&gt; and download the Node.JS installer for your platform. For linux users, I recommend you to build it from source as this is a fast moving project and most distributions packages are outdated.&lt;/p&gt;
+
+&lt;p&gt;You will also need Mongo.DB, which is available from this page: &lt;a href=&#34;http://www.mongodb.org/&#34;&gt;http://www.mongodb.org/&lt;/a&gt;. For those not already familiar with it, Mongo.DB is a document oriented Database Engine. Unlike relational databases no schema is required and the query are done with a DSL (Domain Specific Language). This make this engine very fast and easy to replicate to the cost of managing yourself data coherence.&lt;/p&gt;
+
+&lt;p&gt;The last thing you will need is the Node.JS package manager. To install it on UNIX like Operating System is pretty easy :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;curl http://npmjs.org/install.sh | sh&lt;/pre&gt;
+
+&lt;p&gt;Users of Windows will sadly need to follow a pretty tedious procedure which is documented here : &lt;a href=&#34;http://npmjs.org/doc/README.html&#34;&gt;http://npmjs.org/doc/README.html&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;You are now ready to start building your application&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;npm install -g express #get the framework
+express . #setup the project with default settings&lt;/pre&gt;
+
+&lt;p&gt;Edit the Manifest :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//file package.json
+{
+&#34;name&#34;: &#34;MyRegistrationApp&#34;
+, &#34;version&#34;: &#34;1.0.0-pre&#34;   /* Version number. No Space nor special chars */
+, &#34;private&#34;: true
+, &#34;dependencies&#34;: {
+&#34;express&#34;: &#34;2.5.0&#34;     /* Framework */
+, &#34;jade&#34;: &#34;&amp;gt;= 0.0.1&#34;     /* Template engine */
+, &#34;mongoose&#34;: &#34;&amp;gt;=2.3.13&#34; /* Node.JS Mongo.DB API */
+}
+}&lt;/pre&gt;
+
+&lt;p&gt;Please note that comments in JSON  are NOT legal. You must strip them out of this snippet to use it !&lt;/p&gt;
+
+&lt;p&gt;Now that the project is ready we can install all the dependencies. Unlike Express installation, we skip the &amp;#8220;-g packageName&amp;#8221;. &amp;#8220;-g&amp;#8221; stands for &amp;#8220;global&amp;#8221;. In this case we install them in the project scope only. This way, we can have multiple projects with different versions of the libraries. When &amp;#8220;packageName&amp;#8221; is not provided, NPM will automatically look for the &amp;#8220;dependencies section&amp;#8221; in the &amp;#8220;package.json&amp;#8221; file.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;npm install&lt;/pre&gt;
+
+&lt;p&gt;The resulting directory structure should look like this. If some directories are missing, do not hesitate to create them manually &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:-)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;pre&gt;project_root/
+    - public/
+        - javascripts/
+        - stylesheets/
+        - images/
+    - models/
+    - views/
+    - routes/
+    - config/
+    - node_modules/
+        ...&lt;/pre&gt;
+
+&lt;p&gt;In order to spare some time and focus on the development work, I suggest you to use the twitter css bootstrap. It will provide you with a nice and clean stylesheet. In the following code snippets of this article, I&amp;rsquo;ll assume you are using this framework.&lt;/p&gt;
+
+&lt;h1 id=&#34;the-model:37973bb4341bd246a575a1b01ee2d703&#34;&gt;The Model&lt;/h1&gt;
+
+&lt;p&gt;The model is the place where the data type is defined. The first step is to identify the required fields and their constraints. To keep the example minimal, I&amp;rsquo;ll use just a little subset :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Title. Mandatory. Must be one of
+
+&lt;ul&gt;
+&lt;li&gt;Mr&lt;/li&gt;
+&lt;li&gt;Ms&lt;/li&gt;
+&lt;li&gt;Miss&lt;/li&gt;
+&lt;li&gt;Mrs&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;Firstname. Mandatory.&lt;/li&gt;
+&lt;li&gt;Lastname. Mandatory.&lt;/li&gt;
+&lt;li&gt;E-Mail. Mandatory.&lt;/li&gt;
+&lt;li&gt;Date. Mandatory. Auto-generated.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This leads to the following schema :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;var MemberSchema = new Schema({
+    id        : ObjectId,
+    title     : { type: String, required: true, enum: [&#39;Mr&#39;, &#39;Mrs&#39;, &#39;Mme&#39;, &#39;Miss&#39;] },
+    lastname  : { type: String, required: true, uppercase: true, trim: true},
+    firstname : { type: String, required: true},
+    mail      : { type: String, required: true, trim: true, index: { unique: true, sparse: true } },
+    date      : Date
+});&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s write it in file models/MemberModel.js. To get it to work, we need to import Mongoose API in the file header :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;var mongoose = require(&#39;mongoose&#39;),
+    Schema = mongoose.Schema,
+    ObjectId = Schema.ObjectId;&lt;/pre&gt;
+
+&lt;p&gt;You noticed that the &amp;#8220;date&amp;#8221; field should be auto-generated. This can be achieved with a default value. This time, although this could be done in the schema, we will do it separately to show how to decorate an existing schema. Please note that another extremely powerful tool is available in Mongoose. These are the middleware.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;// Date setter
+MemberSchema.path(&#39;date&#39;)
+    .default(function(){
+        return new Date()
+    })
+    .set(function(v){
+        return v == &#39;now&#39; ? new Date() : v;
+    });&lt;/pre&gt;
+
+&lt;p&gt;The last step for the model is to expose it to the application chunk :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;module.exports = mongoose.model(&#39;Members&#39;, MemberSchema);&lt;/pre&gt;
+
+&lt;h1 id=&#34;the-view:37973bb4341bd246a575a1b01ee2d703&#34;&gt;The view&lt;/h1&gt;
+
+&lt;p&gt;The view is the place where the actual web page you see is generated from data computed in the controller. In small projects such as this one, I usually code the controller at last since it is the &amp;#8220;glue&amp;#8221; between the Model and the View.&lt;/p&gt;
+
+&lt;p&gt;For this example, I did 2 views. The first one is the registration form while the second one displays a list of registered members.&lt;/p&gt;
+
+&lt;p&gt;Since the header of theses pages are common, we will put it in a separate file called &amp;#8220;views/layout.jade&amp;#8221;. The first line of this templates tells the template engine to insert the HTML5 DOCTYPE. As in python, there is no closing tags but the indentation is semantical. This helps to keep the code readable ! The first CSS file is provided by the bootstrap CSS framework maintained on Github by Twitter. An &amp;#8220;=&amp;#8221; sign tells Jade to load a variable, attribute list is between &amp;#8220;(&amp;#8221; and &amp;#8220;)&amp;#8221; and the text to put write is what follows.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;!!! 5
+html
+  head
+    title= title
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/bootstrap.css&#39;)
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/styles.css&#39;)
+    //if lt IE 9
+        script(src=&#34;http://html5shim.googlecode.com/svn/trunk/html5.js&#34;, language=&#34;text/javascript&#34;)
+  body!= body&lt;/pre&gt;
+
+&lt;p&gt;The conditional tag &amp;#8220;lt IE 9&amp;#8221; allows us to use HTML 5 tags in our layout. The other half of this trick takes place in style.css :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: css; title: ; notranslate&#34; title=&#34;&#34;&gt;/*[...]*/
+/*HTML 5 compat*/
+header, section, article, nav, footer, aside, hgroup{
+    display: block;
+}
+/*[...]*/&lt;/pre&gt;
+
+&lt;p&gt;We will then define our 2 views: views/index.jade and views/list.jade They both contain the same header and same footer. You also can notice the use of &amp;#8220;header&amp;#8221; and &amp;#8220;footer&amp;#8221; tags. These are 2 new HTML tags adding some semantic to the web.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;.container
+    .content
+        header.page-header
+            h1 Title text
+                small.subtitle Subtitle text
+[...]
+    footer
+        p © Illyse 2011&lt;/pre&gt;
+
+&lt;p&gt;The first part of views/index.jade uses a loop to print messages and errors, if need be, right after the title :&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;.row
+            article.span10
+                - if (errors.length)
+                    - errors.forEach(function(error){
+                        .alert-message.error= error
+                    - })
+                - if (messages.length)
+                    - messages.forEach(function(message){
+                        .alert-message.success= message
+                    - })&lt;/pre&gt;
+
+&lt;p&gt;The remaining parts of this file basically defines a form using the new HTML 5 fields such as &amp;#8220;phone&amp;#8221;, &amp;#8220;url&amp;#8221; and &amp;#8220;email&amp;#8221; and new attributes such as &amp;#8220;required&amp;#8221; helping to perform some basic validation before the submission. As this is a very verbose part, I will skip it on this post.&lt;/p&gt;
+
+&lt;p&gt;The body of views/list.jade basically loops over the members structures and displays all members in a table.&lt;/p&gt;
+
+&lt;h1 id=&#34;the-controller:37973bb4341bd246a575a1b01ee2d703&#34;&gt;The controller&lt;/h1&gt;
+
+&lt;p&gt;The controller is the part that glues the views and the models together. It takes the input from the user, routes it, handle it and then triggers the render of the view.&lt;/p&gt;
+
+&lt;p&gt;For simplicity sake, I kept a single default controller &amp;#8220;routes/index.js&amp;#8221; with all the routing logic in the auto-generated &amp;#8220;app.js&amp;#8221;. It&amp;rsquo;s probably not the best and cleanest way to do it but it&amp;rsquo;s enough yet ;-).&lt;/p&gt;
+
+&lt;p&gt;The only added part to &amp;#8220;app.js&amp;#8221;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;// Routes
+
+app.get(&#39;/&#39;, routes.index);
+app.get(&#39;/list&#39;, routes.list);
+app.get(&#39;/csv&#39;, routes.csv);
+app.post(&#39;/&#39;, routes.index_post);&lt;/pre&gt;
+
+&lt;p&gt;The file &amp;#8220;routes/index.js&amp;#8221; has two parts. In the first, it loads dependencies such as the database driver, connection and model.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;// loads model file and engine
+var mongoose    = require(&#39;mongoose&#39;),
+    memberModel = require(&#39;../models/MemberModel&#39;);
+
+// Open DB connection
+mongoose.connect(&#39;mongodb://localhost/mymembers&#39;);&lt;/pre&gt;
+
+&lt;p&gt;The second part exports all function used by the router. The easiest one is the index page as it only triggers the render of the registration form.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;// Home page =&amp;gt; registration form
+exports.index = function(req, res){
+    res.render(&#39;index.jade&#39;, { title: &#39;My Registration App&#39;, messages: [], errors: [] });
+};&lt;/pre&gt;
+
+&lt;p&gt;This snippets tells express (the framework) to send the rendered version of template &amp;#8220;index.jade&amp;#8221; with this title, no message and no errors.&lt;/p&gt;
+
+&lt;p&gt;The other routes of this controller are all build on the same model. Nonetheless, an interesting one is the &amp;#8220;csv&amp;#8221; export because it both uses database access and an &amp;#8220;advanced&amp;#8221; render feature: the ability to specify the content type and so trigger a download to the proper application instead of just displaying plain text.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;// Member list quick-and-dirty(tm) CSV export
+exports.csv = function(req, res){
+    memberModel.find({},function(err, docs){
+        str = &#34;&#34;;
+        docs.forEach(function (member) {
+            str += member.title;
+            str += &#34;; &#34; + member.firstname;
+            str += &#34;; &#34; + member.lastname;
+            str += &#34;; &#34; + member.mail;
+            str += &#34;; &#34; + member.date;
+            str += &#34;\n&#34;;
+        });
+        res.header(&#39;Content-type&#39;, &#39;text/csv&#39;);
+        res.send(str);
+    });
+};&lt;/pre&gt;
+
+&lt;h1 id=&#34;conclusion:37973bb4341bd246a575a1b01ee2d703&#34;&gt;Conclusion&lt;/h1&gt;
+
+&lt;p&gt;This (long) post demonstrated and demystified quite a lot of modern technologies at once which may be a little confusing for a newcomer. Sadly, I could not get an in depth overview of these tools. It would have required many books ! Nonetheless, I hope it has been useful to you and help you getting started. have fun !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>About proxying wget http 1.0 using http 1.1 headers</title>
+      <link>http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</link>
+      <pubDate>Wed, 21 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</guid>
+      <description>&lt;p&gt;When &lt;a href=&#34;http://www.grapsus.net/&#34;&gt;a friend&lt;/a&gt; tried to syndicate my blog on his, his server was unable to complete the sync. Page &lt;a href=&#34;http://blog.jtlebi.fr/feed/&#34;&gt;http://blog.jtlebi.fr/feed/&lt;/a&gt; simply timed out. After quite a few tests, we noticed that this issue never happened with a browser like Firefox. Aside,  Wget hanged for 2 minutes after downloading more than Firefox. Strange&lt;/p&gt;
+
+&lt;p&gt;In my previous post, I explained that WordPress is hosted behind Apache2, Apache2 behind itself reachable behind &lt;a href=&#34;https://github.com/jtlebi/nodejs-proxy&#34;&gt;my house-made reverse-proxy&lt;/a&gt;. The main goal being to host all services on port 80.&lt;/p&gt;
+
+&lt;pre&gt;|&amp;lt;-----&amp;gt; Apache (WordPress and more)
+Client &amp;lt;----&amp;gt; Reverse-Proxy |&amp;lt;-----&amp;gt; Etherpad
+                            |&amp;lt;-----&amp;gt; Cloud 9
+                            |...&lt;/pre&gt;
+
+&lt;p&gt;Using tcpdump, we noticed that the packet with the &amp;#8220;FIN&amp;#8221; flag set was never send by the client. The strangest was that Wget received more data than Firefox.&lt;/p&gt;
+
+&lt;p&gt;After a few hours of investigations, it appeared that Wget was sending header &amp;#8220;keepalive&amp;#8221; to keep the connection open while using http version 1.0. &amp;#8220;Keepalive&amp;#8221; is an illegal header in HTTP 1.0 as it has been introduced with 1.1 revision. This is actually a &lt;a href=&#34;https://www.varnish-cache.org/trac/ticket/524&#34;&gt;known bug&lt;/a&gt;. A workaround is to use it in conjunction with &amp;#8220;-no-http-keep-alive&amp;#8221; command-line option.&lt;/p&gt;
+
+&lt;div id=&#34;attachment_48&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;http://blog.jtlebi.fr/wp-content/uploads/2011/09/wireshark-wget-http-violation.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-48&#34; title=&#34;wireshark: wget http violation&#34; src=&#34;http://blog.jtlebi.fr/wp-content/uploads/2011/09/wireshark-wget-http-violation-300x168.png&#34; alt=&#34;Wireshark shows that wget uses illegal header &amp;quot;keepalive&amp;quot; with HTTP version 1.0&#34; width=&#34;300&#34; height=&#34;168&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    Wireshark shows that wget uses illegal header &amp;#8220;keepalive&amp;#8221; with HTTP version 1.0
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The real reason why Wget avoid using version 1.1 is that it doesn&amp;rsquo;t understand &amp;#8220;Transfer-Encoding: chunked&amp;#8221; header, which is shame, btw. Since the answer was encoded this way, it embedded chunk size informations interpreted as regular content by Wget making the resulting file both bigger and corrupted.&lt;/p&gt;
+
+&lt;p&gt;Since I can not force all my visitors willing to wget from my website to use this workaround, I had to &amp;#8220;hardcode&amp;#8221; a way to force HTTP/1.0 when proxying for 1.0 enabled client. According to &amp;#8220;http&amp;#8221; module documentation of node.js, it automatically adapts itself when responding to request protocol. This is great. Since my reverse proxy implementation just streams raw answers back to the client, I needed a way to forward the request in the same version to get a compatible answer. Sadly this is not (yet) possible.&lt;/p&gt;
+
+&lt;p&gt;I suggested &lt;a href=&#34;https://github.com/joyent/node/pull/1750&#34;&gt;a fix on github wich is currently under review&lt;/a&gt; by node.js team on master and v0.4 branches to address this missing feature. Wait and see &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;UPDATE 25/09/2011:&lt;/p&gt;
+
+&lt;p&gt;Here is a copy a &lt;a href=&#34;https://github.com/pkrumins/nodejs-proxy/pull/11#issuecomment-2190685&#34;&gt;comment i posted on github&lt;/a&gt; which sums well up the situation:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;div&gt;
+  &lt;p&gt;
+    Actually, the &amp;#8220;end&amp;#8221; event seems to be fired when the data stream ends. It is not linked to the underlying socket. Eherpad (like most software) relies on the ability the HTTP1.1 to &amp;#8220;keepalive&amp;#8221; a connection. This is the behaviour broken by the &amp;#8220;destroy&amp;#8221; called on &amp;#8220;end&amp;#8221; event.
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    The actual bug I was facing was hidden deeply inside. It occured only when prowying HTTP/1.0 requests. To make things even more complicated, Wget is cheating and uses HTTP/1.1 &amp;#8220;keepalive&amp;#8221; header. I tried to clarify all this in this blogpost: &lt;a href=&#34;../2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/&#34;&gt;http://blog.jtlebi.fr/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/&lt;/a&gt;
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    Currently, i rely on a patch i did to add HTTP/1.0 to node.js http lib to fix this. My pull request will probably never be merged in as this truly is &amp;#8220;legacy feature&amp;#8221; &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt; The best would be to fix Wget 😀
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    If a need appears to bring a real long term fix, I can either embed a patched version of the http library or implement a real proxy HTTP/1.0 &lt;&amp;#8212;-&gt; HTTP/1.1, the biggest concern being the &amp;#8220;transfer-encoding: chunked&amp;#8221; which is almost always used by Apache2 but not available in HTTP/1.0 and thus requires the full filesize to be known when starting the transfer and caching to be enabled on the proxy side as soon as this transfer encoding is used.
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    Let me know if a better fix would be a good idea.
+  &lt;/p&gt;
+&lt;/div&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Node.Js reverse proxy</title>
+      <link>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</link>
+      <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</guid>
+      <description>&lt;p&gt;When I rented this OVH server, I wanted to be able to host all my web tools on it on port 80 using both my IPv6 and IPv4 stack. This is usually done with Apache&amp;rsquo;s &amp;#8220;ports.conf&amp;#8221; and VHost feature.&lt;/p&gt;
+
+&lt;p&gt;In fact, most of my favorite applications are written using &lt;a href=&#34;http://nodejs.org/&#34;&gt;Node.Js&lt;/a&gt; and as such embeds there own server logic. It is not possible anymore to bind each of them to *:80.&lt;/p&gt;
+
+&lt;p&gt;The only solution is then to use a reverse-proxy binded to all my real interfaces on port 80 and to forward calls based on the domain to the real applications listening to a random port of the loopback interface.&lt;/p&gt;
+
+&lt;p&gt;I found an impressive 20 line basis on &lt;a href=&#34;http://www.catonmat.net/http-proxy-in-nodejs/&#34;&gt;Peteris Krumins&amp;rsquo; blog&lt;/a&gt; that I forked on Github. You can find &lt;a href=&#34;https://github.com/jtlebi/nodejs-proxy&#34;&gt;my modifications on my github fork&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The basic idea is to decode the &amp;#8220;host&amp;#8221; field of the HTTP 1.1 headers and to forward the requests according to the config file. This solves the &amp;#8220;VHost&amp;#8221; issue. Here are two helpers I use internally:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//decode host and port info from header
+function decode_host(host){
+    out={};
+    host = host.split(&#39;:&#39;);
+    out.host = host[0];
+    out.port = host[1] || 80;
+    return out;
+}
+
+//Find the more precise rule for this request.
+//the actual rule decoding in done in &#34;handle_proxy_rule&#34;
+//which i did not include in this snippet to keep it short 😉
+function handle_proxy_route(host, token) {
+    //extract target host and port
+    action = decode_host(host);
+    action.action=&#34;proxyto&#34;;//default action
+
+    //try to find a matching rule
+    //rule of the form &#34;foo.domain.tld:port&#34;
+    if(action.host+&#39;:&#39;+action.port in hostfilters)
+    {
+         rule=hostfilters[action.host+&#39;:&#39;+action.port];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //rule of the form &#34;foo.domain.tld&#34;
+    else if (action.host in hostfilters)
+    {
+         rule=hostfilters[action.host];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //rule of the form &#34;*:port&#34;
+    else if (&#34;*:&#34;+action.port in hostfilters)
+    {
+         rule=hostfilters[&#39;*:&#39;+action.port];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    //default rule
+    else if (&#34;*&#34; in hostfilters)
+    {
+         rule=hostfilters[&#39;*&#39;];
+         action=handle_proxy_rule(rule, action, token);
+    }
+    return action;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;It is then possible to put all this server logic in a separate callback that would be called by multiple listener. This solves the &amp;#8220;Dual stack&amp;#8221; issue.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;interface_to_listen_on = [
+    {&#39;ip&#39;:&#34;0.0.0.0&#34;, &#39;port&#39;:80},//all IPv4 int
+    {&#39;ip&#39;:&#34;::&#34;, &#39;port&#39;:80}//all IPv6 int
+];
+
+interface_to_listen_on.forEach(function(listen)
+{
+    port = listen.port;
+    ip=listen.ip;
+    sys.log(&#34;Starting server on port &#39;&#34; + ip+&#39;:&#39;+port);
+    http.createServer(server_loop).listen(port, ip);
+});&lt;/pre&gt;
+
+&lt;p&gt;What if a malicious packet is forged that makes every thing crash ? Let&amp;rsquo;s add a small security layer. At least filtering based on source address was already done by the bootstrap code. I just added a &amp;#8220;last chance exception catcher&amp;#8221; and an input field check. Here is he last chance exception catcher. The filtering is pretty straight forward. It mostly is a matter of checking headers on by one and taking a decision.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//last chance error handler
+//it catch the exception preventing the application from crashing.
+//I recommend to comment it in a development environment as it
+//&#34;Hides&#34; very interesting bits of debugging informations.
+process.on(&#39;uncaughtException&#39;, function (err) {
+  console.log(&#39;LAST ERROR: Caught exception: &#39; + err);
+});
+&lt;/pre&gt;
+
+&lt;p&gt;What if a redirect rule has an error that causes a loop ? Let&amp;rsquo;s add a special header indicating that a forward already happened. That&amp;rsquo;s all the trick.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;function prevent_loop(request, response)
+{
+    //if request is already tooted =&amp;gt; loop 
+    if(request.headers.proxy==&#34;node.jtlebi&#34;)
+    {
+        sys.log(&#34;Loop detected&#34;);
+        response.writeHead(500);
+        response.write(&#34;Proxy loop !&#34;);
+        response.end();
+        return false;
+    } 
+    //append a tattoo to it
+    else 
+    {
+        request.headers.proxy=&#34;node.jtlebi&#34;;
+        return request;
+    }
+}&lt;/pre&gt;
+
+&lt;p&gt;What if I need authentication for an app that doesn&amp;rsquo;t support it natively ? Let&amp;rsquo;s implement &amp;#8220;basic auth&amp;#8221; as defined in RFC 2617. It is really easy to do:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;//1st =&amp;gt; On each request, decode the &#34;authorization&#34; field (easy part)
+function authenticate(request)
+{
+    token={
+            &#34;login&#34;:&#34;anonymous&#34;,
+            &#34;pass&#34;:&#34;&#34;
+        };
+    if (request.headers.authorization &amp;&amp; request.headers.authorization.search(&#39;Basic &#39;) === 0) 
+    {
+        // fetch login and password
+        basic = (new Buffer(request.headers.authorization.split(&#39; &#39;)[1], &#39;base64&#39;).toString());
+        sys.log(&#34;Authentication token received: &#34;+basic);
+        basic = basic.split(&#39;:&#39;);
+        token.login = basic[0];
+        token.pass  = basic[1];//fixme: potential trouble if there is a &#34;:&#34; in the pass
+    }
+    return token;
+}
+
+//2nd =&amp;gt; Somewhere in your application logic, check credentials
+//3rd =&amp;gt; If they are not valid, issue an authentication request (trivial part :p )
+function action_authenticate(response, msg)
+{
+    response.writeHead(401,{
+        &#39;WWW-Authenticate&#39;: &#34;Basic realm=\&#34;&#34;+msg+&#34;\&#34;&#34;
+    });
+    response.end();
+}
+&lt;/pre&gt;
+
+&lt;p&gt;To make it short, this reverse-proxy enables :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;IPv4/IPv6 only application to answer to both IP familly&lt;/li&gt;
+&lt;li&gt;Independent servers to work transparently on the same public interface/port&lt;/li&gt;
+&lt;li&gt;Unsecured application to get very basic user security&lt;/li&gt;
+&lt;li&gt;more to come ? Let me know&amp;#8230;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

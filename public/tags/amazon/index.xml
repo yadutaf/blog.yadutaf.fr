@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Amazon on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/amazon/</link>
+    <description>Recent content in Amazon on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 11 Oct 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/amazon/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Investigating DynamoDB 5sec latency</title>
+      <link>http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/</link>
+      <pubDate>Thu, 11 Oct 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/</guid>
+      <description>&lt;p&gt;It goes without saying that a 5000ms latency is&amp;#8230; &lt;em&gt;unacceptable&lt;/em&gt; in a real-time environment. Honestly, we first blamed our &lt;a href=&#34;http://pypi.python.org/pypi/dynamodb-mapper&#34; title=&#34;(Python) DynamoDB Mapper&#34;&gt;home-grown DynamoDB-Mapper&lt;/a&gt; and, indeed found, and fixed, a nasty design. &lt;a href=&#34;https://bitbucket.org/Ludia/dynamodb-mapper/changeset/059791c53426e92556a9c20a3376db298be38a37&#34; title=&#34;commit about always filling transactions&#34;&gt;Here is the specific commit&lt;/a&gt; for those liking juicy details &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Ok, so &amp;#8220;case closed&amp;#8221; you might think. Sadly not, it did not change anything but since this behavior was random and the application still under very low load (development environment) it took some time to spot it again.&lt;/p&gt;
+
+&lt;p&gt;Case re-opened.&lt;/p&gt;
+
+&lt;p&gt;Diving deeper in CloudWatch, I saw these pick latency in the stat. Interestingly enough, this was always like 5000 + n milliseconds. Where &amp;#8216;n&amp;rsquo; is small and pretty close to the normal average latency observed on DynamoDB. After mailing directly Amazon&amp;rsquo;s support about this specific issue, it appeared that this intuition was right. 5 sec it the failure timeout on their side.&lt;/p&gt;
+
+&lt;p&gt;We already know that data is spread over partitions. But this &amp;#8220;partitions&amp;#8221; might simply be instances running as part of a cluster. This cluster would then be exposed by an ELB with failure timeout set to 5sec. From my early tests, I noticed that there is 2 exposed partitions on a nearly empty table at a throughput of 1000. It now appears that both partition contains the whole dataset. Good!&lt;/p&gt;
+
+&lt;p&gt;Mystery solved ? Dunno. I have no clue how DynamoDB is actually built and all this is jealously kept as an &amp;#8216;IP&amp;rsquo; secret, which I can understand.&lt;/p&gt;
+
+&lt;p&gt;So, most of the time DynamoDB is indeed a great choice. But, sometimes, you may experience unusual latencies. In this case, feel free to tell the support so that they can drop an eye.&lt;/p&gt;
+
+&lt;p&gt;Last advice: always keep profiling informations. I was asked for the &amp;#8216;TransactionID&amp;rsquo; and suddenly felt stupid as we have none. Bad luck. If you use the great &lt;a href=&#34;http://docs.pythonboto.org/en/latest/index.html&#34; title=&#34;Python Boto library&#34;&gt;Boto library&lt;/a&gt;, do not forget to configure &amp;#8216;boto.perflog&amp;rsquo;, I contributed it for this very purpose &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Oh, If you read this down to that point, you may be interested in some &lt;a href=&#34;https://blog.jtlebi.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/&#34; title=&#34;Common DynamoDB questions/misconceptions/recipes&#34;&gt;common DynamoDB recipies&lt;/a&gt; too.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Common DynamoDB questions/misconceptions/recipes</title>
+      <link>http://localhost:1313/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</link>
+      <pubDate>Sun, 07 Oct 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</guid>
+      <description>
+
+&lt;p&gt;DynamoDB is a key:value store of the NoSQL family developed and offered by Amazon as part of AWS. It focuses on high performance throughput vs functionality.&lt;/p&gt;
+
+&lt;p&gt;I started to work with DynamoDB 3 month ago. It is lean enough to be easily mastered and I started answering more and more advanced questions from my colleagues and then from SO people.&lt;/p&gt;
+
+&lt;h2 id=&#34;a-name-h-r4l2vhnrpon2-a-dynamodb-is-not-nosql-database:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.r4l2vhnrpon2&#34;&gt;&lt;/a&gt;DynamoDB is NOT NoSQL Database&lt;/h2&gt;
+
+&lt;p&gt;DynamoDB belongs to the huge family of NoSQL. But NoSQL does not define what it is. It defines what it is not not. DynamoDB is a Key:Value store, much closer to Redis or Cassandra than it is to MongoDB (document database) or FlockDB (graph database).&lt;/p&gt;
+
+&lt;p&gt;But the fact is that most people moving to DynamoDB comes from *SQL or MongoDB. At least, my company does. As most people asking for help on SO. DynamoDB is the first Key:Value Database to be brought to a wide audience and this is thanks to Amazon. Hence a lot of misconceptions, at first.&lt;/p&gt;
+
+&lt;p&gt;Let me (try to) sum up:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;SQL oriented&lt;/strong&gt;: highly relational data. Critical data requiring ACID. Banking, customer managment.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Document oriented&lt;/strong&gt;: mostly standalone data, 1-to-1 or 1-to-n relations. This is, in my opinion,  the most intuitive to use or for prototyping. Most applications can use it.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Graph oriented&lt;/strong&gt;: highly, and arbitrarily linked data. Network management, social networks, CMDB, …&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Key:Value oriented&lt;/strong&gt;: where blazing fast performance are needed. Model data with query in mind, not the other way around.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;I like to compare Key:Value stores to RISC processors. Reduced instruction set, predictable behavior/time.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;a-name-h-js6b59ucu505-a-dynamodb-is-not-a-sql-database:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.js6b59ucu505&#34;&gt;&lt;/a&gt;DynamoDB is NOT a SQL database&lt;/h2&gt;
+
+&lt;p&gt;Yeah, what you read is “de-normaliztion”. This topic is implied by the previous one. This is the point. Depending on the context, you may want to duplicate you data, “de-normalize”, to make queries fast.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;There is no auto_inc feature, even if you can emulate it (see below)&lt;/li&gt;
+&lt;li&gt;There is no JOIN operations (who said “EMR” ? sights&amp;#8230;)&lt;/li&gt;
+&lt;li&gt;You can not “SELECT” arbitrary fields (SCAN is BAD)&lt;/li&gt;
+&lt;li&gt;You can not &amp;#8230;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;To make it simple, (DynamoDB ⊂SQL) but (SQL ⊄DynamoDB)&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;a-name-h-t1u6qh1ggqlz-a-getting-an-auto-inc-like-behavior:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.t1u6qh1ggqlz&#34;&gt;&lt;/a&gt;Getting an auto_inc-like behavior&lt;/h2&gt;
+
+&lt;p&gt;Ok, this is both possible and reliable. But please, think twice before using it ! Most of the time when you use it you should rethink your modeling. This is the first feature that was added to DynamoDB-mapper, long before I took over the development. It has never been used internally. I only refactored it to be harmless.&lt;/p&gt;
+
+&lt;p&gt;Put it to work requires&lt;/p&gt;
+
+&lt;ol start=&#34;1&#34;&gt;
+  &lt;li&gt;
+    &lt;a href=&#34;http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/WorkingWithDDItems.html&#34;&gt;Atomic counter&lt;/a&gt;, provided by UpdateItem’s ADD operation
+  &lt;/li&gt;
+  &lt;li&gt;
+    Helpers and black magic
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;strong&gt;generate an id&lt;/strong&gt;: id=UpdateItem(ADD, 1, hash_key=-1, return_values=”UPDATED_NEW”)&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;push a new item&lt;/strong&gt;: PutItem(hash_key=id, &amp;#8230;)&lt;/p&gt;
+
+&lt;p&gt;When saving to an existing item, use UpdateItem or PutItem as usual, do not re-generate an ID or you’ll end up with duplicated/dead data.&lt;/p&gt;
+
+&lt;p&gt;First id generated will be 1. I store the “magic counter” at index -1 because 0 is a neutral value. That is to say, poorly initialized items will go there and you’ll loose the counter. No kidding, it occurred to me. Once.&lt;/p&gt;
+
+&lt;p&gt;For more background, I can only recommend you to read &lt;a href=&#34;http://dynamodb-mapper.readthedocs.org/en/latest/api/model.html#using-auto-incrementing-index&#34;&gt;this extract of DynamoDB-mapper’s documentation&lt;/a&gt; I wrote 2 month ago.&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Thanks to atomic counters, auto_inc behavior is possible. But do you need it ? I never found a real use-case.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;a-name-h-vtv3e1yckbsj-a-storing-article-revisions-getting-always-the-latest:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.vtv3e1yckbsj&#34;&gt;&lt;/a&gt;Storing article revisions, getting always the latest&lt;/h2&gt;
+
+&lt;p&gt;After my DynamoDB presentation, a colleague asked me how we could let’s say, store blog posts revisions and efficiently get the most recent one. I did not know whether it was possible and told him frankly.&lt;/p&gt;
+
+&lt;p&gt;It’s only a month later (after crawling the documentation at least for the 10th time) that I found it. I felt ashamed because it’s pretty easy when you think twice of it &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;hash_key&lt;/strong&gt;: article identifier. A “slug” for example&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;range_key&lt;/strong&gt;: revision id. DateTime for example.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;payload&lt;/strong&gt;: article body, tags, ….&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As you may have notice, this model avoids twice the “auto-inc” temptation :p&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Push a new article&lt;/strong&gt;: PutItem(hash_key=slug, range_key=revision_id=now, ….)&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Push a new revisions&lt;/strong&gt;: same as for a new article (Yeah !)&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Get all revision id&lt;/strong&gt;: Query(hash_key=slug, range_key_condition=None, fields_to_get=[‘revision_id’])&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Get a specific revision&lt;/strong&gt;: same as above, with no field filter&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Get the last revision&lt;/strong&gt;: Query(hash_key=slug, ScanIndexForward=True, limit=1)&lt;/p&gt;
+
+&lt;p&gt;Of course, all this assumes that your “article identifier” is immutable and that your “revision id” follows a monotonic strictly growing function.&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;DynamoDB is excellent when it comes to revisions. The single &amp;#8220;trick&amp;#8221; to remember is &amp;#8220;reverse scan + limit=1&amp;#8221;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;a-name-h-g2za5919ol0l-a-the-third-key-trick:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.g2za5919ol0l&#34;&gt;&lt;/a&gt;The “third key trick”&lt;/h2&gt;
+
+&lt;p&gt;This was an internal question at my job. A backend engineer asked me how I would do to find all challenges initiated&lt;/p&gt;
+
+&lt;ol start=&#34;1&#34;&gt;
+  &lt;li&gt;
+    in a given world
+  &lt;/li&gt;
+  &lt;li&gt;
+    by a given player
+  &lt;/li&gt;
+  &lt;li&gt;
+    not older than a week
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Once you have a whiteboard in front of you, it becomes easier. The solution we came up with was to build a compound range_key and then play with the magic of Query with ‘BEGINS_WITH’ or ‘GT’ comparison operators.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;hash_key&lt;/strong&gt;: world_id&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;range_key&lt;/strong&gt;: playerid+’:’+datetime&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;So, let’s say you have 3 “keys” ‘a’, ‘b’, ‘c’. The range key will be a combination of ‘b’ and ‘c’. So that you can&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Query for all (or some) ‘a’&lt;/li&gt;
+&lt;li&gt;Query for all or some ‘a’ and ‘b’ using comparison operators&lt;/li&gt;
+&lt;li&gt;Get item at ‘a’, ‘b’, ‘c’&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Thanks to the power of queries, you can simulate a third key by concatenating two and then apply query filters.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;a-name-h-1shlqfirwps3-a-how-do-i-query-a-non-key-field:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.1shlqfirwps3&#34;&gt;&lt;/a&gt;How do I query a non key field ?&lt;/h2&gt;
+
+&lt;p&gt;Have double checked your model ? Have you considered the “3rd key trick” above ?&lt;/p&gt;
+
+&lt;p&gt;I know, sometimes, you just have no choice, Data is here but needs changes. Chris Moyer wrote an excellent &lt;a href=&#34;http://blog.coredumped.org/2012/01/amazon-dynamodb.html&#34;&gt;blog post on this subject&lt;/a&gt;.&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;He basically suggests to build (and) maintain special tables as custom indexes. I never tried it myself but it sounds really good.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;that-s-all-folks:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;That&amp;rsquo;s all folks&lt;/h2&gt;
+
+&lt;p&gt;Well, all I can think of for today &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

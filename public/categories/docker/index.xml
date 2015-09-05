@@ -1,0 +1,858 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Docker on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/categories/docker/</link>
+    <description>Recent content in Docker on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 25 Apr 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/categories/docker/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How I shrunk a Docker image by 98.8% – featuring fanotify</title>
+      <link>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
+      <pubDate>Sat, 25 Apr 2015 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
+      <description>
+
+&lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
+
+&lt;p&gt;You can find a couple of pretty decent common-sense powered approach &lt;a href=&#34;https://intercityup.com/blog/downsizing-docker-containers.html&#34;&gt;on the web&lt;/a&gt; like removing well known cache folders, temporary files, installing all superfluous packages and flatten layers if not the full image. There is also the &lt;code&gt;-slim&lt;/code&gt; declination of the official language images.&lt;/p&gt;
+
+&lt;p&gt;But, thinking at it, do we &lt;em&gt;really&lt;/em&gt; need a full consistent base Linux install? Which files do we &lt;em&gt;really&lt;/em&gt; need in a given image? I found a radical and pretty efficient approaches with a go binary. It was statically build, almost no external dependency. &lt;a href=&#34;http://blog.codeship.com/building-minimal-docker-containers-for-go-applications/&#34;&gt;Resulting image&lt;/a&gt;: 6.12MB.&lt;/p&gt;
+
+&lt;p&gt;Whaou! Is there any chance to do something comparable, deterministic with any random application?&lt;/p&gt;
+
+&lt;p&gt;It turns out there could be one. The idea is simple: We could profile the image at run time one way or another to determine which files are ever accessed/opened/&amp;#8230;, then remove all the remaining files. Hmm, sounds promising. Let&amp;rsquo;s PoC it.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Target definition&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Start image&lt;/strong&gt;: Ubuntu (~200MB)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Application that MUST run&lt;/strong&gt;: &lt;code&gt;/bin/ls&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Goal&lt;/strong&gt;: Build the smallest possible image&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;code&gt;/bin/ls&lt;/code&gt; is a good target: It is simple enough for a PoC with no nasty behavior but still not trivial, it uses dynamic linking.&lt;/p&gt;
+
+&lt;p&gt;Now that we have a target, let&amp;rsquo;s pick a tool. As this is a proof of concept, using dynamites where a hole puncher would  be enough &lt;em&gt;IS&lt;/em&gt; an option, as long as it does the job.&lt;/p&gt;
+
+&lt;p&gt;The base idea it to record all file accesses. Be it a stat or a open. There are a couple of good candidates to help with the task. We could use &lt;a href=&#34;http://linux.die.net/man/7/inotify&#34; title=&#34;Man Inotify&#34;&gt;inotify&lt;/a&gt; but it is a pain to setup and watches needs to be attached on every single files, which potentially mean a *lot* of watches. We could use LD_PRELOAD but 1/ it&amp;rsquo;s no fun to use, 2/ it won&amp;rsquo;t catch direct syscalls 3/ it won&amp;rsquo;t work with statically linked programs (who said golang&amp;rsquo;s?). A solution that would work well even for statically linked program would be to use &lt;a href=&#34;http://linux.die.net/man/2/ptrace&#34; title=&#34;Man ptrace&#34;&gt;ptrace&lt;/a&gt; to trace all syscalls, in realtime. It is also a pain to setup but, it would be a reliable and flexible option. A lesser known linux syscall is &lt;a href=&#34;http://man7.org/linux/man-pages/man7/fanotify.7.html&#34;&gt;fanotify&lt;/a&gt;. As the title suggests, This is the one we&amp;rsquo;ll go with&lt;sup&gt;1&lt;/sup&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;fanotify&lt;/code&gt; syscall has originally been implemented as &amp;#8220;decent&amp;#8221; mechanism for anti-virus vendors to intercept file access events, potentially on a whole mountpoint at once. Sounds familiar? While it may be used to deny file accesses, it may also just report file access events in a non-blocking fashion, potentially dropping&lt;sup&gt;2&lt;/sup&gt; events if the kernel queue overflows. In this last case, a special message will be generated to notify user-land listener about the message loss. This is perfectly what I needed. Non intrusive, a whole mountpoint at once, simple setup (well, provided that you find the documentation, no comment&amp;#8230;). This may seem anecdotal but it has its importance, as a learned after.&lt;/p&gt;
+
+&lt;p&gt;Using it is fairly simple:&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1/ Init &lt;code&gt;fanotify&lt;/code&gt; in &lt;code&gt;FAN_CLASS_NOTIF&lt;/code&gt;ication mode using &lt;a href=&#34;http://man7.org/linux/man-pages/man2/fanotify_init.2.html&#34;&gt;&lt;code&gt;fanotify_init&lt;/code&gt; syscall&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Open ``fan`` fd for fanotify notifications. Messages will embed a 
+// filedescriptor on accessed file. Expect it to be read-only
+fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ Subscribe to &lt;code&gt;FAN_ACCESS&lt;/code&gt; and &lt;code&gt;FAN_OPEN&lt;/code&gt; events on &amp;#8220;/&amp;#8221; &lt;code&gt;FAN_MARK_MOUNT&lt;/code&gt;point using &lt;a href=&#34;http://man7.org/linux/man-pages/man2/fanotify_mark.2.html&#34;&gt;&lt;code&gt;fanotify_mark&lt;/code&gt; syscall&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Watch open/access events on root mountpoint
+fanotify_mark(
+    fan, 
+    FAN_MARK_ADD | FAN_MARK_MOUNT, // Add mountpoint mark to fan
+    FAN_ACCESS | FAN_OPEN,         // Report open and access events, non blocking
+    -1, &#34;/&#34;                        // Watch root mountpoint (-1 is ignored for FAN_MARK_MOUNT type calls)
+);
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;3/ read&lt;/code&gt; pending event messages from the filedescriptor returned by &lt;code&gt;fanotify_init&lt;/code&gt; and iterate using &lt;code&gt;FAN_EVENT_NEXT&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;// Read pending events from ``fan`` into ``buf``
+buflen = read(fan, buf, sizeof(buf));
+
+// Position cursor on first message
+metadata = (struct fanotify_event_metadata*)&amp;buf;
+
+// Loop until we reached the last event
+while(FAN_EVENT_OK(metadata, buflen)) {
+    // Do something interesting with the notification
+    // ``metadata-&amp;gt;fd`` will contain a valid, RO fd to accessed file.
+
+    // Close opened fd, otherwise we&#39;ll quickly exhaust the fd pool.
+    close(metadata-&amp;gt;fd);
+
+    // Move to next event in buffer
+    metadata = FAN_EVENT_NEXT(metadata, buflen);
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Putting it all together, we&amp;rsquo;ll print the full name of all accessed files and add queue overflow detection. This should be plain enough for us (comments and error checks stripped for the purpose of this illustration):&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;limits.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sys/fanotify.h&amp;gt;
+
+int main(int argc, char** argv) {
+    int fan;
+    char buf[4096];
+    char fdpath[32];
+    char path[PATH_MAX + 1];
+    ssize_t buflen, linklen;
+    struct fanotify_event_metadata *metadata;
+
+    // Init fanotify structure
+    fan = fanotify_init(FAN_CLASS_NOTIF, O_RDONLY);
+
+    // Watch open/access events on root mountpoint
+    fanotify_mark(
+        fan,
+        FAN_MARK_ADD | FAN_MARK_MOUNT,
+        FAN_ACCESS | FAN_OPEN,
+        -1, &#34;/&#34;
+    );
+
+    while(1) {
+        buflen = read(fan, buf, sizeof(buf));
+        metadata = (struct fanotify_event_metadata*)&amp;buf;
+
+        while(FAN_EVENT_OK(metadata, buflen)) {
+            if (metadata-&amp;gt;mask &amp; FAN_Q_OVERFLOW) {
+                printf(&#34;Queue overflow!\n&#34;);
+                continue;
+            }
+
+            // Resolve path, using automatically opened fd
+            sprintf(fdpath, &#34;/proc/self/fd/%d&#34;, metadata-&amp;gt;fd);
+            linklen = readlink(fdpath, path, sizeof(path) - 1);
+            path[linklen] = &#39;&amp;#92;&amp;#48;&#39;;
+            printf(&#34;%s\n&#34;, path);
+
+            close(metadata-&amp;gt;fd);
+            metadata = FAN_EVENT_NEXT(metadata, buflen);
+        }
+    }
+}
+&lt;/pre&gt;
+
+&lt;p&gt;To build it, use:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;gcc main.c --static -o fanotify-profiler
+&lt;/pre&gt;
+
+&lt;p&gt;We basically now have a tool to report any file access on the active &amp;#8216;/&amp;rsquo; mountpoint in real time. Good.&lt;/p&gt;
+
+&lt;p&gt;What now? Let&amp;rsquo;s create an Ubuntu container, start the recorder and run &lt;code&gt;/bin/ls&lt;/code&gt;. &lt;code&gt;fanotify&lt;/code&gt; requires require the &amp;#8220;&lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&amp;#8221; capability. This is basically the &amp;#8220;catch-all&amp;#8221; root &lt;a href=&#34;http://linux.die.net/man/7/capabilities&#34;&gt;capability&lt;/a&gt;. Still better than running in &lt;code&gt;--privileged&lt;/code&gt; mode though.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Run image
+docker run --name profiler_ls \
+           --volume $PWD:/src \
+           --cap-add SYS_ADMIN \
+           -it ubuntu /src/fanotify-profiler
+
+# Run the command to profile, from another shell
+docker exec -it profiler_ls ls
+
+# Interrupt Running image using
+docker kill profiler_ls # You know, the &#34;dynamite&#34;
+&lt;/pre&gt;
+
+&lt;p&gt;This should produce an output like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;/etc/passwd
+/etc/group
+/etc/passwd
+/etc/group
+/bin/ls
+/bin/ls
+/bin/ls
+/lib/x86_64-linux-gnu/ld-2.19.so
+/lib/x86_64-linux-gnu/ld-2.19.so
+/etc/ld.so.cache
+/lib/x86_64-linux-gnu/libselinux.so.1
+/lib/x86_64-linux-gnu/libacl.so.1.1.0
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libc-2.19.so
+/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libdl-2.19.so
+/lib/x86_64-linux-gnu/libattr.so.1.1.0
+&lt;/pre&gt;
+
+&lt;p&gt;Awesome! It worked. We now know for sure what &lt;code&gt;/bin/ls&lt;/code&gt; ultimately needs to run.&lt;/p&gt;
+
+&lt;p&gt;So we&amp;rsquo;ll just copy-paste-import all this in a &amp;#8220;&lt;code&gt;FROM scratch&lt;/code&gt;&amp;#8221; Docker Image and we&amp;rsquo;ll be done. Easy. Well, not so. But let&amp;rsquo;s do it to see by ourselves.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Export base docker image
+mkdir ubuntu_base
+docker export profiler_ls | sudo tar -x -C ubuntu_base
+
+# Create new image
+mkdir ubuntu_lean
+
+# Get the linker (trust me)
+sudo mkdir -p ubuntu_lean/lib64
+sudo cp -a ubuntu_base/lib64/ld-linux-x86-64.so.2 ubuntu_lean/lib64/
+
+# Copy the files
+sudo mkdir -p ubuntu_lean/etc
+sudo mkdir -p ubuntu_lean/bin
+sudo mkdir -p ubuntu_lean/lib/x86_64-linux-gnu/
+
+sudo cp -a ubuntu_base/bin/ls ubuntu_lean/bin/ls
+sudo cp -a ubuntu_base/etc/group ubuntu_lean/etc/group
+sudo cp -a ubuntu_base/etc/passwd ubuntu_lean/etc/passwd
+sudo cp -a ubuntu_base/etc/ld.so.cache ubuntu_lean/etc/ld.so.cache
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/ld-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libselinux.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libselinux.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1.1.0
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libc-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3.13.1 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3.13.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl-2.19.so ubuntu_lean/lib/x86_64-linux-gnu/libdl-2.19.so
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1.1.0 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1.1.0
+
+# Import it back to Docker
+cd ubuntu_lean
+sudo tar -c . | docker import - ubuntu_lean
+&lt;/pre&gt;
+
+&lt;p&gt;Run the resulting image:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run --rm -it ubuntu_lean /bin/ls
+&lt;/pre&gt;
+
+&lt;p&gt;And, Tadaaaaa:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;# If you did not trust me with the linker (as it was already loaded when the profiler started, it does not show in the ouput)
+no such file or directoryFATA[0000] Error response from daemon: Cannot start container f318adb174a9e381500431370a245275196a2948828919205524edc107626d78: no such file or directory
+
+# Otherwise
+/bin/ls: error while loading shared libraries: libacl.so.1: cannot open shared object file: No such file or directory
+&lt;/pre&gt;
+
+&lt;p&gt;Well, not so&amp;#8230; What went wrong? Remember when I said this syscall was primarily designed with antivirus in mind? The real-time part of the antivirus is supposed to detect that a file is being accessed, run some checks, take a decision. What matters here is the actual, real content of the file. In particular, filesystem races MUST be avoided at all costs. This is the reason why &lt;code&gt;fanotify&lt;/code&gt; yields filedescriptors instead of accesses path. Determining the underlying physical file is done by probing &lt;code&gt;/proc/self/fd/[fd]&lt;/code&gt;. It does not tell you through which symlink the file being accessed was accessed, only what file it is.&lt;/p&gt;
+
+&lt;p&gt;To make this work, we need to find all links to reported files and install them in the filtered image as well. A &lt;code&gt;find&lt;/code&gt; command like this will do the job:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Find all files refering to a given one
+find -L -samefile &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; 2&amp;gt;/dev/null
+
+# If you want to exclude the target itself from the results
+find -L -samefile &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; -a ! -path &#34;./lib/x86_64-linux-gnu/libacl.so.1.1.0&#34; 2&amp;gt;/dev/null
+&lt;/pre&gt;
+
+&lt;p&gt;This can easily be automated with a loop like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;for f in $(cd ubuntu_lean; find)
+do 
+    (
+        cd ubuntu_base
+        find -L -samefile &#34;$f&#34; -a ! -path &#34;$f&#34;
+    ) 2&amp;gt;/dev/null
+done
+&lt;/pre&gt;
+
+&lt;p&gt;Which produces the list of missing symlinks. All libs.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;./lib/x86_64-linux-gnu/libc.so.6
+./lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+./lib/x86_64-linux-gnu/libattr.so.1
+./lib/x86_64-linux-gnu/libdl.so.2
+./lib/x86_64-linux-gnu/libpcre.so.3
+./lib/x86_64-linux-gnu/libacl.so.1
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s copy them too from the source image and re-create the destination image. (Yeah, could also have created them on the fly).&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Copy the links
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libc.so.6 ubuntu_lean/lib/x86_64-linux-gnu/libc.so.6
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ubuntu_lean/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libdl.so.2 ubuntu_lean/lib/x86_64-linux-gnu/libdl.so.2
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libpcre.so.3 ubuntu_lean/lib/x86_64-linux-gnu/libpcre.so.3
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libacl.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libacl.so.1
+sudo cp -a ubuntu_base/lib/x86_64-linux-gnu/libattr.so.1 ubuntu_lean/lib/x86_64-linux-gnu/libattr.so.1
+
+# Import it back to Docker
+cd ubuntu_lean
+docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Warning&lt;/strong&gt;: This method is limited. For example, it won&amp;rsquo;t return links to links to files neither absolute links. The later requiring at least a chroot. Or to be run in the source container itself, provided that find or equivalent is present.&lt;/p&gt;
+
+&lt;p&gt;Run the resulting image:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run --rm -it ubuntu_lean /bin/ls
+&lt;/pre&gt;
+
+&lt;p&gt;And, Tadaaaaa:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;bin  dev  etc  lib  lib64  proc  sys
+&lt;/pre&gt;
+
+&lt;p&gt;It works! &lt;sup&gt;tm&lt;/sup&gt;&lt;/p&gt;
+
+&lt;p&gt;Time is over, let&amp;rsquo;s measure:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;&lt;strong&gt;ubuntu&lt;/strong&gt;: 209M&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;strong&gt;ubuntu_lean&lt;/strong&gt;: 2,5M&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Resulting Docker image is 83.5 &lt;em&gt;times&lt;/em&gt; smaller&lt;sup&gt;3&lt;/sup&gt;. That&amp;rsquo;s a 98.8% reduction. Looks good to me, I&amp;rsquo;ll accept it. If you agree.&lt;/p&gt;
+
+&lt;h3 id=&#34;last-thought:ed6b7f79feba98b85e08740dab416986&#34;&gt;Last Thought&lt;/h3&gt;
+
+&lt;p&gt;Like all profiling based method, it will only tell you about what&amp;rsquo;s actually done/used in a specific scenario. For example, try to run &lt;code&gt;/bin/ls -l&lt;/code&gt; in the resulting image and see by yourself. (spoiler: it does not work. Well it does, but not as expected).&lt;/p&gt;
+
+&lt;p&gt;The profiling technique itself is not without flaws. It does not detect how a file was opened but only which file this is. This is a problem for symlinks, especially cross-filesytems (read: cross-volumes). With fanotify, we&amp;rsquo;ll completely miss the original symlink and break the application.&lt;/p&gt;
+
+&lt;p&gt;If I were to build a production shrinker, I would probably go for a &lt;code&gt;ptrace&lt;/code&gt; based method.&lt;/p&gt;
+
+&lt;h3 id=&#34;footnotes:ed6b7f79feba98b85e08740dab416986&#34;&gt;Footnotes&lt;/h3&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;Let&amp;rsquo;s face the truth: What I really wanted, was experimenting with this syscall. Docker images are more of a (good) pretext.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Actually, one could use &lt;code&gt;FAN_UNLIMITED_QUEUE&lt;/code&gt; well calling &lt;code&gt;fanotify_init&lt;/code&gt; to remove this limitation, provided that the calling process is at least &lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;That&amp;rsquo;s also 2.4 times smaller that the 6.13MB image I mentioned at the beginning of this post. But the comparison is not fair.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>How to run Docker behind an Nginx reverse proxy</title>
+      <link>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
+      <pubDate>Fri, 12 Dec 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
+      <description>
+
+&lt;p&gt;A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.&lt;/p&gt;
+
+&lt;p&gt;Shared hosting farms are usually built around some kind of public gateway for incoming/outgoing traffic as well as management traffic including FTP and SSH. Te largest part of the farm - not unlike an iceberg - being &amp;#8220;hidden&amp;#8221; in a private network behind these gateways.&lt;/p&gt;
+
+&lt;p&gt;So, my question was, is there any way we can imagine that could enable a similar gateway behavior with Docker, including multi-tenancy support and all features you&amp;rsquo;d expect?&lt;/p&gt;
+
+&lt;p&gt;It turns out, there is.&lt;/p&gt;
+
+&lt;p&gt;Docker binary can actually play up to 3 roles:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Docker Command line -&amp;gt; the one making it shiny and plain awesome&lt;/li&gt;
+&lt;li&gt;Docker Daemon -&amp;gt; the one behind the scenes doing most of the hard work&lt;/li&gt;
+&lt;li&gt;Docker init -&amp;gt; the one behind the one behind the scenes doing the early container setup&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The command line and and daemon talk together using a &lt;em&gt;&lt;strong&gt;mostly&lt;/strong&gt;&lt;/em&gt; HTTP based protocol. I say &amp;#8220;mostly&amp;#8221; because the a couple of API endpoints &amp;#8216;hijack&amp;rsquo; the connection, notably the &lt;code&gt;container/attach&lt;/code&gt; endpoint, also known as &amp;#8220;forward my container&amp;rsquo;s console.&amp;#8221;&lt;/p&gt;
+
+&lt;p&gt;Knowing that, a common setup, already well covered by blog posts around the web, recommend to setup an &lt;code&gt;NGinx&lt;/code&gt; reverse proxy and add basic authentication for the security.&lt;/p&gt;
+
+&lt;p&gt;Sadly, there are 2 downsides with this approach:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Stock Docker client does not &amp;#8220;speak&amp;#8221; HTTP basic authentication&lt;/li&gt;
+&lt;li&gt;Stock Nginx is completely lost when Docker hijacks the connection&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Regarding the authentication issue, I recommend to rather rely on Docker TLS certificate as they are supported out of the box. Then, using some LUA magic, we could use them as &amp;#8220;public keys&amp;#8221; to balance to the appropriate. This would in itself a good subject for a dedicated post.&lt;/p&gt;
+
+&lt;p&gt;How do we deal with the second point, namely, Nginx being lost?&lt;/p&gt;
+
+&lt;p&gt;Once the mechanism behind the &amp;#8220;hijack&amp;#8221; is well identified, things quickly becomes straight forward: A usual HTTP connection could be seen as &amp;#8220;half-duplex&amp;#8221; network. One peer talks and, when it is done, the other peer can talk and so on, using a well known protocol. When doing a docker attach, Docker uses the raw TCP connection in &amp;#8220;full duplex&amp;#8221; mode, any peer can talk whenever they have something to say. This is why reverse proxies are lost: they expect - and rely - a lot on the HTTP protocol being well respected.&lt;/p&gt;
+
+&lt;p&gt;Interestingly, there is another mainstream protocol doing just this. As it turns out, this standard protocol is so popular that it has been integrated in Nginx years ago. I named &lt;code&gt;WebSocket&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;So, basically, the idea is to teach Nginx how to handle Docker&amp;rsquo;s custom protocol just as it does with websockets. Here is the patch:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;--- a/src/http/ngx_http_upstream.c Tue Nov 04 19:56:23 2014 +0900
++++ b/src/http/ngx_http_upstream.c  Sat Nov 15 16:21:58 2014 +0100
+@@ -89,6 +89,8 @@
+     ngx_table_elt_t *h, ngx_uint_t offset);
+ static ngx_int_t ngx_http_upstream_process_content_length(ngx_http_request_t *r,
+     ngx_table_elt_t *h, ngx_uint_t offset);
++static ngx_int_t ngx_http_upstream_process_content_type(ngx_http_request_t *r,
++    ngx_table_elt_t *h, ngx_uint_t offset);
+ static ngx_int_t ngx_http_upstream_process_last_modified(ngx_http_request_t *r,
+     ngx_table_elt_t *h, ngx_uint_t offset);
+ static ngx_int_t ngx_http_upstream_process_set_cookie(ngx_http_request_t *r,
+@@ -175,7 +177,7 @@
+                  ngx_http_upstream_copy_header_line, 0, 0 },
+
+     { ngx_string(&#34;Content-Type&#34;),
+-                 ngx_http_upstream_process_header_line,
++                 ngx_http_upstream_process_content_type,
+                  offsetof(ngx_http_upstream_headers_in_t, content_type),
+                  ngx_http_upstream_copy_content_type, 0, 1 },
+
+@@ -2716,6 +2718,7 @@
+     u-&amp;gt;write_event_handler = ngx_http_upstream_upgraded_write_upstream;
+     r-&amp;gt;read_event_handler = ngx_http_upstream_upgraded_read_downstream;
+     r-&amp;gt;write_event_handler = ngx_http_upstream_upgraded_write_downstream;
++    u-&amp;gt;headers_in.chunked = 0;
+
+     if (clcf-&amp;gt;tcp_nodelay) {
+         tcp_nodelay = 1;
+@@ -3849,6 +3852,25 @@
+
+ static ngx_int_t
++ngx_http_upstream_process_content_type(ngx_http_request_t *r, ngx_table_elt_t *h,
++    ngx_uint_t offset)
++{
++    ngx_int_t ret = ngx_http_upstream_process_header_line(r, h, offset);
++    if (ret != NGX_OK) {
++        return ret;
++    }
++
++    // is docker header ?
++    if (ngx_strstrn(h-&amp;gt;value.data,
++                    &#34;application/vnd.docker.raw-stream&#34;, 34 - 1) != NULL) {
++        r-&amp;gt;upstream-&amp;gt;upgrade = 1;
++    }
++
++    return NGX_OK;
++}
++
++
++static ngx_int_t
+ ngx_http_upstream_process_last_modified(ngx_http_request_t *r,
+     ngx_table_elt_t *h, ngx_uint_t offset)
+ {
+1
+
+The only remaining step is then to configure the reverse proxy, as usual. This should be easy 😉
+
+Just for the record, here is my test &amp;lt;code&amp;gt;nginx.conf&amp;lt;/code&amp;gt;:
+
+1
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+
+    keepalive_timeout  65;
+
+    server {
+        listen 9000;
+
+        location / {
+            proxy_buffering off;
+            proxy_pass http://localhost:8080;
+        }
+    }
+}
+&lt;/pre&gt;
+
+&lt;p&gt;You just need to run Docker on port 8080 with a command like the following or just add your params to &lt;code&gt;/etc/default/docker&lt;/code&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;docker -d -H tcp://localhost:8080&lt;/pre&gt;
+
+&lt;p&gt;And we&amp;rsquo;re done!&lt;/p&gt;
+
+&lt;h3 id=&#34;final-thought:d5aecd33c8f89018de5951b27bb1e669&#34;&gt;Final thought&lt;/h3&gt;
+
+&lt;p&gt;While hacking this, I noticed that all Nginx needs to switch protocols for websockets was proper HTTP Headers:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;# Request
+Connection: Upgrade
+Upgrade: websocket
+
+# Response
+HTTP/1.1 101 Upgraded
+Connection: Upgrade
+Upgrade: websocket
+&lt;/pre&gt;
+
+&lt;p&gt;So that another approach could be to inject proper headers in Docker protocol.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Getting Docker to run on Power8</title>
+      <link>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</link>
+      <pubDate>Tue, 28 Oct 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</guid>
+      <description>
+
+&lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
+
+&lt;p&gt;[UPDATE 2014-11-19]: IBM is currently porting Docker to gccgo/Power8, see the comments below for more informations.&lt;/p&gt;
+
+&lt;p&gt;Power8 is the name of a 64bits RISC processor micro-architecture of the same family as the G5 for example. This was the processor powering the venerable Mac G5. It is extremely parallel with up to 8 threads per core. This makes it especially good at running databases. Notably, &lt;a href=&#34;https://www.flamingspork.com/blog/2014/06/03/1-million-sql-queries-per-second-mysql-5-7-on-power8/&#34;&gt;Stewart Smith tuned MySQL 7 to get up to 1M request per seconds&lt;/a&gt;. This is just amazing!&lt;/p&gt;
+
+&lt;p&gt;Docker is a tool helping developers to build, ship and run code anywhere just like containers helps shipping anything anywhere. It is increasingly used in production to cleanly isolate processes on a same physical machine without the overhead of a Virtual Machine.&lt;/p&gt;
+
+&lt;p&gt;So, let&amp;rsquo;s get started. My goal was to get docker running and, if possible the latest version (it turns out it actually **is** the latest version). The goal was not to make it the shiniest way. That&amp;rsquo;s for later.&lt;/p&gt;
+
+&lt;p&gt;Here is the state of the art:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Docker depends on Go and cgo 1.2.1 until version 1.1.1&lt;/li&gt;
+&lt;li&gt;Docker depends on Go and cgo 1.3+ after then&lt;/li&gt;
+&lt;li&gt;gccgo 4.9, shipped with Ubuntu 14.04 supports go 1.2.1 but lacks some reflexivity implementation for Power8 and Elf parsing for Power8 in libcgo&lt;/li&gt;
+&lt;li&gt;gccgo trunk supports go 1.4 (yes), fixes the reflexivity but still lacks the Elf parsing&lt;/li&gt;
+&lt;li&gt;golang 1.3 has no support for Power8&lt;/li&gt;
+&lt;li&gt;golang dev.power64 is still very work in progress but supports ELF parsing for Power8 (hint, hint)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As you can see, this is not &lt;span class=&#34;span9&#34;&gt;attempting to square the circle but not so close.&lt;/span&gt;&lt;/p&gt;
+
+&lt;p&gt;It is also worth noting that gccgo is only the compiler parts. It brings no support for the &amp;#8220;go&amp;#8221; command line itself (which is written in pure go) neither for cgo (which bridges the gap between Go and C worlds). Fortunately, Dave Cheney, of Canonical, did the hard work of getting &amp;#8220;go&amp;#8221; to build with gccgo and in turn seamlessly work with gccgo backend by default. His work is now available through &amp;#8216;apt-get&amp;rsquo;. He also did a great presentation of his work which is available online &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide&#34;&gt;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide&lt;/a&gt;. And, honestly, after a full week-end battling to get it right, I totally share his opinions when he writes &amp;#8220;ʕ╯◔ϖ◔ʔ╯︵ ┻━┻&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;Among the discarded, aborted, failed attempts: cross compile from my laptop, find ready to use instructions, use stock gcc 4.9, build dev.power64 Go branch (it&amp;rsquo;s completely broken / Work in progress), fly a unicorn.&lt;/p&gt;
+
+&lt;p&gt;Anyway, let&amp;rsquo;s start over. What we&amp;rsquo;ll do:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;get a Power8 machine. No cross build sorry.&lt;/li&gt;
+&lt;li&gt;grab latest version of GCC from trunk (SVN, that&amp;rsquo;s 1 VCS)&lt;/li&gt;
+&lt;li&gt;grab latest WIP version of Power8 from dev.power64 (Mercurial, that&amp;rsquo;s a 2nd VCS)&lt;/li&gt;
+&lt;li&gt;copy required bits from go to gccgo, namely the ELF parser of libcgo&lt;/li&gt;
+&lt;li&gt;patch, build and install gccgo in /opt/gcc-trunk&lt;/li&gt;
+&lt;li&gt;build &amp;#8220;go&amp;#8221; and &amp;#8220;cgo&amp;#8221; commands to use our updated libgo.so.6 instead of libgo.so.5&lt;/li&gt;
+&lt;li&gt;grab lastest version of Docker from master (Git, that&amp;rsquo;s a 3rd VCS)&lt;/li&gt;
+&lt;li&gt;patch, build, install Docker&lt;/li&gt;
+&lt;li&gt;celebrate&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&#34;1-get-a-power8-machine:843e6337e67e60d94f17e70050c565c9&#34;&gt;1. Get a Power8 Machine&lt;/h3&gt;
+
+&lt;p&gt;The easiest way to get one is to &lt;a href=&#34;http://labs.runabove.com/power8/&#34;&gt;join RunAbove&amp;rsquo;s public beta&lt;/a&gt; which comes with a $32 Voucher. That&amp;rsquo;s one month worth of Power8.&lt;/p&gt;
+
+&lt;p&gt;Common setup:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo locale-gen
+sudo apt-get -y update
+sudo apt-get -y install subversion mercurial git build-essential gccgo-go
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;2-grab-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;2. Grab GCC&lt;/h3&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+svn checkout svn://gcc.gnu.org/svn/gcc/trunk gcc
+# Be *very* patient
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;3-grab-go-dev-power64:843e6337e67e60d94f17e70050c565c9&#34;&gt;3. Grab Go dev.power64&lt;/h3&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+hg clone -u release https://code.google.com/p/go
+cd go
+hg update dev.power64
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;4-patch-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;4. Patch GCC&lt;/h3&gt;
+
+&lt;p&gt;GCC&amp;rsquo;s libcgo implementation lakes elf parsing supporting for PPC64 instruction set. As this is required by &lt;code&gt;cgo&lt;/code&gt;, we&amp;rsquo;ll get it from Go itself.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+cp go/src/debug/elf/file.go gcc/libgo/go/debug/elf/
+cp go/src/debug/elf/elf.go gcc/libgo/go/debug/elf/
+&lt;/pre&gt;
+
+&lt;p&gt;It also lacks some termios related symbols required to build docker command line interface. They&amp;rsquo;re easily added with this patch (extracted from `svn diff`):&lt;/p&gt;
+
+&lt;p&gt;[UPDATE 2014-11-11]: This patch is no longer needed thanks to IBM&amp;rsquo;s upstream work.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;--- libgo/mksysinfo.sh  (revision 216693)
++++ libgo/mksysinfo.sh  (working copy)
+@@ -174,6 +174,15 @@
+ #ifdef TIOCGWINSZ
+   TIOCGWINSZ_val = TIOCGWINSZ,
+ #endif
++#ifdef TIOCSWINSZ
++  TIOCSWINSZ_val = TIOCSWINSZ,
++#endif
++#ifdef TCGETS
++  TCGETS_val = TCGETS,
++#endif
++#ifdef TCSETS
++  TCSETS_val = TCSETS,
++#endif
+ #ifdef TIOCNOTTY
+   TIOCNOTTY_val = TIOCNOTTY,
+ #endif
+@@ -790,6 +799,21 @@
+     echo &#39;const TIOCGWINSZ = _TIOCGWINSZ_val&#39; &amp;gt;&amp;gt; ${OUT}
+   fi
+ fi
++if ! grep &#39;^const TIOCSWINSZ&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++  if grep &#39;^const _TIOCSWINSZ_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++    echo &#39;const TIOCSWINSZ = _TIOCSWINSZ_val&#39; &amp;gt;&amp;gt; ${OUT}
++  fi
++fi
++if ! grep &#39;^const TCGETS&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++  if grep &#39;^const _TCGETS_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++    echo &#39;const TCGETS = _TCGETS_val&#39; &amp;gt;&amp;gt; ${OUT}
++  fi
++fi
++if ! grep &#39;^const TCSETS&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++  if grep &#39;^const _TCSETS_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
++    echo &#39;const TCSETS = _TCSETS_val&#39; &amp;gt;&amp;gt; ${OUT}
++  fi
++fi
+ if ! grep &#39;^const TIOCNOTTY&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
+   if grep &#39;^const _TIOCNOTTY_val&#39; ${OUT} &amp;gt;/dev/null 2&amp;gt;&amp;1; then
+     echo &#39;const TIOCNOTTY = _TIOCNOTTY_val&#39; &amp;gt;&amp;gt; ${OUT}
+&lt;/pre&gt;
+
+&lt;p&gt;If you&amp;rsquo;re planning on making a break, just wait one more minute. We&amp;rsquo;ll launch GCC&amp;rsquo;s build&amp;#8230;&lt;/p&gt;
+
+&lt;h3 id=&#34;5-build-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;5. Build GCC&lt;/h3&gt;
+
+&lt;p&gt;As usual, except that we built it out of tree.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+mkdir build-gcc
+cd build-gcc
+sudo apt-get install -y libgmp-dev libmpfr-dev libmpc-dev flex bison
+../gcc/configure --enable-languages=go --disable-multilib --prefix=/opt/gcc-trunk
+make -j200 # if using the big instance
+sudo make install
+&lt;/pre&gt;
+
+&lt;p&gt;Be patient, read a book, watch a movie, go visit friends&amp;#8230; It takes a while. On the &amp;#8216;S&amp;rsquo; instance, it took me around 98 minutes.&lt;/p&gt;
+
+&lt;p&gt;Once done, we have some additional setup:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;export PATH=/opt/gcc-trunk/bin:$PATH
+echo &#34;/opt/gcc-trunk/lib64&#34; | sudo tee /etc/ld.so.conf.d/gcc-trunk.conf
+sudo ldconfig
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;6-build-and-install-cgo:843e6337e67e60d94f17e70050c565c9&#34;&gt;6. Build (and install) CGO&lt;/h3&gt;
+
+&lt;p&gt;Cgo is the component bridging the gap between Go and C world. It is notably required to build the devmapper driver of Docker.&lt;/p&gt;
+
+&lt;p&gt;As we won&amp;rsquo;t attempt to build the full go toolchain (it does&amp;rsquo;nt work yet), we&amp;rsquo;ll need to patch &amp;#8220;gcc.go&amp;#8220; to insert `const defaultCC = &amp;#8220;gcc&amp;#8221;` near the top of the file.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd go/src/cmd/cgo
+go build
+&lt;/pre&gt;
+
+&lt;p&gt;You can now install it. It&amp;rsquo;s hackish but it does the job. But I still can&amp;rsquo;t figure out why I needed to copy the source files to `/usr/src/cmd/cgo`. Anyway, it&amp;rsquo;s working.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo mkdir -p /usr/pkg/tool/linux_ppc64
+sudo mkdir -p /usr/src/cmd/cgo
+sudo cp cgo /usr/pkg/tool/linux_ppc64/cgo
+sudo cp * /usr/src/cmd/cgo
+&lt;/pre&gt;
+
+&lt;p&gt;One more thing: to let `go build` know we prepared to using cgo, we need to switch `CGO_ENABLED` environment variable on.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;export CGO_ENABLED=1
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;7-grab-docker-1-3-0:843e6337e67e60d94f17e70050c565c9&#34;&gt;7. Grab Docker 1.3.0&lt;/h3&gt;
+
+&lt;p&gt;This is the last stable release at the time of writing. Let&amp;rsquo;s use it.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+git clone https://github.com/docker/docker.git
+cd docker
+git checkout v1.3.1
+&lt;/pre&gt;
+
+&lt;p&gt;We&amp;rsquo;ll also need to prepare a little the build environment:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo mkdir -p /go/src/github.com/docker/
+sudo ln -s $HOME/docker /go/src/github.com/docker/docker
+export PATH=/opt/gcc-trunk/bin/:$PATH
+export GOPATH=/go:/go/src/github.com/docker/docker/vendor
+&lt;/pre&gt;
+
+&lt;h3 id=&#34;8-build-docker:843e6337e67e60d94f17e70050c565c9&#34;&gt;8. Build Docker&lt;/h3&gt;
+
+&lt;p&gt;Just issue &amp;#8216;docker build&amp;rsquo;. I&amp;rsquo;m kidding.&lt;/p&gt;
+
+&lt;p&gt;This is the trickiest part of the job as all the full build systems assumes a working docker environment. So we&amp;rsquo;ll mostly emulate it.&lt;/p&gt;
+
+&lt;p&gt;First, let&amp;rsquo;s apply a couple of patches.&lt;/p&gt;
+
+&lt;p&gt;Remove a runtime (?!) check preventing Docker to run on non amd64 platforms:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;diff --git a/daemon/daemon.go b/daemon/daemon.go
+index 235788c..b75a94e 100644
+--- a/daemon/daemon.go
++++ b/daemon/daemon.go
+@@ -1104,9 +1104,9 @@ func (daemon *Daemon) ImageGetCached(imgID string, config *runconfig.Config) (*i
+ 
+ func checkKernelAndArch() error {
+    // Check for unsupported architectures
+-   if runtime.GOARCH != &#34;amd64&#34; {
+-       return fmt.Errorf(&#34;The Docker runtime currently only supports amd64 (not %s). This will change in the future. Aborting.&#34;, runtime.GOARCH)
+-   }
++   //if runtime.GOARCH != &#34;amd64&#34; {
++   //  return fmt.Errorf(&#34;The Docker runtime currently only supports amd64 (not %s). This will change in the future. Aborting.&#34;, runtime.GOARCH)
++   //}
+    // Check for unsupported kernel versions
+    // FIXME: it would be cleaner to not test for specific versions, but rather
+    // test for specific functionalities.
+&lt;/pre&gt;
+
+&lt;p&gt;Next, we need to workaround hard-coded references to official go compiler:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;diff --git a/vendor/src/github.com/kr/pty/pty_linux.go b/vendor/src/github.com/kr/pty/pty_linux.go
+index 6e5a042..8525f80 100644
+--- a/vendor/src/github.com/kr/pty/pty_linux.go
++++ b/vendor/src/github.com/kr/pty/pty_linux.go
+@@ -7,6 +7,11 @@ import (
+    &#34;unsafe&#34;
+ )
+ 
++type (
++        _C_int  int32
++        _C_uint uint32
++)
++
+ var (
+    ioctl_TIOCGPTN   = _IOR(&#39;T&#39;, 0x30, unsafe.Sizeof(_C_uint(0))) /* Get Pty Number (of pty-mux device) */
+    ioctl_TIOCSPTLCK = _IOW(&#39;T&#39;, 0x31, unsafe.Sizeof(_C_int(0)))  /* Lock/unlock Pty */
+&lt;/pre&gt;
+
+&lt;p&gt;And, finally, change the link flags. Note that for some reason `-static` breaks network communication. It seems to be related to name resolution but I did not investigate further as dynamic linking works just fine.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: diff; title: ; notranslate&#34; title=&#34;&#34;&gt;diff --git a/hack/make/binary b/hack/make/binary
+index b97069a..f5398ae 100755
+--- a/hack/make/binary
++++ b/hack/make/binary
+@@ -6,9 +6,8 @@ DEST=$1
+ go build \
+    -o &#34;$DEST/docker-$VERSION&#34; \
+    &#34;${BUILDFLAGS[@]}&#34; \
+-   -ldflags &#34;
+-       $LDFLAGS
+-       $LDFLAGS_STATIC_DOCKER
++   -gccgoflags &#34;
++       -static-libgo -static-libgcc
+    &#34; \
+    ./docker
+ echo &#34;Created binary: $DEST/docker-$VERSION&#34;
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start to build. Most of the following steps are normally handled by the Dockerfile but&amp;#8230; we don&amp;rsquo;t have a working Docker yet.&lt;/p&gt;
+
+&lt;p&gt;Grab the dependencies:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo apt-get install -y \
+        aufs-tools \
+        automake \
+        btrfs-tools \
+        build-essential \
+        curl \
+        dpkg-sig \
+        git \
+        iptables \
+        libapparmor-dev \
+        libcap-dev \
+        libsqlite3-dev \
+        lxc=1.0* \
+        mercurial \
+        parallel \
+        reprepro \
+        ruby1.9.1 \
+        ruby1.9.1-dev \
+        s3cmd=1.1.0* \
+        --no-install-recommends
+&lt;/pre&gt;
+
+&lt;p&gt;Docker needs a pretty recent devmapper build to run. Get it.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+git clone --no-checkout https://git.fedorahosted.org/git/lvm2.git
+cd lvm2
+git checkout -q v2_02_103
+&lt;/pre&gt;
+
+&lt;p&gt;Now we&amp;rsquo;ll hit an outdated file `config.guess`, overload it.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;mkdir -p autoconf
+wget &#39;http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD&#39; -O autoconf/config.guess
+&lt;/pre&gt;
+
+&lt;p&gt;Build it:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;./configure --enable-static_link
+make device-mapper
+sudo make install_device-mapper
+&lt;/pre&gt;
+
+&lt;p&gt;Make sure you have the the ldconfig, PATH and CGO_ENABLED tricks then:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
+cd docker
+./hack/make.sh binary
+sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
+&lt;/pre&gt;
+
+&lt;p&gt;And we&amp;rsquo;re done !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Using Docker to triage Nasty-Bugs(tm)</title>
+      <link>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
+      <pubDate>Sat, 27 Sep 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
+      <description>&lt;p&gt;Docker is the container system for reproducible builds. This is precisely what you want when dealing with bugs, especially the nastiest one: an environment where to reproduce it in a fully deterministic way.&lt;/p&gt;
+
+&lt;p&gt;Not long ago, I had to troubleshoot the install process of a new cool piece of software. The weird and really uncool thing with this bug is that it only occurred on the first install install attempt. Even with a full (well, in theory) wipe, there still remained some kind of side effect on the system causing the subsequents install attempts to succeed. Anyone who has ever dealt with Q/A will know what I mean when I say this is pretty damn frustrating. (1)&lt;/p&gt;
+
+&lt;p&gt;Traditional approach: use a smart combination of script and snapshots.&lt;/p&gt;
+
+&lt;p&gt;Wait, isn&amp;rsquo;t it exactly what Docker those ? Sure it is !&lt;/p&gt;
+
+&lt;p&gt;Even better than that: Docker saves one snapshot for each step. This is awesome&lt;/p&gt;
+
+&lt;p&gt;when iterating.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s build a &lt;code&gt;Dockerfile&lt;/code&gt; for a Python project (Whoops, did I just name the perpetrator?):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;dockerfile&#34;&gt;# start from clean, minimalist system
+FROM debian:stable
+
+# step 1: make it less minimalist
+RUN apt-get update &amp;&amp; apt-get install -y git vim python-pip
+
+# step 2: grab code from GIT repo + switch to dev branch
+RUN mkdir -p /usr/src &amp;&amp; git clone http://some-server/my-project /usr/src/my-project --branch fix-nastybugtm
+
+# step 3: change workdir so it spares me one &#39;cd&#39; one each attempt
+WORKDIR /usr/src/my-project
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As recommended by &lt;a href=&#34;https://docs.docker.com/articles/dockerfile_best-practices/&#34;&gt;Docker&amp;rsquo;s best practices&lt;/a&gt;, each logical step is grouped on its own dedicated line so that we keep the number of intermediate snapshots reasonable.&lt;/p&gt;
+
+&lt;p&gt;Speaking of snapshots, let&amp;rsquo;s build our lab environment:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker build -t my-project-lab .
+&lt;/pre&gt;
+
+&lt;p&gt;And work on it!&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;docker run -t -i –rm my-project-lab /bin/bash
+&lt;/pre&gt;
+
+&lt;p&gt;This is where all the magic happens. We tell Docker to fire our &lt;code&gt;my-project-lab&lt;/code&gt; env from a clean copy in interactive mode (&lt;code&gt;-i&lt;/code&gt;) and do not attempt to retain data for later use, we won&amp;rsquo;t need it (&lt;code&gt;--rm&lt;/code&gt;). As we&amp;rsquo;re interactive, we&amp;rsquo;ll need a shell. I use &lt;code&gt;/bin/bash&lt;/code&gt; but given recent security context, I may want to be a better hipster and user &lt;code&gt;/bin/zsh&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;See how easy it is to industrialize bug fighting with Docker!&lt;/p&gt;
+
+&lt;p&gt;Any time you&amp;rsquo;ve come closer to you bug, feel free to update your &lt;code&gt;Dockerfile&lt;/code&gt; and rebuild the image. That&amp;rsquo;s one less step to do manually.&lt;/p&gt;
+
+&lt;p&gt;(1) actually, it was even more fun: the bug only occurred when installing from&lt;/p&gt;
+
+&lt;p&gt;release website. Installing from GIT was always successful.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

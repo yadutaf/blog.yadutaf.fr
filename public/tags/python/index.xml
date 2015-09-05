@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Python on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/python/</link>
+    <description>Recent content in Python on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 29 May 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Gmail Oauth2 with Python and bottle</title>
+      <link>http://localhost:1313/2013/05/29/gmail-oauth2-with-python-and-bottle/</link>
+      <pubDate>Wed, 29 May 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/05/29/gmail-oauth2-with-python-and-bottle/</guid>
+      <description>&lt;p&gt;Remember my previous post about &lt;a href=&#34;https://blog.jtlebi.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/&#34; title=&#34;Fetching all messages since last check with Python + Imap&#34;&gt;checking out only new mails from a IMAP account with Python&lt;/a&gt; ? The main issue with this was the absolute need for user&amp;rsquo;s password.&lt;/p&gt;
+
+&lt;p&gt;The solution for this OAuth2&amp;#8230; which has no decent support for Python 3. Well, it&amp;rsquo;s not exactly true. Guys behind &lt;a href=&#34;https://pypi.python.org/pypi/oauthlib&#34;&gt;oauthlib&lt;/a&gt; did quite a good job but OAuth2 is such a generic framework that using a library quickly requires you to write more code than without anyway.&lt;/p&gt;
+
+&lt;p&gt;Soooo, enough talks. First, &lt;a href=&#34;https://code.google.com/apis/console#access&#34;&gt;get you API key here.&lt;/a&gt; Make sure to create a web-application for this example.&lt;/p&gt;
+
+&lt;p&gt;Then it&amp;rsquo;s merely a matter of reading/implementing the spec. Most documentation will warn you on how hard and overly complicated it is. It is NOT. Well, not for a hacker like you anyway 😉 Here are the basic ideas behind the protocol. I&amp;rsquo;ll provide a link to the full source code at the end of this post.&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;redirect the user you want to authenticate to authorization page&lt;/li&gt;
+&lt;li&gt;authorization page redirects your user to your callback and gives you a CODE (must be pre-defined in the console or the process will miserably fail)&lt;/li&gt;
+&lt;li&gt;on the server side, ask GOOGLE to exchange this CODE for a TOKEN + REFRESH_TOKEN&lt;/li&gt;
+&lt;li&gt;GOOGLE gives you both back along with the token&amp;rsquo;s lifetime.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Most of the time, the CODE must be consumed within 10min. DON&amp;rsquo;T use it twice, otherwise GOOGLE might consider it stolen and revoke every single token and refresh token granted with it. You&amp;rsquo;ve been warned.&lt;/p&gt;
+
+&lt;p&gt;The TOKEN will usually expire after an hour. Once expired, you will need to renew it. If you blindly used the provided snippet (which I do not recommend given it&amp;rsquo;s draft quality), your application specified that it was in offline mode i.e your &lt;em&gt;user&lt;/em&gt; is not always online while you application accesses his account. Hence, you got a REFRESH TOKEN from Google to refresh the access token yourself. This second token never expires unless the user explicitly revokes your application access.&lt;/p&gt;
+
+&lt;p&gt;The last step is now to get the job done and authenticate to the Gmail IMAP server using the provided token. Luckily, this is the easiest part.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: python; title: ; notranslate&#34; title=&#34;&#34;&gt;auth_string = &#39;user=%s\1auth=Bearer %s\1\1&#39; % (username, access_token)
+imap_conn = imaplib.IMAP4_SSL(&#39;imap.gmail.com&#39;)
+imap_conn.authenticate(&#39;XOAUTH2&#39;, lambda x: auth_string)
+&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s it, you done !&lt;/p&gt;
+
+&lt;p&gt;Full source code (~94 loc): &lt;a href=&#34;https://gist.github.com/jtlebi/5673096&#34;&gt;https://gist.github.com/jtlebi/5673096&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Next steps:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Make this code clean (really !)&lt;/li&gt;
+&lt;li&gt;Add state checking, this is essential both for anti-forgery checks and to track which user you were authenticating&amp;#8230;&lt;/li&gt;
+&lt;li&gt;Add anti-forgery checks on the token by checking it&amp;rsquo;s ignature&lt;/li&gt;
+&lt;li&gt;Plug the token refresh code in (needs to be called roughly every hours)&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Fetching all messages since last check with Python &#43; Imap</title>
+      <link>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</link>
+      <pubDate>Fri, 12 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</guid>
+      <description>&lt;p&gt;Recently, in a freelance project I had to parse incoming mails wherever they are in the mail account and, preferably, avoid re-parsing the whole mail account only for a couple of new mails.&lt;/p&gt;
+
+&lt;p&gt;Fortunately, there is the low level &lt;a href=&#34;http://docs.python.org/3.2/library/imaplib.html&#34;&gt;imaplib&lt;/a&gt; module in Python&amp;rsquo;s toolbox. But, curiously enough, while the solution is quite simple, I have not been able to find any good solution on the net&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;By default, when you perform a &lt;a href=&#34;http://tools.ietf.org/html/rfc3501#section-6.4.4&#34;&gt;SEARCH&lt;/a&gt; on an IMAP folder, it will provide you will &lt;em&gt;relative&lt;/em&gt; identifiers in the folder meaning that any operation on the folder might alter them. Another option, not obvious for an IMAP newcommer is to use UIDs instead. These constants IDs uniquely identifies a given during its lifetime in the mail account and are allocated in a strictly growing manner. This basically means that you can rely on this information to affirm that a given mail arrived in the mailbox after another one.&lt;/p&gt;
+
+&lt;p&gt;Last interesting property, the IMAP SEARCH command return all mails whose UID is in a given range, &lt;em&gt;wildcard included&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;For this projects, I also wrote it as a generator so that it yields at each new mail, if any. Here is a stripped down code snippet highlighting the main steps from connection negotiation to yielding individual mail bodies:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: python; title: ; notranslate&#34; title=&#34;&#34;&gt;# -*- coding: utf-8 -*-
+
+import imaplib
+
+# new mail generator --&amp;gt; yield after each mail to save resources
+def new_mail(last_uid, host, port, login, password):
+    # connect
+    mail_server = imaplib.IMAP4(host, port)
+
+    # authenticate
+    mail_server.login(login, password)
+
+    # issue the search command of the form &#34;SEARCH UID 42:*&#34;
+    command = &#34;UID {}:*&#34;.format(last_uid)
+    result, data = mail_server.uid(&#39;search&#39;, None, command)
+    messages = data[0].split()
+
+    # yield mails
+    for message_uid in messages:
+        # SEARCH command *always* returns at least the most
+        # recent message, even if it has already been synced
+        if int(message_uid) &amp;gt; last_uid:
+            result, data = mail_server.uid(&#39;fetch&#39;, message_uid, &#39;(RFC822)&#39;)
+            # yield raw mail body
+            yield data[0][1]
+
+# usage example
+for mail in new_mail_generator(last_uid=42,
+                               host=&#34;imap.example.com&#34;, port=143,
+                               login=&#34;user@exampl.com&#34;,
+                               password=&#34;password&#34;):
+    # do something useful with raw mail
+    pass
+
+&lt;/pre&gt;
+
+&lt;p&gt;Going further:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Loop over all folders. (hint: see &amp;#8220;list&amp;#8221; method to get a folder list)&lt;/li&gt;
+&lt;li&gt;Save sync status to a persistent storage like a database&lt;/li&gt;
+&lt;li&gt;Parse mail body&lt;/li&gt;
+&lt;li&gt;Handle secure connections&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;If you need any help in your Python/Imap related project, &lt;a href=&#34;https://blog.jtlebi.fr/contact/&#34; title=&#34;Contact&#34;&gt;feel free to get in touch&lt;/a&gt; &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

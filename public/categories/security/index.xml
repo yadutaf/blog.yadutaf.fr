@@ -1,0 +1,1259 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Security on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/categories/security/</link>
+    <description>Recent content in Security on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 29 May 2014 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/categories/security/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Introduction to seccomp: BPF linux syscall filter</title>
+      <link>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</link>
+      <pubDate>Thu, 29 May 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</guid>
+      <description>&lt;p&gt;Seccomp is basic yet efficient way to filter syscalls issued by a program. It is especially useful when running untrusted third party programs. Actually, it was first &lt;a href=&#34;http://git.kernel.org/cgit/linux/kernel/git/tglx/history.git/commit/?id=d949d0ec9c601f2b148bed3cdb5f87c052968554&#34; title=&#34;Initial seccomp commit&#34;&gt;introduced in linux 2.6.12&lt;/a&gt; as an essential building block of &lt;a href=&#34;http://mashable.com/2005/12/21/cpushare-distributed-computing-marketplace/&#34;&gt;&amp;#8220;cpushare&amp;#8221; program&lt;/a&gt;. The idea behind this project was to allow anyone with the proper agent installed to rent cpu cycles to third parties, without compromising its the security.&lt;/p&gt;
+
+&lt;p&gt;The initial implementation, also known as &amp;#8220;mode 1 seccomp&amp;#8221; only allowed &amp;#8216;&lt;code&gt;read&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;write&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;_exit&lt;/code&gt;&amp;#8216; and &amp;#8216;&lt;code&gt;sigreturn&lt;/code&gt;&amp;#8216; syscalls to be issued making it only possible to read/write to already opened files and to exit. It is also trivial get started with:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [2,3,10]; title: 01-nothing.c; notranslate&#34; title=&#34;01-nothing.c&#34;&gt;#include &amp;lt;stdio.h&amp;gt;         /* printf */
+#include &amp;lt;sys/prctl.h&amp;gt;     /* prctl */
+#include &amp;lt;linux/seccomp.h&amp;gt; /* seccomp&#39;s constants */
+#include &amp;lt;unistd.h&amp;gt;        /* dup2: just for test */
+
+int main() {
+  printf(&#34;step 1: unrestricted\n&#34;);
+
+  // Enable filtering
+  prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT);
+  printf(&#34;step 2: only &#39;read&#39;, &#39;write&#39;, &#39;_exit&#39; and &#39;sigreturn&#39; syscalls\n&#34;);
+  
+  // Redirect stderr to stdout
+  dup2(1, 2);
+  printf(&#34;step 3: !! YOU SHOULD NOT SEE ME !!\n&#34;);
+
+  // Success (well, not so in this case...)
+  return 0; 
+}
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Build, run, test:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;gcc 01-nothing.c -o 01-nothing &amp;&amp; ./01-nothing; echo &#34;Status: $?&#34;&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Output:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;step 1: unrestricted
+step 2: only &#39;read&#39;, &#39;write&#39;, &#39;_exit&#39; and &#39;sigreturn&#39; syscalls
+Processus arrêté
+Status: 137        &amp;lt;------ 128+9 ==&amp;gt; SIGKILL
+&lt;/pre&gt;
+
+&lt;p&gt;See the return status ? Whenever a forbidden syscall is issued, the program is immediately killed.&lt;/p&gt;
+
+&lt;p&gt;While this is really cool, this is also somewhat over-restrictive. This is the reason why it saw such a little adoption. Linus Torvald even suggested to ax it out of the kernel!&lt;/p&gt;
+
+&lt;p&gt;Fortunately, since linux 3.5, it is also possible to define advanced custom filters based on the BPF (Berkley Packet Filters). These filters may apply on any of the syscall argument but only on their value. In other words, a filter won&amp;rsquo;t be able to dereference a pointer. For example one could write a rule to forbid any call to &amp;#8216;&lt;code&gt;dup2&lt;/code&gt;&amp;#8216; as long as it targets &amp;#8216;&lt;code&gt;stderr&lt;/code&gt;&amp;#8216; (fd=2) but would not be able to restrict &amp;#8216;&lt;code&gt;open&lt;/code&gt;&amp;#8216; to a given set of files neither bind to a specific interface or port number.&lt;/p&gt;
+
+&lt;p&gt;Once installed, each syscall is sent to the filter which tells what action to take:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;SECCOMP_RET_KILL&lt;/code&gt;: Immediate kill with SIGSYS&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SECCOMP_RET_TRAP&lt;/code&gt;: Send a catchable SIGSYS, giving a chance to emulate the syscall&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SECCOMP_RET_ERRNO&lt;/code&gt;: Force &lt;code&gt;errno&lt;/code&gt; value&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SECCOMP_RET_TRACE&lt;/code&gt;: Yield decision to ptracer or set &lt;code&gt;errno&lt;/code&gt; to &lt;code&gt;-ENOSYS&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SECCOMP_RET_ALLOW&lt;/code&gt;: Allow&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Enough words. Let&amp;rsquo;s allow the program to redirect its &lt;code&gt;stderr&lt;/code&gt; to &lt;code&gt;stdout&lt;/code&gt; but nothing else. Writing BPF directly is cumbersome and far beyond the scope of this post, we&amp;rsquo;ll use the &lt;code&gt;libseccomp&lt;/code&gt; helper to make the code easier to write&amp;#8230; and read. Error checking stripped for brevity.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Grab the library:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;sudo apt-get install libseccomp-dev&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Write the code:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: 02-bpf-only-dup-sudo.c; notranslate&#34; title=&#34;02-bpf-only-dup-sudo.c&#34;&gt;#include &amp;lt;stdio.h&amp;gt;   /* printf */
+#include &amp;lt;unistd.h&amp;gt;  /* dup2: just for test */
+#include &amp;lt;seccomp.h&amp;gt; /* libseccomp */
+
+int main() {
+  printf(&#34;step 1: unrestricted\n&#34;);
+
+  // Init the filter
+  scmp_filter_ctx ctx;
+  ctx = seccomp_init(SCMP_ACT_KILL); // default action: kill
+
+  // setup basic whitelist
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+  
+  // setup our rule
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(dup2), 2, 
+                        SCMP_A0(SCMP_CMP_EQ, 1),
+                        SCMP_A1(SCMP_CMP_EQ, 2));
+
+  // build and load the filter
+  seccomp_load(ctx);
+  printf(&#34;step 2: only &#39;write&#39; and dup2(1, 2) syscalls\n&#34;);
+  
+  // Redirect stderr to stdout
+  dup2(1, 2);
+  printf(&#34;step 3: stderr redirected to stdout\n&#34;);
+
+  // Duplicate stderr to arbitrary fd
+  dup2(2, 42);
+  printf(&#34;step 4: !! YOU SHOULD NOT SEE ME !!\n&#34;);
+
+  // Success (well, not so in this case...)
+  return 0; 
+}
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Build, run, test:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;gcc 02-bpf-only-dup-sudo.c -o 02-bpf-only-dup-sudo -lseccomp &amp;&amp; sudo ./02-bpf-only-dup-sudo; echo &#34;Status: $?&#34;&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Output:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;step 1: unrestricted
+step 2: only &#39;write&#39; and dup2(1, 2) syscalls
+step 3: stderr redirected to stdout
+Appel système erroné
+Status: 159        &amp;lt;------ 128+31 ==&amp;gt; SIGSYS
+&lt;/pre&gt;
+
+&lt;p&gt;Just as expected.&lt;/p&gt;
+
+&lt;p&gt;As you probably noticed, we ran the previous example as root which somewhat limits the security benefice of syscall filtering as we actually have MORE privileges than before&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;This is where it really gets interesting: filters are inherited by child processes so that one could technically apply syscall filters to &amp;#8216;sudo&amp;rsquo; and maybe defeat some of its security measures and gain root on the machine ? To prevent this, one must either be &amp;#8216;&lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&amp;#8216; (read: root), either explicitly accept to never get any more privileges. For example the &amp;#8216;&lt;code&gt;setuid&lt;/code&gt;&amp;#8216; bit of &amp;#8216;&lt;code&gt;sudo&lt;/code&gt;&amp;#8216; would not be honored.&lt;/p&gt;
+
+&lt;p&gt;This can easily be achieved by adding this snippet &lt;em&gt;before&lt;/em&gt; installing the filter:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;prctl(PR_SET_NO_NEW_PRIVS, 1);&lt;/pre&gt;
+
+&lt;p&gt;Another security note, remember the &lt;code&gt;SECCOMP_RET_TRACE&lt;/code&gt; filter return value ? It instructs the kernel to notify the ptracer program, if any, to take the final decision. Hence the &amp;#8220;secured&amp;#8221; program could be run under a malicious ptracer possibly defeating the security measures. This is why another &lt;code&gt;prctl&lt;/code&gt; is highly recommended to forbid any attempt to attach a ptracer:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;prctl(PR_SET_DUMPABLE, 0);&lt;/pre&gt;
+
+&lt;p&gt;Putting it all together we get:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: 03-bpf-only-dup.c; notranslate&#34; title=&#34;03-bpf-only-dup.c&#34;&gt;#include &amp;lt;stdio.h&amp;gt;     /* printf */
+#include &amp;lt;unistd.h&amp;gt;    /* dup2: just for test */
+#include &amp;lt;seccomp.h&amp;gt;   /* libseccomp */
+#include &amp;lt;sys/prctl.h&amp;gt; /* prctl */
+
+int main() {
+  printf(&#34;step 1: unrestricted\n&#34;);
+
+  // ensure none of our children will ever be granted more priv
+  // (via setuid, capabilities, ...)
+  prctl(PR_SET_NO_NEW_PRIVS, 1);
+  // ensure no escape is possible via ptrace
+  prctl(PR_SET_DUMPABLE, 0);
+
+  // Init the filter
+  scmp_filter_ctx ctx;
+  ctx = seccomp_init(SCMP_ACT_KILL); // default action: kill
+
+  // setup basic whitelist
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+  
+  // setup our rule
+  seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(dup2), 2, 
+                        SCMP_A0(SCMP_CMP_EQ, 1),
+                        SCMP_A1(SCMP_CMP_EQ, 2));
+
+  // build and load the filter
+  seccomp_load(ctx);
+  printf(&#34;step 2: only &#39;write&#39; and dup2(1, 2) syscalls\n&#34;);
+  
+  // Redirect stderr to stdout
+  dup2(1, 2);
+  printf(&#34;step 3: stderr redirected to stdout\n&#34;);
+
+  // Duplicate stderr to arbitrary fd
+  dup2(2, 42);
+  printf(&#34;step 4: !! YOU SHOULD NOT SEE ME !!\n&#34;);
+
+  // Success (well, not so in this case...)
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Build, run, test:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;gcc 03-bpf-only-dup.c -o 03-bpf-only-dup -lseccomp &amp;&amp; ./03-bpf-only-dup; echo &#34;Status: $?&#34;&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Output:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;step 1: unrestricted
+step 2: only &#39;write&#39; and dup2(1, 2) syscalls
+step 3: stderr redirected to stdout
+Appel système erroné
+Status: 159        &amp;lt;------ 128+31 ==&amp;gt; SIGSYS
+&lt;/pre&gt;
+
+&lt;p&gt;There we are: no more &amp;#8220;sudo&amp;#8221; to run it &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Linux&amp;rsquo;s seccomp is an extremely powerful tool when dealing with untrusted program&amp;rsquo;s on Linux. (who said in &amp;#8220;shared hosting environment&amp;#8221;?). And we only scratched its surface. Please, keep in mind that seccomp is only a tool and should be used in combination with other Linux&amp;rsquo;s security building blocks such as &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;namespaces&lt;/a&gt; and capabilities to unleash its full power.&lt;/p&gt;
+
+&lt;p&gt;Example applications:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;prevent &amp;#8220;virtual priv esc&amp;#8221; -&amp;gt; clone &amp;amp;&amp;amp; unshare CLONE_NEW_USER&lt;/li&gt;
+&lt;li&gt;prevent std{in,out,err} escape -&amp;gt; block &lt;code&gt;close&lt;/code&gt;, &lt;code&gt;dup2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;restrict read/write to std{in,out,err}&lt;/li&gt;
+&lt;li&gt;change limits (rlimits)&lt;/li&gt;
+&lt;li&gt;&amp;#8230; -&amp;gt; see man 2 syscalls for more ideas 😉&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;What you still can&amp;rsquo;t do:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;filter base on filename: no pointer dereference&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;filter base on port/ip: same reason&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Going further:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;http://sourceforge.net/p/libseccomp/libseccomp/ci/master/tree/tests/&#34;&gt;libseccomp tests&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;kernel seccomp &lt;a href=&#34;https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt&#34;&gt;documentation&lt;/a&gt; and &lt;a href=&#34;https://github.com/torvalds/linux/tree/master/samples/seccomp&#34;&gt;samples&lt;/a&gt; (low level BPF)&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;ptrace interaction: overcome the &amp;#8220;What you still can&amp;rsquo;t do&amp;#8221; section.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces – Part 5: NET</title>
+      <link>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
+      <pubDate>Sun, 19 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/&#34; title=&#34;Introduction to Linux namespaces – Part 4: PID&#34;&gt;previous post on PID namespace&lt;/a&gt; (Restart process numbering to &amp;#8220;1&amp;#8221;), would like to go further and fly eve closer to full-featured VMs ? Great ! The two last posts of this series will precisely focus on this. Isolate network interfaces with the &amp;#8220;NET&amp;#8221; namespace (Yes, really) and user/group identifier for even more transparency. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-5.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;For once we won&amp;rsquo;t start with the addition of the &amp;#8220;CLONE_NEWNET&amp;#8221; flag to the &amp;#8220;clone&amp;#8221; syscall. I keep it for later. For now, IMHO, the best way to get started with this namespace is the incredibly mighty &amp;#8220;&lt;a href=&#34;http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2&#34; title=&#34;IPRoute2 official website&#34;&gt;iproute2&lt;/a&gt;&amp;#8221; net-admin swiss army knife. If you don&amp;rsquo;t have it (yet) I highly encourage you to install it. Nonetheless, if don&amp;rsquo;t want to / can&amp;rsquo;t, you may as well skip the explanation part and go straight to the full code sample.&lt;/p&gt;
+
+&lt;p&gt;First, let&amp;rsquo;s see what network interfaces we have at the moment:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;ip link list&lt;/pre&gt;
+
+&lt;p&gt;Which outputs something like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: &amp;lt;NO-CARRIER,BROADCAST,MULTICAST,UP&amp;gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+3: wlan0: &amp;lt;BROADCAST,MULTICAST,UP,LOWER_UP&amp;gt; mtu 1500 qdisc mq state UP mode DORMANT qlen 1000
+    link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
+# ...
+&lt;/pre&gt;
+
+&lt;p&gt;Nothing unexpected here. I have a working loopback, UP (Yeah, &amp;#8216;UNKNOWN&amp;rsquo; means &amp;#8216;UP&amp;rsquo;&amp;#8230;) and am connected to my wireless network + a couple of extra connections eclipsed for this article.&lt;/p&gt;
+
+&lt;p&gt;Now, let&amp;rsquo;s create a network namespace and run the same from inside:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# create a network namespace called &#34;demo&#34;
+ip netns add demo
+# exec &#34;ip link list&#34; inside the namespace
+ip netns exec demo ip link list
+&lt;/pre&gt;
+
+&lt;p&gt;Output is now:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK&amp;gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+&lt;/pre&gt;
+
+&lt;p&gt;Huuu, not only is there only a loopback but also it is &amp;#8220;DOWN&amp;#8221;. Even more interesting, it is fully isolated from the main loopback. That is to say, any application inside the namespace binding on &amp;#8220;the&amp;#8221; loopback would only be able to communicate with applications inside the same namespace. Exactly the same level of isolation as with the IPC namespace. Neat, isnt&amp;rsquo;t ?&lt;/p&gt;
+
+&lt;p&gt;Right, but how do I communicate with the interwebz now ?&lt;/p&gt;
+
+&lt;p&gt;There are multiple solutions. The easiest and most common one is to create a Point-to-Point tunnel between your &amp;#8220;Host&amp;#8221; and &amp;#8220;Guest&amp;#8221; system. Once, again, the Linux Kernel provides multiple alternatives. I recommend to use the &amp;#8220;veth&amp;#8221; interfaces as these are the best integrated in the ecosystem especially with iproute2. This is also an extremely well tested piece of code as it is used by LXC and actually comes from the &lt;a href=&#34;http://openvz.org&#34; title=&#34;OpenVZ offical website&#34;&gt;OpenVZ project&lt;/a&gt;. Another alternative could be the &amp;#8220;etun&amp;#8221; driver. It conceptually is the same with another name but I&amp;rsquo;m not aware of any project using it.&lt;/p&gt;
+
+&lt;p&gt;Both &amp;#8220;veth&amp;#8221; and &amp;#8220;etun&amp;#8221; create a pair of virtual interfaces linked on with the other in the current namespace. You can then pick one and move it in the target namespace to get a communication channel. You could think of it as intricate particles if it makes it easier to understand ;).&lt;/p&gt;
+
+&lt;p&gt;The next step is to give them an IP, set them up and ping ! Here is an example bash session doing just that:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Create a &#34;demo&#34; namespace
+ip netns add demo
+
+# create a &#34;veth&#34; pair
+ip link add veth0 type veth peer name veth1
+
+# and move one to the namespace
+ip link set veth1 netns demo
+
+# configure the interfaces (up + IP)
+ip netns exec demo ip link set lo up
+ip netns exec demo ip link set veth1 up
+ip netns exec demo ip addr add 169.254.1.2/30 dev veth1
+ip link set veth0 up
+ip addr add 169.254.1.1/30 dev veth0
+&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s it ! Nothing scary.&lt;/p&gt;
+
+&lt;p&gt;If you need to get Internet access from the &amp;#8220;guest&amp;#8221; system using the &amp;#8220;veth&amp;#8221; technique, you could setup masquerding, commonly known as &amp;#8220;NAT&amp;#8221;. In the same way, to make a webserver listening on the :80 inside the namespace appear to listen directly on the main interface, one could use &amp;#8220;DNAT&amp;#8221; commonly known as port &amp;#8220;forwarding&amp;#8221;. I&amp;rsquo;ll leave this up to the reader.&lt;/p&gt;
+
+&lt;p&gt;Here is a basic example to quickly get started:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# make sure ip forwarding is enabled
+echo 1 &amp;gt; /proc/sys/net/ipv4/ip_forward
+# enable Internet access for the namespace, assuming you ran the previous example
+iptables -t nat -A POSTROUTING -i veth0 -j  MASQUERADE
+# Forward main &#34;:80&#34; to guest &#34;:80&#34;
+iptables -t nat -A PREROUTING -d &amp;lt;your main ip&amp;gt;/32 -p tcp --dport 80 -j  DNAT --to-destination  169.254.1.2:80
+&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s put it all together and finally append the &lt;code&gt;CLONE_NEWNET&lt;/code&gt; flag to the &lt;code&gt;clone&lt;/code&gt; syscall. For the sake of simplicity we&amp;rsquo;ll simply stick with direct calls to &amp;#8220;ip&amp;#8221; using the &lt;code&gt;system()&lt;/code&gt; syscall.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [9,40,41,42,57,60,61,62,63,64,65,66]; title: main-5-net.c; notranslate&#34; title=&#34;main-5-net.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;sys/mount.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+
+  // setup hostname
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+
+  // remount &#34;/proc&#34; to get accurate &#34;top&#34; &amp;&amp; &#34;ps&#34; output
+  mount(&#34;proc&#34;, &#34;/proc&#34;, &#34;proc&#34;, 0, NULL);
+
+  // wait for network setup in parent
+  read(checkpoint[0], &amp;c, 1);
+
+  // setup network
+  system(&#34;ip link set lo up&#34;);
+  system(&#34;ip link set veth1 up&#34;);
+  system(&#34;ip addr add 169.254.1.2/30 dev veth1&#34;);
+
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, NULL);
+
+  // further init: create a veth pair
+  char* cmd;
+  asprintf(&amp;cmd, &#34;ip link set veth1 netns %d&#34;, child_pid);
+  system(&#34;ip link add veth0 type veth peer name veth1&#34;);
+  system(cmd);
+  system(&#34;ip link set veth0 up&#34;);
+  system(&#34;ip addr add 169.254.1.1/30 dev veth0&#34;);
+  free(cmd);
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s give it a test run !&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns &amp;&amp; sudo ./ns
+ - [22094] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog$ # run a super-powerful server, fully isolated
+root@In Namespace:~/blog$ nc -l 4242
+Hi !
+Bye...
+root@In Namespace:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
+&lt;/pre&gt;
+
+&lt;p&gt;This is what you would have seen if, from another terminal, you had:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
+Hi !    
+Bye...
+jean-tiare@jeantiare-Ubuntu:~$ 
+&lt;/pre&gt;
+
+&lt;p&gt;To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;If you feel that running a bunch of &lt;code&gt;system()&lt;/code&gt; calls into a production system is a dirty hack (and it is !), you could have look at the &lt;code&gt;rtnetlink&lt;/code&gt; kernel communication interface. This is the barely documented API used by iproute under the hood.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NET&amp;#8221; namespace. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. With the next article we&amp;rsquo;ll explore the last and most tricky namespace &amp;#8220;USER&amp;#8221;. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 4: NS (FS)</title>
+      <link>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
+      <pubDate>Sun, 12 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/&#34; title=&#34;Introduction to Linux namespaces – Part 4: NS (FS)&#34;&gt;previous post on FS namespace&lt;/a&gt; (mountpoints table isolation), we will now have a look at an amazing one: isolated mount table. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-4.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;In the previous post we &amp;#8220;chrooted&amp;#8221; the PID namespace and got a new &amp;#8220;1&amp;#8221; process. But even with this namespace activated, there still lacked isolation for tools like &amp;#8220;top&amp;#8221; because they rely on the &amp;#8220;/proc&amp;#8221; virtual filesystem which is still shared (identical) between namespaces. In this post, let me introduce the namespace that will solve this: &amp;#8220;NS&amp;#8221;. This is historically the first Linux Namespace, hence the name.&lt;/p&gt;
+
+&lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWNS&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, any (un)mount operations from the child will only affect the child and vice-versa.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start experimenting. In the previous example, just activate the NS:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; first-line: 43; title: activate-ns-snippet.c; notranslate&#34; title=&#34;activate-ns-snippet.c&#34;&gt;int child_pid = clone(child_main, child_stack+STACK_SIZE, 
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
+&lt;/pre&gt;
+
+&lt;p&gt;Now, if we run it, we finally can fix the issue from the previous post on PID:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; highlight: [4,7,8]; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall ns.c -o ns &amp;&amp; sudo ./ns
+ - [14472] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# mount -t proc proc /proc
+root@In Namespace:~/blog# ps aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  1.0  0.0  23620  4680 pts/4    S    00:07   0:00 /bin/bash
+root        79  0.0  0.0  18492  1328 pts/4    R+   00:07   0:00 ps aux
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;Tadaaa ! &amp;#8220;/proc&amp;#8221; is now working as expected from the container, without breaking the parent.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s automate it to finalize previous post&amp;rsquo;s example:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [4,33,51]; title: main-4-ns.c; notranslate&#34; title=&#34;main-4-ns.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;sys/mount.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+
+  // setup hostname
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+
+  // remount &#34;/proc&#34; to get accurate &#34;top&#34; &amp;&amp; &#34;ps&#34; output
+  mount(&#34;proc&#34;, &#34;/proc&#34;, &#34;proc&#34;, 0, NULL);
+
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
+
+  // further init here (nothing yet)
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;If you run this snippet, you should get exactly the same behavior as the previous test without manually remounting &amp;#8220;/proc&amp;#8221; neither messing with your real parent&amp;rsquo;s &amp;#8220;/proc&amp;#8221;. Neat isn&amp;rsquo;t it ?&lt;/p&gt;
+
+&lt;p&gt;To leverage the power of this technique you could now prepare and enter a chroot to further enhance the isolation. Steps involved would be to prepare a &amp;#8220;debootstrap&amp;#8221;, remount some essentials filesystems like &amp;#8220;/tmp&amp;#8221;, &amp;#8220;/dev/shm&amp;#8221;, &amp;#8220;/proc&amp;#8221;, optionally all or part of &amp;#8220;/dev&amp;#8221; and &amp;#8220;/sys&amp;#8221; and then &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/2/chdir&#34; title=&#34;man chdir&#34;&gt;chdir&lt;/a&gt;&amp;#8221; + &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/1/chroot&#34; title=&#34;man Chroot&#34;&gt;chroot&lt;/a&gt;&amp;#8220;. I&amp;rsquo;ll leave it as an exercise for the reader.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NS&amp;#8221; namespace. With the next article we&amp;rsquo;ll explore an incredibly powerful namespace &amp;#8220;NET&amp;#8221;. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 3: PID</title>
+      <link>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
+      <pubDate>Sun, 05 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/&#34; title=&#34;Introduction to Linux namespaces – Part 2: IPC&#34;&gt;previous post on IPC namespace&lt;/a&gt; (Inter Process Communication isolation), I would now like to introduce my personal favorite one (as sysadmin): PID namespaces. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-3.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Yes, that&amp;rsquo;s it, with this namespace it is possible to restart PID numbering and get your own &amp;#8220;1&amp;#8221; process. This could be seen as a &amp;#8220;chroot&amp;#8221; in the process identifier tree. It&amp;rsquo;s extremely handy when you need to deal with pids in day to day work and are stuck with 4 digits numbers&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWPID&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, the result of getpid() from child process will invariably be &amp;#8220;1&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;But, WAIT! I know have to &amp;#8220;1&amp;#8221; process right ? What about process management ?&lt;/p&gt;
+
+&lt;p&gt;Well, actually, this *really* is much like a &amp;#8220;chroot&amp;#8221;. That is to say, a change of view point.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Host: &lt;em&gt;all&lt;/em&gt; processes are visible, &lt;em&gt;global&lt;/em&gt; PIDs (init=1, &amp;#8230;, child=xxx, &amp;#8230;.)&lt;/li&gt;
+&lt;li&gt;Container: &lt;em&gt;only child + descendant&lt;/em&gt; are visible, local PIDs (child=1, &amp;#8230;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Here is an illustration:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [29,41,44]; title: ; notranslate&#34; title=&#34;&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  printf(&#34; - [%5d] World !\n&#34;, getpid());
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - [%5d] Hello ?\n&#34;, getpid());
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | SIGCHLD, NULL);
+
+  // further init here (nothing yet)
+
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;And an example run:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns &amp;&amp; sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# echo &#34;=&amp;gt; My PID: $$&#34;
+=&amp;gt; My PID: 1
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;As expected, even thought the parent process as a PID of &amp;#8220;7823&amp;#8221;, the child&amp;rsquo;s PID is &amp;#8220;1&amp;#8221;. If you are playfull, you could try to &amp;#8220;kill -KILL 7823&amp;#8221; the parent process. It would do exactly&amp;#8230; nothing:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main-3-pid.c -o ns &amp;&amp; sudo ./ns
+ - [ 7823] Hello ?
+ - [    1] World !
+root@In Namespace:~/blog# kill -KILL 7823
+bash: kill: (7823) - No such process
+root@In Namespace:~/blog# exit
+&lt;/pre&gt;
+
+&lt;p&gt;The isolation is working as expected. And, as written earlier, this behaves much like a &amp;#8220;chroot&amp;#8221; meaning that with a &amp;#8220;top&amp;#8221; or &amp;#8220;ps exf&amp;#8221; from the parent process will show the child process with its real un-mapped PID. This is an essential feature for process control like &amp;#8220;kill&amp;#8221;, &amp;#8220;cgroups&amp;#8221;, &amp;#8230; and various policies.&lt;/p&gt;
+
+&lt;p&gt;Wait! Speaking of &amp;#8220;top&amp;#8221; and &amp;#8220;ps exf&amp;#8221;, I just ran them from the child and saw exactly the same as from the parent. You lied to me about isolation !&lt;/p&gt;
+
+&lt;p&gt;Well, not at all. This is because these tools get their informations from the virtual &amp;#8220;/proc&amp;#8221; filesystem which is not (yet) isolated. This is the purpose of the next article.&lt;/p&gt;
+
+&lt;p&gt;In the mean time, an easy workaround could be:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; highlight: [3,5]; title: ; notranslate&#34; title=&#34;&#34;&gt;# from child
+root@In Namespace:~/blog# mkdir -p proc
+root@In Namespace:~/blog# mount -t proc proc proc
+root@In Namespace:~/blog# ls proc
+1          dma          key-users      net            sysvipc
+80         dri          kmsg           pagetypeinfo   timer_list
+acpi       driver       kpagecount     partitions     timer_stats
+asound     execdomains  kpageflags     sched_debug    tty
+buddyinfo  fb           latency_stats  schedstat      uptime
+bus        filesystems  loadavg        scsi           version
+cgroups    fs           locks          self           version_signature
+cmdline    interrupts   mdstat         slabinfo       vmallocinfo
+consoles   iomem        meminfo        softirqs       vmstat
+cpuinfo    ioports      misc           stat           zoneinfo
+crypto     irq          modules        swaps
+devices    kallsyms     mounts         sys
+diskstats  kcore        mtrr           sysrq-trigger
+&lt;/pre&gt;
+
+&lt;p&gt;Everything seems reasonable again. As expected, you get PID &amp;#8220;1&amp;#8221; for /bin/bash itself and &amp;#8220;80&amp;#8221; corresponds to the running &amp;#8220;/bin/ls proc&amp;#8221; command. Much nicer to read than usual /proc, isn&amp;rsquo;t it ? That&amp;rsquo;s why I love it.&lt;/p&gt;
+
+&lt;p&gt;If you attempt to run this command directly on the &amp;#8220;/proc&amp;#8221; from the namespace, it will &lt;em&gt;seem&lt;/em&gt; to work in the child but BREAK your main namespace. Example:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ ps aux
+Error, do this: mount -t proc proc /proc
+&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for PID namespace. With the next article, we&amp;rsquo;ll be able to re-mount /proc itself and hence fix &amp;#8220;top&amp;#8221; and any similar tools without breaking the parent namespace. Thanks for reading !&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 2: IPC</title>
+      <link>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
+      <pubDate>Sat, 28 Dec 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
+      <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;previous post on UTS namespace&lt;/a&gt; (hostname isolation), we will now go deeper and look at a more security oriented namespace: IPC, Inter-Process Communications. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-2.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Activating the IPC namespace is only a matter of adding &amp;#8220;CLONE_NEWIPC&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
+
+&lt;p&gt;Once activated, you are free to create any IPC as usual, even named one, without any risk of collision with other applications.&lt;/p&gt;
+
+&lt;p&gt;But, WAIT! My &amp;#8220;parent process&amp;#8221; is now isolated from my &amp;#8220;child process&amp;#8221; right ? What if I need to do some kind of communication between them ?&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s a good question. A common use case for this is you need some additional setup from the parent before letting the child take full control. Fortunately, not everything is isolated and clone shares memory space with its parent so that you can still use:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;signal&lt;/li&gt;
+&lt;li&gt;poll memory&lt;/li&gt;
+&lt;li&gt;sockets&lt;/li&gt;
+&lt;li&gt;use files and file-descriptors&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Because of it&amp;rsquo;s context changes, signaling is probably not the most practical one while polling memory is damn inefficient way of communicating !&lt;/p&gt;
+
+&lt;p&gt;If you don&amp;rsquo;t plan to fully isolate the network stack, you could go with sockets. Same remark applies with filesystem. But, in the case of this series this is precisely what we intend to do: isolate everything, step by step.&lt;/p&gt;
+
+&lt;p&gt;A little known / rarely used solution is to watch events on a pipe pair. In fact this is the technique used (with no explanation) by Lennart Poettering in &lt;a href=&#34;http://cgit.freedesktop.org/systemd/systemd/tree/src/nspawn/nspawn.c&#34; title=&#34;systemd nspawn - git&#34;&gt;Systemd&amp;rsquo;s &amp;#8220;nspawn&amp;#8221;&lt;/a&gt; command. This is an extremely powerful technique that I would like to introduce here. This is also the one we will rely upon in the next articles.&lt;/p&gt;
+
+&lt;p&gt;We first need to init a pair of pipes. Let&amp;rsquo;s call them a &amp;#8220;checkpoint&amp;#8221;.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-global-init.c; notranslate&#34; title=&#34;checkpoint-global-init.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// global status:
+int checkpoint[2];
+
+// [parent] init:
+pipe(checkpoint);
+&lt;/pre&gt;
+
+&lt;p&gt;The idea is to trigger a &amp;#8220;close&amp;#8221; event from the parent and wait for &amp;#8220;EOF&amp;#8221; to be received on the reading end, in the child. Something crucial to understand is that *all* writing file-descriptors must be closed for an EOF to be received. Hence, the first thing to do before waiting in the child is to close our own write fd copy.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-child-init.c; notranslate&#34; title=&#34;checkpoint-child-init.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// [child] init:
+close(checkpoint[1]);
+&lt;/pre&gt;
+
+&lt;p&gt;Actual &amp;#8220;signaling&amp;#8221; is now straightforward:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;close write fd in parent&lt;/li&gt;
+&lt;li&gt;wait for EOF from child&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;pre class=&#34;brush: cpp; title: checkpoint-signal.c; notranslate&#34; title=&#34;checkpoint-signal.c&#34;&gt;// required headers: 
+#include &amp;lt;unistd.h&amp;gt;
+
+// [child] wait:
+char c; // stub char
+read(checkpoint[0], &amp;c, 1);
+
+// [parent] signal ready code:
+close(checkpoint[1]);
+&lt;/pre&gt;
+
+&lt;p&gt;If we put it together the first example on UTS namespace, it could look like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [7,12,25,27,39,49]; title: main-2-ipc.c; notranslate&#34; title=&#34;main-2-ipc.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+// sync primitive
+int checkpoint[2];
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  char c;
+
+  // init sync primitive
+  close(checkpoint[1]);
+  // wait...
+  read(checkpoint[0], &amp;c, 1);
+
+  printf(&#34; - World !\n&#34;);
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  // init sync primitive
+  pipe(checkpoint);
+
+  printf(&#34; - Hello ?\n&#34;);
+
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD, NULL);
+
+  // some damn long init job
+  sleep(4);
+  // signal &#34;done&#34;
+  close(checkpoint[1]);
+
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;As this requires advanced capabilities, this snippets needs root or equivalent privileges to run. Obviously, there is no need to keep &amp;#8220;CLONE_NEWUTS&amp;#8221; in this example. I kept it only to show that multiple namespaces may be used together.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all for IPC. IPC in itself is nothing complicated. It just becomes tricky when it comes to parent/child synchronization as we will do later. This is where the &amp;#8220;pipe&amp;#8221; technique comes as a handy solution. It actually works and is used in production.&lt;/p&gt;
+
+&lt;p&gt;The next article will be on my favorite one (as sysadmin): PID namespaces.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Introduction to Linux namespaces - Part 1: UTS</title>
+      <link>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</link>
+      <pubDate>Sun, 22 Dec 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</guid>
+      <description>&lt;p&gt;As a part of my job at &lt;a href=&#34;http://www.ovh.com/&#34;&gt;OVH&lt;/a&gt; I dealt with Linux Namespaces as a security mechanism in a &amp;#8220;yet to be announced&amp;#8221; product. I was astonished by both how powerful and poorly documented it is.&lt;/p&gt;
+
+&lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-1.html&#34;&gt;here&lt;/a&gt;:&lt;/p&gt;
+
+&lt;p&gt;Most of you have probably heard about &lt;a href=&#34;http://linuxcontainers.org/&#34; title=&#34;LXC - Linux Container official website&#34;&gt;LXC - LinuX Containers&lt;/a&gt;, &amp;#8220;Chroot on steroids&amp;#8221;. What it basically does is isolate applications from others. A bit like chroot does by isolating applications in a virtual private root but taking the process further. Internally, LXC relies on 3 main isolation infrastructure of the Linux Kernel:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Chroot&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.kernel.org/doc/Documentation/cgroups/&#34; title=&#34;Linux Cgroups. Kernel.org&#34;&gt;Cgroups&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Namespaces&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;I could have entitled this article series &amp;#8220;How to build your own LXC&amp;#8221; and probably earned a better Google rank but that would have been quite a bit pretentious. In fact LXC does a lot more than isolation. It also brings template management, freezing, and much much more. What this series really about is more of demystifying than reinventing the wheel.&lt;/p&gt;
+
+&lt;p&gt;During this series, we will write a minimal C program starting /bin/bash with more isolation from steps to steps.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start.&lt;/p&gt;
+
+&lt;p&gt;What&amp;rsquo;s really interesting with Linux&amp;rsquo; approach to containers is that precisely it does &lt;em&gt;not&lt;/em&gt; provide a &amp;#8220;back-box/magical&amp;#8221; container solution but instead provides individual isolation building blocks called &amp;#8220;Namespaces&amp;#8221;, new one appearing from releases to release. It also allows you to use solely the one you actually need for your specific application.&lt;/p&gt;
+
+&lt;p&gt;As of 3.12, Linux supports 6 Namespaces:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;UTS: hostname (this post)&lt;/li&gt;
+&lt;li&gt;IPC: inter-process communication (in a future post)&lt;/li&gt;
+&lt;li&gt;PID: &amp;#8220;chroot&amp;#8221; process tree (in a future post)&lt;/li&gt;
+&lt;li&gt;NS: mount points, first to land in Linux (in a future post)&lt;/li&gt;
+&lt;li&gt;NET: network access, including interfaces (in a future post)&lt;/li&gt;
+&lt;li&gt;USER: map virtual, local user-ids to real local ones (in a future post)&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Here is a complete skeleton for cleanly launching /bin/bash from a child process: (error checking stripped for clarity/brevity)&lt;/p&gt;
+
+&lt;pre class=&#34;brush: cpp; highlight: [20,29]; title: main-0-template.c; notranslate&#34; title=&#34;main-0-template.c&#34;&gt;#define _GNU_SOURCE
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/wait.h&amp;gt;
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;sched.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+
+#define STACK_SIZE (1024 * 1024)
+
+static char child_stack[STACK_SIZE];
+char* const child_args[] = {
+  &#34;/bin/bash&#34;,
+  NULL
+};
+
+int child_main(void* arg)
+{
+  printf(&#34; - World !\n&#34;);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  printf(&#34; - Hello ?\n&#34;);
+  int child_pid = clone(child_main, child_stack+STACK_SIZE, SIGCHLD, NULL);
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Notice the use of the &lt;a href=&#34;http://linux.die.net/man/2/clone&#34; title=&#34;Man 2 clone&#34;&gt;&amp;#8220;clone&amp;#8221; syscall&lt;/a&gt; instead of the more traditional &amp;#8220;fork&amp;#8221; syscall. This is where the magic (will) happen.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns &amp;&amp; ./ns
+ - Hello ?
+ - World !
+jean-tiare@jeantiare-Ubuntu:~/blog$ # inside the container
+jean-tiare@jeantiare-Ubuntu:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
+&lt;/pre&gt;
+
+&lt;p&gt;Ok, cool. But pretty hard to notice without the comments that we are in a child /bin/bash. Actually, while writing this post, I accidentally exited the &lt;em&gt;parent&lt;/em&gt; shell a couple of times&amp;#8230;&lt;/p&gt;
+
+&lt;p&gt;Wouldn&amp;rsquo;t it be cool if we could just change, let&amp;rsquo;s say, the hostname with 0% env vars tricks ? Just plain Namespaces ? Easy, just&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;add &amp;#8220;CLONE_NEWUTS&amp;#8221; flag to clone&lt;/li&gt;
+&lt;li&gt;call &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/2/sethostname&#34; title=&#34;Man 2 sethostname&#34;&gt;sethostname&lt;/a&gt;&amp;#8221; from &lt;em&gt;child&lt;/em&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;pre class=&#34;brush: cpp; first-line: 15; highlight: [20,29,30]; title: main-1-uts.c; notranslate&#34; title=&#34;main-1-uts.c&#34;&gt;// (needs root privileges (or appropriate capabilities))
+//[...]
+int child_main(void* arg)
+{
+  printf(&#34; - World !\n&#34;);
+  sethostname(&#34;In Namespace&#34;, 12);
+  execv(child_args[0], child_args);
+  printf(&#34;Ooops\n&#34;);
+  return 1;
+}
+
+int main()
+{
+  printf(&#34; - Hello ?\n&#34;);
+  int child_pid = clone(child_main, child_stack+STACK_SIZE,
+      CLONE_NEWUTS | SIGCHLD, NULL);
+  waitpid(child_pid, NULL, 0);
+  return 0;
+}
+&lt;/pre&gt;
+
+&lt;p&gt;Run it&lt;/p&gt;
+
+&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~/blog$ gcc -Wall main.c -o ns &amp;&amp; sudo ./ns
+ - Hello ?
+ - World !
+root@In Namespace:~/blog$ # inside the container
+root@In Namespace:~/blog$ exit
+jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
+&lt;/pre&gt;
+
+&lt;p&gt;And that&amp;rsquo;s all folks! (for this first article, at least). Getting started with namespaces is pretty damn easy: clone, set appropriate &amp;#8220;CLONE_NEW*&amp;#8221; flags, setup the new env, done!&lt;/p&gt;
+
+&lt;p&gt;Would like to go further ? You might be interested in reading also the &lt;a href=&#34;http://lwn.net/Articles/531114/&#34; title=&#34;Linux namespaces, LWN&#34;&gt;excellent LWN article series on namespaces&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Anatomy of a virus: iTunesHelper.vbe 2/2</title>
+      <link>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
+      <pubDate>Wed, 20 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
+      <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;This post is the source-code analysis part of the article. For an introduction to the iTunesHelper.vbe virus and a more qualitative approach, &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/&#34; title=&#34;Anatomy of a virus 1/2: iTunesHelper.vbe&#34;&gt;you may be interested in reading the first part&amp;#8230; first&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1/ What does it look like ?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;Name&lt;/em&gt;: iTunesHelper.vbe&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Target system&lt;/em&gt;: Windows &amp;gt;= XP&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Propagation vector&lt;/em&gt;: Replace files by shortcuts to virus code on USB drive root&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Hiding techniques&lt;/em&gt;:
+
+&lt;ul&gt;
+&lt;li&gt;Hides real files as well as himself as &amp;#8220;system files&amp;#8221;&lt;/li&gt;
+&lt;li&gt;Use a name close to a real world program &amp;#8220;iTunesHelper.exe&amp;#8221;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Symptoms&lt;/em&gt;:
+
+&lt;ul&gt;
+&lt;li&gt;All files on USB drive root are shortcuts to &amp;#8220;strange/suspect&amp;#8221; script&lt;/li&gt;
+&lt;li&gt;Process &amp;#8220;wscript&amp;#8221; using ~1/2GB of memory&lt;/li&gt;
+&lt;li&gt;Real files visible when &amp;#8220;system files&amp;#8221; are not hidden&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ How does it work ? - Dissimulation&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1st&lt;/strong&gt; level of dissimulation: &lt;em&gt;dissuasion&lt;/em&gt;. The file appears to be 65MB big. While this seems small, most text editors (who said Notepad ?) just assumes text files are no more than a couple of KB big. It makes it almost impossible to read it. Moreover, it starts with empty lines discouraging to scroll down to the real code. We&amp;rsquo;ll make it fast.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: filter iTuneHelper.vbe empty lines noise; notranslate&#34; title=&#34;filter iTuneHelper.vbe empty lines noise&#34;&gt;jean-tiare@laptop:~$ grep -E &#34;^\\s*$&#34; iTuneHelper.vbe | wc -l
+34 598 142 # huh huh, ~34 *millions* of empty lines. Useful...
+jean-tiare@laptop:~$ grep -vE &#34;^\\s*$&#34; iTuneHelper.vbe | wc -l
+43 # &#34;real&#34; code
+jean-tiare@laptop:~$ grep -vE &#34;^\\s*$&#34; iTuneHelper.vbe &amp;gt; iTuneHelper-trimmed.vbe
+&lt;/pre&gt;
+
+&lt;p&gt;The code now looks like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: vb; title: iTuneHelper-trimmed.vbe; notranslate&#34; title=&#34;iTuneHelper-trimmed.vbe&#34;&gt;Audi = Mercedes(&#34;&amp;lt;base64 &#39;hidden&#39; payload&amp;gt;&#34;)
+EXECUTE (Audi)
+Function Mercedes(data)
+     Mercedes=decodeBase64(data)
+End Function
+Function decodeBase64(ByVal base64String)
+&#39; trimmed
+End Function
+&lt;/pre&gt;
+
+&lt;p&gt;This basically decodes a base64 encoded the payload and run it. `&lt;code&gt;decodeBase64&lt;/code&gt;` is standard and has been removed from this snippet for brevity. Nothing fancy, here apart from the variable&amp;rsquo;s name.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;2nd&lt;/strong&gt; level of dissimulation: &lt;em&gt;base64, fun var names&lt;/em&gt;. That&amp;rsquo;s an easy one. It can be manually decoded for example with the following one liner. Notice that I also trim empty lines as it re-uses the same trick as before:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: decode iTuneHelper.vbe base64 payload; notranslate&#34; title=&#34;decode iTuneHelper.vbe base64 payload&#34;&gt;jean-tiare@laptop:~$ head -n1 iTuneHelper-trimmed.vbe | cut -d\&#34; -f2 | base64 -d &amp;gt; iTuneHelper-decoded.vbe
+&lt;/pre&gt;
+
+&lt;p&gt;It basically takes the part between double quotes on the first line and feeds it to base64 decoder and finally stores the result.&lt;/p&gt;
+
+&lt;p&gt;We notice the same kind of fanciness in the variables names but with names (Benjamin, Christophe, Raphael, Damien, Pierre) instead of cars.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;3/ How does it work ? - Virus skeleton&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;As stated in the disclaimer, I wont provide real source code. But here is what the code roughly looks like once all &amp;#8220;obfuscation&amp;#8221; techniques have been bypassed.&lt;/p&gt;
+
+&lt;pre class=&#34;brush: vb; title: iTuneHelper-decoded.vbe; notranslate&#34; title=&#34;iTuneHelper-decoded.vbe&#34;&gt;&#39; Init
+Benjamin = &#34;&amp;lt;command server fqdn&amp;gt;&#34;
+Christophe = -1 &#39;Port on command server
+Raphael = &#34;&amp;lt;install dir on target&amp;gt;&#34;
+Damien = True
+Pierre = True
+
+&#39; Main loop:
+&#39;   - install (*each*) iteration
+&#39;   - contact command server
+&#39;   - execute command
+&#39;   - sleep 5s&amp;lt;/p&amp;gt;
+
+&#39; Command handlers
+
+Sub install
+On Error Resume Next
+&#39; trimmed code
+&#39; handles USB propagation
+End Sub
+
+Sub information
+On Error Resume Next
+&#39; trimmed code
+&#39; leaks informations, especially Installed AV software, if any.
+End Sub
+
+&#39;and so on...
+&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;4/ How does it work ? - (Un-)Install&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;The main loop runs roughly every 5s. The &lt;em&gt;first&lt;/em&gt; thing it does is call `&lt;code&gt;install&lt;/code&gt;` function. (no, the last thing is not a call to `&lt;code&gt;uninstall&lt;/code&gt;` function).&lt;/p&gt;
+
+&lt;p&gt;Here is what it basically &lt;em&gt;looks&lt;/em&gt; like:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: vb; title: install procedure; notranslate&#34; title=&#34;install procedure&#34;&gt;Sub install
+
+&#39; 1/ ensure start mode
+&#39; make sure it starts on session start
+setRegistryKey &#34;HKEY_CURRENT_USER\software\microsoft\windows\currentversion\run\&amp;lt;virus name&amp;gt;&#34;
+&#39; attempts to even set it globally (Admin session ?)
+setRegistryKey &#34;HKEY_LOCAL_MACHINE\software\microsoft\windows\currentversion\run\&amp;lt;virus name&amp;gt;&#34;
+
+&#39; 2/ copy virus file
+filesystemobj.copyfile wscript.scriptfullname, &#34;&amp;lt;destination 1&amp;gt;&#34;, True
+filesystemobj.copyfile wscript.scriptfullname, &#34;&amp;lt;destination 2&amp;gt;&#34;, True
+
+&#39; 3/ infect each USB Mass Storage
+For each drive in filesystemobj.drives
+
+    &#39; 3.1/ is it a mass storage ?
+    If isUsbMassStorage drive Then
+        &#39; 3.2 install file
+        filesystemobj.copyfile wscript.scriptfullname, &#34;&amp;lt;usb root&amp;gt;&#34;, True
+        &#39; 3.3 hide it (no snippet)
+        &#39; 3.4 for each file (and folder) on storage root:
+        For Each file in filesystemobj.getfolder( drive.path &amp; &#34;\&#34; ).Files
+            &#39; 3.4.1 hide each reach file (no snippet)
+            &#39; 3.4.2 create *visible* shortcut to each real file *first* calling the virus (no snippet)
+            &#39; 3.4.3 pretend to be the real file by forcing the icon (no snippet)
+        Next
+    End If
+
+Next
+
+End Sub
+&lt;/pre&gt;
+
+&lt;p&gt;On the opposite, the `&lt;code&gt;uninstall&lt;/code&gt;`does exactly the reverse with one noteworthy difference: It is executed only after the control server requests so, never automatically.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;5/ How does it work ? - Backdoor&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So, this virus is build around a main loop sleeping for 5s after each run. It also starts by (re-)installing the virus. Up to this point that still is a common virus. What it does right after makes it also a Trojan Horse. Nice &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/frownie.png&#34; alt=&#34;:(&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;To make it short it&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Connects to a server&lt;/li&gt;
+&lt;li&gt;Reads the command from the answer&lt;/li&gt;
+&lt;li&gt;Execute it&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;There are 13 supported commands, some of them doing similar things. The most important is that it allows an attacker to trigger an auto-update, (up|down)-load arbitrary files, run arbitrary commands, &amp;#8230;: do anything. And &lt;em&gt;that&lt;/em&gt; is the scary part.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;6/ Last word&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;I find strange to find such simple script-based viruses in the wild, while not being detected by Antivirus software. This makes me wonder if they are of any use, but that&amp;rsquo;s another question. The most important point I would like to stress is: User behavior and vigilance &lt;em&gt;is&lt;/em&gt; the most efficient way to protect himself. Being infected happens even to the best but noticing this strange behavior and asking around has been, in this case, the most efficient response.&lt;/p&gt;
+
+&lt;p&gt;This said, even very simple, this virus has most characteristics one would expect:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Efficient dissimulation.&lt;/li&gt;
+&lt;li&gt;Clever propagation mechanism.&lt;/li&gt;
+&lt;li&gt;Centralized command server.&lt;/li&gt;
+&lt;li&gt;Background command loop.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This last point makes me think this virus is part of a botnet. But I may be wrong.&lt;/p&gt;
+
+&lt;p&gt;There are nonetheless a couple of interesting vulnerabilities in the conception itself:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Interpreted language makes it easy to analyze.&lt;/li&gt;
+&lt;li&gt;Code &amp;#8220;obfuscation&amp;#8221; with only base64 ???&lt;/li&gt;
+&lt;li&gt;No attempts to dissimulate itself better than &amp;#8220;system files&amp;#8221;.&lt;/li&gt;
+&lt;li&gt;Essential registry key is still visible.&lt;/li&gt;
+&lt;li&gt;&amp;#8220;What are all theses shortcuts doing here ???&amp;#8221; user suspicion.&lt;/li&gt;
+&lt;li&gt;and HEAVY on memory usage !&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Anatomy of a virus: iTunesHelper.vbe 1/2</title>
+      <link>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</link>
+      <pubDate>Mon, 18 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</guid>
+      <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
+
+&lt;p&gt;I recently identified a virus called &amp;#8220;iTunesHelper.vbe&amp;#8221; on my Dad&amp;rsquo;s personal laptop. By the time we noticed it it already had infected the whole House. Let aside the (pretty bad) surprise I found interesting that none of the (up to date) Antivirus were able to detect it. And, interestingly enough this virus is script based, hence easily studied. Let&amp;rsquo;s dive in it.&lt;/p&gt;
+
+&lt;p&gt;This first post is a purely qualitative approach, voluntarily avoiding any source reading. For a more in-depth approach, you may be interested in reading the &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;second part of this post&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;1/ Lab system&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Windows XP, in a virtual Machine&lt;/li&gt;
+&lt;li&gt;NO updates&lt;/li&gt;
+&lt;li&gt;NO antivirus software&lt;/li&gt;
+&lt;li&gt;&amp;gt;1GB RAM&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Infection test was run from this VM. Analysis was performed directly on my Linux laptop with no special security as it lacks the required runtime.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ Symptoms&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;When an infected USB mass storage is connected to a target system, all files on its root folder appears as shortcuts instead of plain files. This set aside, icons are as expected and &amp;#8220;files&amp;#8221; behaves apparently behave as expected too.&lt;/p&gt;
+
+&lt;div id=&#34;attachment_344&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-344&#34; alt=&#34;iTuneHelper, only shortcuts visible&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible-300x225.png&#34; width=&#34;300&#34; height=&#34;225&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTuneHelper, only shortcut visible
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Diving a little deeper the shortcut appears to &lt;em&gt;really&lt;/em&gt; be a shortcut:&lt;/p&gt;
+
+&lt;div id=&#34;attachment_346&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-3-really.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-346&#34; alt=&#34;iTunesHelper. The shortcut is the virus vector&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-3-really-300x298.png&#34; width=&#34;300&#34; height=&#34;298&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTunesHelper. The shortcut is the virus vector
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Here is the full, plain text target:&lt;/p&gt;
+
+&lt;pre class=&#34;brush: plain; title: pseudo shortcut target; notranslate&#34; title=&#34;pseudo shortcut target&#34;&gt;C:\WINDOWS\system32\cmd.exe /c start iTunesHelper.vbe&amp;start Secret&#34; &#34;Text&#34; &#34;File.txt&amp;exit
+&lt;/pre&gt;
+
+&lt;p&gt;Which basically means:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;run &amp;#8220;iTunesHelper.vbe&amp;#8221;&lt;/li&gt;
+&lt;li&gt;open the real &amp;#8220;Secret Text File.txt&amp;#8221;&lt;/li&gt;
+&lt;li&gt;and you&amp;rsquo;re done&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Huh huh, interesting. But where are theses files located ? Turning off &amp;#8220;Hide protected operating system files&amp;#8221; in &amp;#8220;Folder Options&amp;#8221; will do the trick. Yes ! This nice piece of software pretends to be an essential piece of the Operating System. Simple and efficient way to &lt;em&gt;dissimulate&lt;/em&gt; itself from almost all computers. Here is what one could then see:&lt;/p&gt;
+
+&lt;div id=&#34;attachment_345&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-2-all.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-345&#34; alt=&#34;iTuneHelper, payload and real files when system files are visible&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-2-all-300x225.png&#34; width=&#34;300&#34; height=&#34;225&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTuneHelper, payload and real files when system files are visible
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Last but not least, the name &amp;#8220;iTunesHelper.vbe&amp;#8221; itself has been chosen for dissimulation. &amp;#8220;iTunesHelper.&lt;strong&gt;exe&lt;/strong&gt;&amp;#8221; being an actual.. &amp;#8220;iTunes background Helper&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;Long story short: The virus dissimulate itself under the name of a common software and pretending to be an essential system file. Nonetheless, it is still quite easy to suspect it&amp;rsquo;s presence as it replaces all files on the root of the drive by shortcuts.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;2/ Propagation Mechanism&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;With all this initial analysis done it is now straightforward to guess the virus&amp;rsquo; propagation mechanism:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;System is clean&lt;/li&gt;
+&lt;li&gt;Infected drive is inserted. Nothing happens&lt;/li&gt;
+&lt;li&gt;A file is opened from the drive&lt;/li&gt;
+&lt;li&gt;The virus payload is executed, then the real file is opened&lt;/li&gt;
+&lt;li&gt;[hypothesis] The virus installs itself&lt;/li&gt;
+&lt;li&gt;[hypothesis] The virus manages to watch for new USB drives&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;The last point is easy to check: Insert a clean drive and observe: files will quickly be replaced by shortcuts.&lt;/p&gt;
+
+&lt;p&gt;In fact the virus remains in memory. Speaking of memory, it consumes quite a lot of it&amp;#8230; Around 1/2GB!&lt;/p&gt;
+
+&lt;div id=&#34;attachment_347&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-4-resources.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-347&#34; alt=&#34;iTunesHelper, quite a lot of memory !&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-4-resources-300x292.png&#34; width=&#34;300&#34; height=&#34;292&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    iTunesHelper, quite a lot of memory !
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;When the computer is rebooted, the virus is reloaded with it via the registry. Even more Ironic, being a script ran by &amp;#8220;wscript.exe&amp;#8221; from Microsoft, its is reported as a Microsoft program. Trustworthy? Simple and efficient.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;3/ Counter measures, cleaning&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;All these informations gathered It is also possible to guess a way to efficiently get rid of it:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Remove any USB drive from the computer&lt;/li&gt;
+&lt;li&gt;Kill any &amp;#8220;wscript.exe&amp;#8221; process, especially if it eats up all your memory !&lt;/li&gt;
+&lt;li&gt;Disable further automatic restarts. A tool like CCleaner will help. It will also give the path to the resident payload&lt;/li&gt;
+&lt;li&gt;Delete the resident Payload&lt;/li&gt;
+&lt;li&gt;Show system protected files&lt;/li&gt;
+&lt;li&gt;For each infected drive:
+
+&lt;ol&gt;
+&lt;li&gt;Insert it. DO NOT open &lt;em&gt;any&lt;/em&gt; file from it&lt;/li&gt;
+&lt;li&gt;Delete iTunesHelper.vbe along with &lt;em&gt;ALL&lt;/em&gt; shortcuts&lt;/li&gt;
+&lt;li&gt;Reset files to regular attributes&lt;/li&gt;
+&lt;/ol&gt;&lt;/li&gt;
+&lt;li&gt;Hide system protected files&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Which also appears to be quite close from the real uninstall procedure, hardcoded in the virus.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;4/ Last word&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;This Post dived into a virus from a purely qualitative point of view, following the same general approach the author used to quickly get rid of this file. All the informations from this post have been cross-verified against the virus source code which appears to be only poorly obfuscated. But that&amp;rsquo;s another topic, for a future post.&lt;/p&gt;
+
+&lt;p&gt;This virus has been reported to an antivirus editor. Hopefully it&amp;rsquo;s signature will quickly be added to official databases.&lt;/p&gt;
+
+&lt;p&gt;[&lt;/p&gt;
+
+&lt;p&gt;For a more technical approach, please read on: second part.]&lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;1&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

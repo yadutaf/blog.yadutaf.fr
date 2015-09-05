@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Wget on Yet another enthusiast blog!</title>
+    <link>http://localhost:1313/tags/wget/</link>
+    <description>Recent content in Wget on Yet another enthusiast blog!</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 21 Sep 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/wget/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>About proxying wget http 1.0 using http 1.1 headers</title>
+      <link>http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</link>
+      <pubDate>Wed, 21 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</guid>
+      <description>&lt;p&gt;When &lt;a href=&#34;http://www.grapsus.net/&#34;&gt;a friend&lt;/a&gt; tried to syndicate my blog on his, his server was unable to complete the sync. Page &lt;a href=&#34;http://blog.jtlebi.fr/feed/&#34;&gt;http://blog.jtlebi.fr/feed/&lt;/a&gt; simply timed out. After quite a few tests, we noticed that this issue never happened with a browser like Firefox. Aside,  Wget hanged for 2 minutes after downloading more than Firefox. Strange&lt;/p&gt;
+
+&lt;p&gt;In my previous post, I explained that WordPress is hosted behind Apache2, Apache2 behind itself reachable behind &lt;a href=&#34;https://github.com/jtlebi/nodejs-proxy&#34;&gt;my house-made reverse-proxy&lt;/a&gt;. The main goal being to host all services on port 80.&lt;/p&gt;
+
+&lt;pre&gt;|&amp;lt;-----&amp;gt; Apache (WordPress and more)
+Client &amp;lt;----&amp;gt; Reverse-Proxy |&amp;lt;-----&amp;gt; Etherpad
+                            |&amp;lt;-----&amp;gt; Cloud 9
+                            |...&lt;/pre&gt;
+
+&lt;p&gt;Using tcpdump, we noticed that the packet with the &amp;#8220;FIN&amp;#8221; flag set was never send by the client. The strangest was that Wget received more data than Firefox.&lt;/p&gt;
+
+&lt;p&gt;After a few hours of investigations, it appeared that Wget was sending header &amp;#8220;keepalive&amp;#8221; to keep the connection open while using http version 1.0. &amp;#8220;Keepalive&amp;#8221; is an illegal header in HTTP 1.0 as it has been introduced with 1.1 revision. This is actually a &lt;a href=&#34;https://www.varnish-cache.org/trac/ticket/524&#34;&gt;known bug&lt;/a&gt;. A workaround is to use it in conjunction with &amp;#8220;-no-http-keep-alive&amp;#8221; command-line option.&lt;/p&gt;
+
+&lt;div id=&#34;attachment_48&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
+  &lt;a href=&#34;http://blog.jtlebi.fr/wp-content/uploads/2011/09/wireshark-wget-http-violation.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-48&#34; title=&#34;wireshark: wget http violation&#34; src=&#34;http://blog.jtlebi.fr/wp-content/uploads/2011/09/wireshark-wget-http-violation-300x168.png&#34; alt=&#34;Wireshark shows that wget uses illegal header &amp;quot;keepalive&amp;quot; with HTTP version 1.0&#34; width=&#34;300&#34; height=&#34;168&#34; /&gt;&lt;/a&gt;
+  
+  &lt;p class=&#34;wp-caption-text&#34;&gt;
+    Wireshark shows that wget uses illegal header &amp;#8220;keepalive&amp;#8221; with HTTP version 1.0
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The real reason why Wget avoid using version 1.1 is that it doesn&amp;rsquo;t understand &amp;#8220;Transfer-Encoding: chunked&amp;#8221; header, which is shame, btw. Since the answer was encoded this way, it embedded chunk size informations interpreted as regular content by Wget making the resulting file both bigger and corrupted.&lt;/p&gt;
+
+&lt;p&gt;Since I can not force all my visitors willing to wget from my website to use this workaround, I had to &amp;#8220;hardcode&amp;#8221; a way to force HTTP/1.0 when proxying for 1.0 enabled client. According to &amp;#8220;http&amp;#8221; module documentation of node.js, it automatically adapts itself when responding to request protocol. This is great. Since my reverse proxy implementation just streams raw answers back to the client, I needed a way to forward the request in the same version to get a compatible answer. Sadly this is not (yet) possible.&lt;/p&gt;
+
+&lt;p&gt;I suggested &lt;a href=&#34;https://github.com/joyent/node/pull/1750&#34;&gt;a fix on github wich is currently under review&lt;/a&gt; by node.js team on master and v0.4 branches to address this missing feature. Wait and see &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;UPDATE 25/09/2011:&lt;/p&gt;
+
+&lt;p&gt;Here is a copy a &lt;a href=&#34;https://github.com/pkrumins/nodejs-proxy/pull/11#issuecomment-2190685&#34;&gt;comment i posted on github&lt;/a&gt; which sums well up the situation:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;div&gt;
+  &lt;p&gt;
+    Actually, the &amp;#8220;end&amp;#8221; event seems to be fired when the data stream ends. It is not linked to the underlying socket. Eherpad (like most software) relies on the ability the HTTP1.1 to &amp;#8220;keepalive&amp;#8221; a connection. This is the behaviour broken by the &amp;#8220;destroy&amp;#8221; called on &amp;#8220;end&amp;#8221; event.
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    The actual bug I was facing was hidden deeply inside. It occured only when prowying HTTP/1.0 requests. To make things even more complicated, Wget is cheating and uses HTTP/1.1 &amp;#8220;keepalive&amp;#8221; header. I tried to clarify all this in this blogpost: &lt;a href=&#34;../2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/&#34;&gt;http://blog.jtlebi.fr/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/&lt;/a&gt;
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    Currently, i rely on a patch i did to add HTTP/1.0 to node.js http lib to fix this. My pull request will probably never be merged in as this truly is &amp;#8220;legacy feature&amp;#8221; &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt; The best would be to fix Wget 😀
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    If a need appears to bring a real long term fix, I can either embed a patched version of the http library or implement a real proxy HTTP/1.0 &lt;&amp;#8212;-&gt; HTTP/1.1, the biggest concern being the &amp;#8220;transfer-encoding: chunked&amp;#8221; which is almost always used by Apache2 but not available in HTTP/1.0 and thus requires the full filesize to be known when starting the transfer and caching to be enabled on the proxy side as soon as this transfer encoding is used.
+  &lt;/p&gt;
+  
+  &lt;p&gt;
+    Let me know if a better fix would be a good idea.
+  &lt;/p&gt;
+&lt;/div&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

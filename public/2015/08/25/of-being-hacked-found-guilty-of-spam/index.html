@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Of being hacked, found guilty of spam | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Of being hacked, found guilty of spam</h1>
+      <div class="meta">
+        Aug 25, 2015 &nbsp;
+        
+          #<a href="/tags/postfix">postfix</a>&nbsp;
+        
+          #<a href="/tags/spam">spam</a>&nbsp;
+        
+          #<a href="/tags/sysadmin">sysadmin</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>A few days ago, my hosting company sent me an automated email notifying me that port 25 had been blocked on my personal server. Cause: It had been found guilty of sending spam. As I&rsquo;m not (at least officially) in the spam business, this could only mean one thing: I got hacked.</p>
+
+<p>I was shocked. If felt to me as though I was having a car accident.</p>
+
+<p>The first think to do in such situations is to restrict to the bare minimum connections from the outside world to regain control of the machine. In my case, I rebooted the server to rescue mode with only SSH access. This means mail server downtime BUT SMTP protocol is reliable by design. Actually, it has been developed when Internet barely existed and mails where directly hosted on terminals with intermittent connexions. Hence, not an issue.</p>
+
+<p>Next, inspect postfix queue to get an overview:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">postqueue -p | head
+</pre>
+
+<p>Dumping a random email from the queue is also a good idea:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">postcat -qv POSTFIX_QUEUE_ID
+</pre>
+
+<p>This gives a good idea of where the bulk of the emails came from. In this specific scenario, most mail (~55K) were coming from &#8220;@blog.jtlebi.fr&#8221;. Which is a pretty good news since NO legitimate mail is ever sent from this domain. Anyway, at this point, you should be able to infer basic patterns.</p>
+
+<p>Time to filter out the spam. The film-hacker way: with a shiny progress bar. Actully, this is not about hype but truly about getting feedback. Filtering 10s of thousands of mails using postfix tools takes a <em>very</em> long time. You need to have an ETA. Here is the command I used:</p>
+
+<pre class="brush: bash; title: ; notranslate" title="">CANDIDATES="grep -rlP '(MAILER-DAEMON|@blog\.jtlebi\.fr)' /var/spool/postfix/deferred/"; (
+    eval $CANDIDATES   # get the list of mails, directly from the pool
+    | tee deleting     # track actions
+    | grep -o '[^/]*$' # extract POSTFIX_QUEUE_ID
+    | pv -lns $(eval $CANDIDATES | wc -l) -i0.1 # compute progress based on processed lines (mails) vs matching files (mails) in the spool.
+    | postadmin -d -   # delete mail by  POSTFIX_QUEUE_ID (1 per line)
+
+) 2&gt;&1
+| dialog --no-lines --no-shadow  --gauge "Delicately filtering away da F*cking spam... " 7 70 # The hype thing
+</pre>
+
+<p>After that, before re-opening accesses, do not forget to close the holes the hacker came in through. Temporary fix was to upgrade all, disable most plugins. Long term fix ? <strong>KILL WORDPRESS</strong>.</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/" rel="prev">Force a remote host to reboot via VNC</a></span>
+    
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+<script data-no-instant>document.write('<script src="http://'
+        + (location.host || 'localhost').split(':')[0]
+		+ ':1313/livereload.js?mindelay=10"></'
+        + 'script>')</script></body>
+</html>
+
