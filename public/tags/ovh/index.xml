@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Ovh on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/ovh/</link>
+    <link>http://blog.yadutaf.fr/tags/ovh/</link>
     <description>Recent content in Ovh on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 30 Nov 2013 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/ovh/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/ovh/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Gérer son site avec GIT sur un serveur mutualisé</title>
-      <link>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
+      <link>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
       <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
+      <guid>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
       <description>
 
 &lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
@@ -183,10 +183,10 @@ git push
     
     <item>
       <title>Lazy man backup strategy with duplicity</title>
-      <link>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
+      <link>http://blog.yadutaf.fr/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
       <pubDate>Sat, 08 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
+      <guid>http://blog.yadutaf.fr/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
       <description>&lt;p&gt;I recently moved to a new dedicated server and decided it also was a good to time do start doing things &amp;#8220;the good way&amp;#8221; &lt;sup&gt;tm&lt;/sup&gt;. A good backup strategy was especially needed.&lt;/p&gt;
 
 &lt;p&gt;Most articles I found on the net explains how to backup your data and they do it well. But they lack something essential that might someday become a real issue in case there is a disaster. Main disk crash ? Yes, you know what I mean &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
@@ -292,10 +292,10 @@ chmod +x /root/server/backup.d/42
     
     <item>
       <title>IPv6 fails after a certain time</title>
-      <link>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</link>
+      <link>http://blog.yadutaf.fr/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</link>
       <pubDate>Tue, 10 Jul 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</guid>
+      <guid>http://blog.yadutaf.fr/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</guid>
       <description>&lt;p&gt;[UPDATE]&lt;/p&gt;
 
 &lt;p&gt;I still did not find the real source of the problem but it seems that both OVH and Ubuntu stock kernel fail to renew the default routes. Good news, it can be manually renewed, including from a Cron job:&lt;/p&gt;
@@ -318,10 +318,10 @@ chmod +x /root/server/backup.d/42
     
     <item>
       <title>Testing X2go on OVH Public Cloud</title>
-      <link>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
+      <link>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
       <pubDate>Tue, 17 Jan 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
+      <guid>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
       <description>
 
 &lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;
@@ -427,10 +427,10 @@ $ sudo apt-get install x2gognomebindings #brings some integration &lt;/pre&gt;
     
     <item>
       <title>Node.Js reverse proxy</title>
-      <link>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</link>
+      <link>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</link>
       <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</guid>
+      <guid>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</guid>
       <description>&lt;p&gt;When I rented this OVH server, I wanted to be able to host all my web tools on it on port 80 using both my IPv6 and IPv4 stack. This is usually done with Apache&amp;rsquo;s &amp;#8220;ports.conf&amp;#8221; and VHost feature.&lt;/p&gt;
 
 &lt;p&gt;In fact, most of my favorite applications are written using &lt;a href=&#34;http://nodejs.org/&#34;&gt;Node.Js&lt;/a&gt; and as such embeds there own server logic. It is not possible anymore to bind each of them to *:80.&lt;/p&gt;

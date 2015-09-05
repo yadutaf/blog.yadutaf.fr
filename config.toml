@@ -1,4 +1,4 @@
-baseurl = "http://blog.yadutaf.fr"
+baseurl = "http://blog.yadutaf.fr/"
 name = "Yet another enthusiast blog!"
 title = "Yet another enthusiast blog!"
 languageCode = "en-us"

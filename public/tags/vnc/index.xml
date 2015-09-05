@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Vnc on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/vnc/</link>
+    <link>http://blog.yadutaf.fr/tags/vnc/</link>
     <description>Recent content in Vnc on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 04 May 2015 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/vnc/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/vnc/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Force a remote host to reboot via VNC</title>
-      <link>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
+      <link>http://blog.yadutaf.fr/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
       <pubDate>Mon, 04 May 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
+      <guid>http://blog.yadutaf.fr/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
       <description>&lt;p&gt;Yesterday, dealt with a machine in a pretty bad state:&lt;/p&gt;
 
 &lt;ul&gt;

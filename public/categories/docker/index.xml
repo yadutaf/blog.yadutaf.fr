@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Docker on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/categories/docker/</link>
+    <link>http://blog.yadutaf.fr/categories/docker/</link>
     <description>Recent content in Docker on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 25 Apr 2015 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/categories/docker/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/categories/docker/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>How I shrunk a Docker image by 98.8% – featuring fanotify</title>
-      <link>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
+      <link>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
       <pubDate>Sat, 25 Apr 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
+      <guid>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
       <description>
 
 &lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
@@ -322,10 +322,10 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
     
     <item>
       <title>How to run Docker behind an Nginx reverse proxy</title>
-      <link>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
+      <link>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
       <pubDate>Fri, 12 Dec 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
+      <guid>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
       <description>
 
 &lt;p&gt;A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.&lt;/p&gt;
@@ -476,10 +476,10 @@ Upgrade: websocket
     
     <item>
       <title>Getting Docker to run on Power8</title>
-      <link>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</link>
+      <link>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</link>
       <pubDate>Tue, 28 Oct 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</guid>
+      <guid>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</guid>
       <description>
 
 &lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
@@ -799,10 +799,10 @@ sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
     
     <item>
       <title>Using Docker to triage Nasty-Bugs(tm)</title>
-      <link>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
+      <link>http://blog.yadutaf.fr/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
       <pubDate>Sat, 27 Sep 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
+      <guid>http://blog.yadutaf.fr/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
       <description>&lt;p&gt;Docker is the container system for reproducible builds. This is precisely what you want when dealing with bugs, especially the nastiest one: an environment where to reproduce it in a fully deterministic way.&lt;/p&gt;
 
 &lt;p&gt;Not long ago, I had to troubleshoot the install process of a new cool piece of software. The weird and really uncool thing with this bug is that it only occurred on the first install install attempt. Even with a full (well, in theory) wipe, there still remained some kind of side effect on the system causing the subsequents install attempts to succeed. Anyone who has ever dealt with Q/A will know what I mean when I say this is pretty damn frustrating. (1)&lt;/p&gt;

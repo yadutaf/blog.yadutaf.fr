@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Boto on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/boto/</link>
+    <link>http://blog.yadutaf.fr/tags/boto/</link>
     <description>Recent content in Boto on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Thu, 11 Oct 2012 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/boto/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/boto/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Investigating DynamoDB 5sec latency</title>
-      <link>http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/</link>
+      <link>http://blog.yadutaf.fr/2012/10/11/investigating-dynamodb-5sec-latency/</link>
       <pubDate>Thu, 11 Oct 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/</guid>
+      <guid>http://blog.yadutaf.fr/2012/10/11/investigating-dynamodb-5sec-latency/</guid>
       <description>&lt;p&gt;It goes without saying that a 5000ms latency is&amp;#8230; &lt;em&gt;unacceptable&lt;/em&gt; in a real-time environment. Honestly, we first blamed our &lt;a href=&#34;http://pypi.python.org/pypi/dynamodb-mapper&#34; title=&#34;(Python) DynamoDB Mapper&#34;&gt;home-grown DynamoDB-Mapper&lt;/a&gt; and, indeed found, and fixed, a nasty design. &lt;a href=&#34;https://bitbucket.org/Ludia/dynamodb-mapper/changeset/059791c53426e92556a9c20a3376db298be38a37&#34; title=&#34;commit about always filling transactions&#34;&gt;Here is the specific commit&lt;/a&gt; for those liking juicy details &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;Ok, so &amp;#8220;case closed&amp;#8221; you might think. Sadly not, it did not change anything but since this behavior was random and the application still under very low load (development environment) it took some time to spot it again.&lt;/p&gt;

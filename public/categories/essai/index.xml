@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Essai on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/categories/essai/</link>
+    <link>http://blog.yadutaf.fr/categories/essai/</link>
     <description>Recent content in Essai on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 14 Oct 2012 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/categories/essai/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/categories/essai/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>[1982] Introducing the UNIX operating System</title>
-      <link>http://localhost:1313/2012/10/15/1982-introducing-the-unix-operating-system/</link>
+      <link>http://blog.yadutaf.fr/2012/10/15/1982-introducing-the-unix-operating-system/</link>
       <pubDate>Sun, 14 Oct 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/10/15/1982-introducing-the-unix-operating-system/</guid>
+      <guid>http://blog.yadutaf.fr/2012/10/15/1982-introducing-the-unix-operating-system/</guid>
       <description>&lt;p&gt;1982, AT&amp;amp;T introduces UNIX, a new revolutionary Operating System. Revolutionary because it keeps things simple and modular. They let people build their own solutions.&lt;/p&gt;
 
 &lt;blockquote&gt;
@@ -27,10 +27,10 @@
     
     <item>
       <title>Économie de la culture ou communisme du savoir ?</title>
-      <link>http://localhost:1313/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</link>
+      <link>http://blog.yadutaf.fr/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</link>
       <pubDate>Thu, 24 May 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</guid>
+      <guid>http://blog.yadutaf.fr/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</guid>
       <description>&lt;p&gt;« La preuve de la faillite du système communiste, c&amp;rsquo;est sa condition de survie. Pour survivre, ils doivent adopter un modèle économique libérale. » Combien de fois ai-je entendu cette affirmation pompeuse ?&lt;/p&gt;
 
 &lt;p&gt;Quoi qu’étant, à titre strictement personnel, fermement opposé au communisme, je ne voudrais certainement pas que cette opposition se fasse au prix de ma lucidité et de ma capacité à prendre du recul.&lt;/p&gt;
@@ -55,10 +55,10 @@
     
     <item>
       <title>Pourquoi je soutiens l&#39;AFNIC</title>
-      <link>http://localhost:1313/2012/04/24/pourquoi-je-soutiens-lafnic/</link>
+      <link>http://blog.yadutaf.fr/2012/04/24/pourquoi-je-soutiens-lafnic/</link>
       <pubDate>Tue, 24 Apr 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/04/24/pourquoi-je-soutiens-lafnic/</guid>
+      <guid>http://blog.yadutaf.fr/2012/04/24/pourquoi-je-soutiens-lafnic/</guid>
       <description>&lt;p&gt;Pour peu que l&amp;rsquo;on s’intéresse à l&amp;rsquo;IT en France, il est difficile de passer à coté de &lt;a href=&#34;http://www.industrie.gouv.fr/tic/consultation-publique/domaines-nationaux/aac-domaines-internet.php&#34;&gt;l&amp;rsquo;appel d&amp;rsquo;offre qui oppose l&amp;rsquo;AFNIC et un nouvel entrant, FRNIC&lt;/a&gt; dans la gestion du &amp;#8216;.fr&amp;rsquo; et les 10 autres domaines français.&lt;/p&gt;
 
 &lt;p&gt;Avant de rentrer plus avant dans le vif du sujet, je tiens à insister sur un point: mes propos n&amp;rsquo;engagent que moi. Ils relèvent plus d&amp;rsquo;une tentative de réflexion indépendante que d&amp;rsquo;une analyse poussée.&lt;/p&gt;

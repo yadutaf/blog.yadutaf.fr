@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Cloud on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/cloud/</link>
+    <link>http://blog.yadutaf.fr/tags/cloud/</link>
     <description>Recent content in Cloud on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 07 Oct 2012 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/cloud/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/cloud/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Common DynamoDB questions/misconceptions/recipes</title>
-      <link>http://localhost:1313/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</link>
+      <link>http://blog.yadutaf.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</link>
       <pubDate>Sun, 07 Oct 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</guid>
+      <guid>http://blog.yadutaf.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</guid>
       <description>
 
 &lt;p&gt;DynamoDB is a key:value store of the NoSQL family developed and offered by Amazon as part of AWS. It focuses on high performance throughput vs functionality.&lt;/p&gt;
@@ -167,10 +167,10 @@
     
     <item>
       <title>Économie de la culture ou communisme du savoir ?</title>
-      <link>http://localhost:1313/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</link>
+      <link>http://blog.yadutaf.fr/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</link>
       <pubDate>Thu, 24 May 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</guid>
+      <guid>http://blog.yadutaf.fr/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</guid>
       <description>&lt;p&gt;« La preuve de la faillite du système communiste, c&amp;rsquo;est sa condition de survie. Pour survivre, ils doivent adopter un modèle économique libérale. » Combien de fois ai-je entendu cette affirmation pompeuse ?&lt;/p&gt;
 
 &lt;p&gt;Quoi qu’étant, à titre strictement personnel, fermement opposé au communisme, je ne voudrais certainement pas que cette opposition se fasse au prix de ma lucidité et de ma capacité à prendre du recul.&lt;/p&gt;
@@ -195,10 +195,10 @@
     
     <item>
       <title>Testing X2go on OVH Public Cloud</title>
-      <link>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
+      <link>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
       <pubDate>Tue, 17 Jan 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
+      <guid>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
       <description>
 
 &lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;
