@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Cloudflare on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/cloudflare/</link>
+    <link>http://blog.yadutaf.fr/tags/cloudflare/</link>
     <description>Recent content in Cloudflare on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Fri, 26 Feb 2016 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/cloudflare/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/cloudflare/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Security as a commercial strategy</title>
-      <link>http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/</link>
+      <link>http://blog.yadutaf.fr/2016/02/26/security-as-a-commercial-strategy/</link>
       <pubDate>Fri, 26 Feb 2016 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/</guid>
+      <guid>http://blog.yadutaf.fr/2016/02/26/security-as-a-commercial-strategy/</guid>
       <description>&lt;p&gt;This post is an essay. I am not a business expert. I am not working for Cloudflare. Actually, I&amp;rsquo;m working for a &lt;a href=&#34;https://www.ovh.com/&#34;&gt;competitor&lt;/a&gt;. This is an attempt to understand Cloudflare&amp;rsquo;s strategy, based on my own (rather short) experience.&lt;/p&gt;
 
 &lt;p&gt;2 days ago, Cloudflare &lt;a href=&#34;https://blog.cloudflare.com/introducing-cloudflare-registrar/&#34;&gt;announced&lt;/a&gt; they created a new Registrar, but not one like all the quadrillions other registrars. A registrar for security concerned companies. Just in case, a &lt;a href=&#34;https://en.wikipedia.org/wiki/Domain_name_registrar&#34;&gt;registrar&lt;/a&gt; is the guy who lends you a domain name.&lt;/p&gt;

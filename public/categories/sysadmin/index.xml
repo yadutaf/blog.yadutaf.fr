@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Sysadmin on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/categories/sysadmin/</link>
+    <link>http://blog.yadutaf.fr/categories/sysadmin/</link>
     <description>Recent content in Sysadmin on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Tue, 25 Aug 2015 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/categories/sysadmin/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/categories/sysadmin/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Of being hacked, found guilty of spam</title>
-      <link>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
+      <link>http://blog.yadutaf.fr/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
       <pubDate>Tue, 25 Aug 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
+      <guid>http://blog.yadutaf.fr/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
       <description>&lt;p&gt;A few days ago, my hosting company sent me an automated email notifying me that port 25 had been blocked on my personal server. Cause: It had been found guilty of sending spam. As I&amp;rsquo;m not (at least officially) in the spam business, this could only mean one thing: I got hacked.&lt;/p&gt;
 
 &lt;p&gt;I was shocked. If felt to me as though I was having a car accident.&lt;/p&gt;
@@ -52,10 +52,10 @@
     
     <item>
       <title>Force a remote host to reboot via VNC</title>
-      <link>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
+      <link>http://blog.yadutaf.fr/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
       <pubDate>Mon, 04 May 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
+      <guid>http://blog.yadutaf.fr/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
       <description>&lt;p&gt;Yesterday, dealt with a machine in a pretty bad state:&lt;/p&gt;
 
 &lt;ul&gt;
@@ -93,10 +93,10 @@ rfb.sendKey(0xffe9, 0);
     
     <item>
       <title>How I shrunk a Docker image by 98.8% – featuring fanotify</title>
-      <link>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
+      <link>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
       <pubDate>Sat, 25 Apr 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
+      <guid>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
       <description>
 
 &lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
@@ -404,10 +404,10 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
     
     <item>
       <title>Getting Docker to run on Power8</title>
-      <link>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</link>
+      <link>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</link>
       <pubDate>Tue, 28 Oct 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</guid>
+      <guid>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</guid>
       <description>
 
 &lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
@@ -727,10 +727,10 @@ sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
     
     <item>
       <title>Introduction to Linux namespaces – Part 5: NET</title>
-      <link>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
+      <link>http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
       <pubDate>Sun, 19 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
+      <guid>http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/&#34; title=&#34;Introduction to Linux namespaces – Part 4: PID&#34;&gt;previous post on PID namespace&lt;/a&gt; (Restart process numbering to &amp;#8220;1&amp;#8221;), would like to go further and fly eve closer to full-featured VMs ? Great ! The two last posts of this series will precisely focus on this. Isolate network interfaces with the &amp;#8220;NET&amp;#8221; namespace (Yes, really) and user/group identifier for even more transparency. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-5.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -917,10 +917,10 @@ jean-tiare@jeantiare-Ubuntu:~$
     
     <item>
       <title>Introduction to Linux namespaces - Part 4: NS (FS)</title>
-      <link>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
+      <link>http://blog.yadutaf.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
       <pubDate>Sun, 12 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
+      <guid>http://blog.yadutaf.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/&#34; title=&#34;Introduction to Linux namespaces – Part 4: NS (FS)&#34;&gt;previous post on FS namespace&lt;/a&gt; (mountpoints table isolation), we will now have a look at an amazing one: isolated mount table. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-4.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -1026,10 +1026,10 @@ int main()
     
     <item>
       <title>Introduction to Linux namespaces - Part 3: PID</title>
-      <link>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
+      <link>http://blog.yadutaf.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
       <pubDate>Sun, 05 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
+      <guid>http://blog.yadutaf.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/&#34; title=&#34;Introduction to Linux namespaces – Part 2: IPC&#34;&gt;previous post on IPC namespace&lt;/a&gt; (Inter Process Communication isolation), I would now like to introduce my personal favorite one (as sysadmin): PID namespaces. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-3.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -1167,10 +1167,10 @@ Error, do this: mount -t proc proc /proc
     
     <item>
       <title>Introduction to Linux namespaces - Part 2: IPC</title>
-      <link>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
+      <link>http://blog.yadutaf.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
       <pubDate>Sat, 28 Dec 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
+      <guid>http://blog.yadutaf.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;previous post on UTS namespace&lt;/a&gt; (hostname isolation), we will now go deeper and look at a more security oriented namespace: IPC, Inter-Process Communications. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-2.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -1302,10 +1302,10 @@ int main()
     
     <item>
       <title>Introduction to Linux namespaces - Part 1: UTS</title>
-      <link>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</link>
+      <link>http://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</link>
       <pubDate>Sun, 22 Dec 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</guid>
+      <guid>http://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</guid>
       <description>&lt;p&gt;As a part of my job at &lt;a href=&#34;http://www.ovh.com/&#34;&gt;OVH&lt;/a&gt; I dealt with Linux Namespaces as a security mechanism in a &amp;#8220;yet to be announced&amp;#8221; product. I was astonished by both how powerful and poorly documented it is.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-1.html&#34;&gt;here&lt;/a&gt;:&lt;/p&gt;
@@ -1430,10 +1430,10 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
     
     <item>
       <title>Gérer son site avec GIT sur un serveur mutualisé</title>
-      <link>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
+      <link>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
       <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
+      <guid>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
       <description>
 
 &lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
@@ -1602,10 +1602,10 @@ git push
     
     <item>
       <title>WordPress: from localhost to production</title>
-      <link>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</link>
+      <link>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</link>
       <pubDate>Wed, 03 Jul 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</guid>
+      <guid>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</guid>
       <description>&lt;p&gt;Yesterday, a friend of mine asked me urgent help. He fully developed a WP based website for a research project on &lt;em&gt;localhost/his_website&lt;/em&gt;. As WP stores &lt;em&gt;full links&lt;/em&gt; pretty much everywhere in the database, his website was obviously completely broken when he moved it to production on &lt;em&gt;his_website.com&lt;/em&gt;.&lt;/p&gt;
 
 &lt;p&gt;I quickly put some PHP lines of codes together to fix the whole DB at once. Feel free to re-use it in your own projects.&lt;/p&gt;
@@ -1625,10 +1625,10 @@ git push
     
     <item>
       <title>Lazy man backup strategy with duplicity</title>
-      <link>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
+      <link>http://blog.yadutaf.fr/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
       <pubDate>Sat, 08 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
+      <guid>http://blog.yadutaf.fr/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
       <description>&lt;p&gt;I recently moved to a new dedicated server and decided it also was a good to time do start doing things &amp;#8220;the good way&amp;#8221; &lt;sup&gt;tm&lt;/sup&gt;. A good backup strategy was especially needed.&lt;/p&gt;
 
 &lt;p&gt;Most articles I found on the net explains how to backup your data and they do it well. But they lack something essential that might someday become a real issue in case there is a disaster. Main disk crash ? Yes, you know what I mean &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
@@ -1734,10 +1734,10 @@ chmod +x /root/server/backup.d/42
     
     <item>
       <title>Google HTTPS SEO (Nginx)</title>
-      <link>http://localhost:1313/2012/09/07/google-https-seo-nginx/</link>
+      <link>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</link>
       <pubDate>Fri, 07 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/09/07/google-https-seo-nginx/</guid>
+      <guid>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</guid>
       <description>&lt;p&gt;A couple of days ago, well, 5 to be precise, I moved this blog to a new server, new Nginx based stack. In the move, I decided to enforce secured HTTPS force all my services, including this blog. Privacy matters!&lt;/p&gt;
 
 &lt;p&gt;Surprisingly enough, I suddenly disappeared from Google at the very same time.&lt;/p&gt;
@@ -1767,10 +1767,10 @@ chmod +x /root/server/backup.d/42
     
     <item>
       <title>Nginx: IPv6 and SSL termination</title>
-      <link>http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/</link>
+      <link>http://blog.yadutaf.fr/2012/09/02/nginx-ipv6-and-ssl-termination/</link>
       <pubDate>Sun, 02 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/</guid>
+      <guid>http://blog.yadutaf.fr/2012/09/02/nginx-ipv6-and-ssl-termination/</guid>
       <description>&lt;p&gt;I just installed the beautiful NGINX reverse proxy on my personal server. I use it to run various personal web-based services like this blog, Etherpad or Gitlab. That&amp;rsquo;s 3 different programming languages, PHP, JS, Ruby. Wow.&lt;/p&gt;
 
 &lt;p&gt;Sadly, none of them handles natively HTTPS nor IPv6 moreover, they all require a standalone port to run on. Hopefully, reverse proxies are here to solve the problem. And I chose NGINX. I was previously using a home grown one which is much, much easier to configure but not really state of the art. So Bye Bye &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
@@ -1808,10 +1808,10 @@ ssl_certificate_key /etc/ssl/private/ssl-main.key;
     
     <item>
       <title>IPv6 fails after a certain time</title>
-      <link>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</link>
+      <link>http://blog.yadutaf.fr/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</link>
       <pubDate>Tue, 10 Jul 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</guid>
+      <guid>http://blog.yadutaf.fr/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</guid>
       <description>&lt;p&gt;[UPDATE]&lt;/p&gt;
 
 &lt;p&gt;I still did not find the real source of the problem but it seems that both OVH and Ubuntu stock kernel fail to renew the default routes. Good news, it can be manually renewed, including from a Cron job:&lt;/p&gt;

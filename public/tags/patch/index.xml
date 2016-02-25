@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Patch on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/patch/</link>
+    <link>http://blog.yadutaf.fr/tags/patch/</link>
     <description>Recent content in Patch on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Fri, 12 Dec 2014 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/patch/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/patch/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>How to run Docker behind an Nginx reverse proxy</title>
-      <link>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
+      <link>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
       <pubDate>Fri, 12 Dec 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
+      <guid>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
       <description>
 
 &lt;p&gt;A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.&lt;/p&gt;

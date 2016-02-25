@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Security on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/security/</link>
+    <link>http://blog.yadutaf.fr/tags/security/</link>
     <description>Recent content in Security on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Fri, 26 Feb 2016 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/security/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/security/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Security as a commercial strategy</title>
-      <link>http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/</link>
+      <link>http://blog.yadutaf.fr/2016/02/26/security-as-a-commercial-strategy/</link>
       <pubDate>Fri, 26 Feb 2016 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/</guid>
+      <guid>http://blog.yadutaf.fr/2016/02/26/security-as-a-commercial-strategy/</guid>
       <description>&lt;p&gt;This post is an essay. I am not a business expert. I am not working for Cloudflare. Actually, I&amp;rsquo;m working for a &lt;a href=&#34;https://www.ovh.com/&#34;&gt;competitor&lt;/a&gt;. This is an attempt to understand Cloudflare&amp;rsquo;s strategy, based on my own (rather short) experience.&lt;/p&gt;
 
 &lt;p&gt;2 days ago, Cloudflare &lt;a href=&#34;https://blog.cloudflare.com/introducing-cloudflare-registrar/&#34;&gt;announced&lt;/a&gt; they created a new Registrar, but not one like all the quadrillions other registrars. A registrar for security concerned companies. Just in case, a &lt;a href=&#34;https://en.wikipedia.org/wiki/Domain_name_registrar&#34;&gt;registrar&lt;/a&gt; is the guy who lends you a domain name.&lt;/p&gt;
@@ -51,10 +51,10 @@
     
     <item>
       <title>Introduction to seccomp: BPF linux syscall filter</title>
-      <link>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</link>
+      <link>http://blog.yadutaf.fr/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</link>
       <pubDate>Thu, 29 May 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</guid>
+      <guid>http://blog.yadutaf.fr/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</guid>
       <description>&lt;p&gt;Seccomp is basic yet efficient way to filter syscalls issued by a program. It is especially useful when running untrusted third party programs. Actually, it was first &lt;a href=&#34;http://git.kernel.org/cgit/linux/kernel/git/tglx/history.git/commit/?id=d949d0ec9c601f2b148bed3cdb5f87c052968554&#34; title=&#34;Initial seccomp commit&#34;&gt;introduced in linux 2.6.12&lt;/a&gt; as an essential building block of &lt;a href=&#34;http://mashable.com/2005/12/21/cpushare-distributed-computing-marketplace/&#34;&gt;&amp;#8220;cpushare&amp;#8221; program&lt;/a&gt;. The idea behind this project was to allow anyone with the proper agent installed to rent cpu cycles to third parties, without compromising its the security.&lt;/p&gt;
 
 &lt;p&gt;The initial implementation, also known as &amp;#8220;mode 1 seccomp&amp;#8221; only allowed &amp;#8216;&lt;code&gt;read&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;write&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;_exit&lt;/code&gt;&amp;#8216; and &amp;#8216;&lt;code&gt;sigreturn&lt;/code&gt;&amp;#8216; syscalls to be issued making it only possible to read/write to already opened files and to exit. It is also trivial get started with:&lt;/p&gt;
@@ -279,10 +279,10 @@ Status: 159        &amp;lt;------ 128+31 ==&amp;gt; SIGSYS
     
     <item>
       <title>Anatomy of a virus: iTunesHelper.vbe 2/2</title>
-      <link>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
+      <link>http://blog.yadutaf.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
       <pubDate>Wed, 20 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
+      <guid>http://blog.yadutaf.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
       <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
 
 &lt;p&gt;This post is the source-code analysis part of the article. For an introduction to the iTunesHelper.vbe virus and a more qualitative approach, &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/&#34; title=&#34;Anatomy of a virus 1/2: iTunesHelper.vbe&#34;&gt;you may be interested in reading the first part&amp;#8230; first&lt;/a&gt;.&lt;/p&gt;
@@ -461,10 +461,10 @@ End Sub
     
     <item>
       <title>Anatomy of a virus: iTunesHelper.vbe 1/2</title>
-      <link>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</link>
+      <link>http://blog.yadutaf.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</link>
       <pubDate>Mon, 18 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</guid>
+      <guid>http://blog.yadutaf.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</guid>
       <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
 
 &lt;p&gt;I recently identified a virus called &amp;#8220;iTunesHelper.vbe&amp;#8221; on my Dad&amp;rsquo;s personal laptop. By the time we noticed it it already had infected the whole House. Let aside the (pretty bad) surprise I found interesting that none of the (up to date) Antivirus were able to detect it. And, interestingly enough this virus is script based, hence easily studied. Let&amp;rsquo;s dive in it.&lt;/p&gt;

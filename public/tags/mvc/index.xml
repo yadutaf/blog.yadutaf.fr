@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Mvc on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/mvc/</link>
+    <link>http://blog.yadutaf.fr/tags/mvc/</link>
     <description>Recent content in Mvc on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 20 Nov 2011 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/mvc/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/mvc/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Understanding MVC with Express/Node.js and mongo.db</title>
-      <link>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</link>
+      <link>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</link>
       <pubDate>Sun, 20 Nov 2011 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
+      <guid>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
       <description>
 
 &lt;p&gt;Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight &lt;a href=&#34;http://codeigniter.com/&#34;&gt;CodeIgniter&lt;/a&gt; or the very complete  &lt;a href=&#34;http://symfony.com/&#34;&gt;Symfony&lt;/a&gt; and I missed clean MVC coding. My previous node.js app barely stand in a single controller &lt;a href=&#34;http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/&#34; title=&#34;Node.Js reverse proxy&#34;&gt;as it was a reverse proxy&lt;/a&gt;. This time, I wondered how I could write a bare minimum clean registration form.&lt;/p&gt;
@@ -157,8 +157,8 @@ MemberSchema.path(&#39;date&#39;)
 html
   head
     title= title
-    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/bootstrap.css&#39;)
-    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/styles.css&#39;)
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://blog.yadutaf.fr/stylesheets/bootstrap.css&#39;)
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://blog.yadutaf.fr/stylesheets/styles.css&#39;)
     //if lt IE 9
         script(src=&#34;http://html5shim.googlecode.com/svn/trunk/html5.js&#34;, language=&#34;text/javascript&#34;)
   body!= body&lt;/pre&gt;

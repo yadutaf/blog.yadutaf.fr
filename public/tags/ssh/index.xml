@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Ssh on Yet another enthusiast blog!</title>
-    <link>http://localhost:1313/tags/ssh/</link>
+    <link>http://blog.yadutaf.fr/tags/ssh/</link>
     <description>Recent content in Ssh on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Tue, 17 Jan 2012 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/ssh/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://blog.yadutaf.fr/tags/ssh/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Testing X2go on OVH Public Cloud</title>
-      <link>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
+      <link>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
       <pubDate>Tue, 17 Jan 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
+      <guid>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
       <description>
 
 &lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;
