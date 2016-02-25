@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Security as a commercial strategy | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://localhost:1313/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://localhost:1313/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://localhost:1313/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Security as a commercial strategy</h1>
+      <div class="meta">
+        Feb 26, 2016 &nbsp;
+        
+          #<a href="/tags/essay">essay</a>&nbsp;
+        
+          #<a href="/tags/cloudflare">cloudflare</a>&nbsp;
+        
+          #<a href="/tags/strategy">strategy</a>&nbsp;
+        
+          #<a href="/tags/security">security</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>This post is an essay. I am not a business expert. I am not working for Cloudflare. Actually, I&rsquo;m working for a <a href="https://www.ovh.com/">competitor</a>. This is an attempt to understand Cloudflare&rsquo;s strategy, based on my own (rather short) experience.</p>
+
+<p>2 days ago, Cloudflare <a href="https://blog.cloudflare.com/introducing-cloudflare-registrar/">announced</a> they created a new Registrar, but not one like all the quadrillions other registrars. A registrar for security concerned companies. Just in case, a <a href="https://en.wikipedia.org/wiki/Domain_name_registrar">registrar</a> is the guy who lends you a domain name.</p>
+
+<p>Long story short, their reasoning is pretty straight-forward:</p>
+
+<ol>
+<li>domain names are critical to an organization</li>
+<li>most registrar authenticate organization as any individual</li>
+<li>people knowing the authentication secret eventually leave</li>
+<li>people knowing the authentication secret eventually <em>might</em> be abused</li>
+<li>in turn, domain names <em>might</em> eventually be abused</li>
+</ol>
+
+<p>So they told themselves, why not fixing this, like they did for content distribution?</p>
+
+<p>But here is the catch: unlike content distribution which requires a pretty big initial investment, anybody can bootstrap a registrar with only a handful of cheap servers from any cloud provider. The costs stay low. If you have no customer, you pay close to nothing. You can even bootstrap your activity <a href="https://partners.ovh.com/">as a reseller</a> for a couple of bucks. This is cheap, this is easy. The landscape is <a href="https://www.icann.org/registrar-reports/accredited-list.html">crowded</a>.</p>
+
+<p>So, you want to be a registrar? Great. How different are you?</p>
+
+<p>With this in mind, CloudFlare&rsquo;s move is a clever one. By focusing on security, they bootstrap their registrar activity with a limited number of high level, technically skilled, big paying customers with easy to implement things on their side (ACLs). All this while capitalizing on their existing image. Remember, the AntiDDos thing.</p>
+
+<p>Then, in a second time, they&rsquo;ll most probably generalize (if not yet done) this security to all accounts and services AND most probably open their registrar offers to any one. And maybe even offer free domains with a custom <a href="https://en.wikipedia.org/wiki/Generic_top-level_domain">gTLD</a>.</p>
+
+<p>One step at a time.</p>
+
+<p>More generally, their strategy to attract bigger customers seems to be security. The most obvious way is their <a href="https://www.cloudflare.com/ddos/">L7 attack mitigation</a>. On the same trend, they developed a way to offer SSL termination on their side without giving them the secret key (basically, <a href="https://blog.cloudflare.com/keyless-ssl-the-nitty-gritty-technical-details/">a patch in OpenSSL</a> to implement the Oracle pattern). They did this to target banks (in this case, a BitCoin exchange) by offering them scalability without compromising on the security. Again, security.</p>
+
+<p>Should security be your main concern for your business? No idea. Seriously, I don&rsquo;t know it, you do. It <em>is</em> important, for sure. What I can tell you is CloudFlare was clever. They turned what most see as a constraint not only as a commercial argument but as the core of their commercial strategy. A constraint turned into a strength.</p>
+
+<p>What is your future strength?</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/" rel="prev">Of being hacked, found guilty of spam</a></span>
+    
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+</body>
+</html>
+

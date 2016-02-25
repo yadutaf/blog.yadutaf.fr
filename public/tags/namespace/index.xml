@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Namespace on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/namespace/</link>
+    <link>http://localhost:1313/tags/namespace/</link>
     <description>Recent content in Namespace on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 19 Jan 2014 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/namespace/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/namespace/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Introduction to Linux namespaces – Part 5: NET</title>
-      <link>http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
+      <link>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
       <pubDate>Sun, 19 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
+      <guid>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/&#34; title=&#34;Introduction to Linux namespaces – Part 4: PID&#34;&gt;previous post on PID namespace&lt;/a&gt; (Restart process numbering to &amp;#8220;1&amp;#8221;), would like to go further and fly eve closer to full-featured VMs ? Great ! The two last posts of this series will precisely focus on this. Isolate network interfaces with the &amp;#8220;NET&amp;#8221; namespace (Yes, really) and user/group identifier for even more transparency. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-5.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -201,10 +201,10 @@ jean-tiare@jeantiare-Ubuntu:~$
     
     <item>
       <title>Introduction to Linux namespaces - Part 4: NS (FS)</title>
-      <link>http://blog.yadutaf.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
+      <link>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
       <pubDate>Sun, 12 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
+      <guid>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/&#34; title=&#34;Introduction to Linux namespaces – Part 4: NS (FS)&#34;&gt;previous post on FS namespace&lt;/a&gt; (mountpoints table isolation), we will now have a look at an amazing one: isolated mount table. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-4.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -310,10 +310,10 @@ int main()
     
     <item>
       <title>Introduction to Linux namespaces - Part 3: PID</title>
-      <link>http://blog.yadutaf.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
+      <link>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
       <pubDate>Sun, 05 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
+      <guid>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/&#34; title=&#34;Introduction to Linux namespaces – Part 2: IPC&#34;&gt;previous post on IPC namespace&lt;/a&gt; (Inter Process Communication isolation), I would now like to introduce my personal favorite one (as sysadmin): PID namespaces. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-3.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -451,10 +451,10 @@ Error, do this: mount -t proc proc /proc
     
     <item>
       <title>Introduction to Linux namespaces - Part 2: IPC</title>
-      <link>http://blog.yadutaf.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
+      <link>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
       <pubDate>Sat, 28 Dec 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
+      <guid>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;previous post on UTS namespace&lt;/a&gt; (hostname isolation), we will now go deeper and look at a more security oriented namespace: IPC, Inter-Process Communications. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-2.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;

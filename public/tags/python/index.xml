@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Python on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/python/</link>
+    <link>http://localhost:1313/tags/python/</link>
     <description>Recent content in Python on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 29 May 2013 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/python/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Gmail Oauth2 with Python and bottle</title>
-      <link>http://blog.yadutaf.fr/2013/05/29/gmail-oauth2-with-python-and-bottle/</link>
+      <link>http://localhost:1313/2013/05/29/gmail-oauth2-with-python-and-bottle/</link>
       <pubDate>Wed, 29 May 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/05/29/gmail-oauth2-with-python-and-bottle/</guid>
+      <guid>http://localhost:1313/2013/05/29/gmail-oauth2-with-python-and-bottle/</guid>
       <description>&lt;p&gt;Remember my previous post about &lt;a href=&#34;https://blog.jtlebi.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/&#34; title=&#34;Fetching all messages since last check with Python + Imap&#34;&gt;checking out only new mails from a IMAP account with Python&lt;/a&gt; ? The main issue with this was the absolute need for user&amp;rsquo;s password.&lt;/p&gt;
 
 &lt;p&gt;The solution for this OAuth2&amp;#8230; which has no decent support for Python 3. Well, it&amp;rsquo;s not exactly true. Guys behind &lt;a href=&#34;https://pypi.python.org/pypi/oauthlib&#34;&gt;oauthlib&lt;/a&gt; did quite a good job but OAuth2 is such a generic framework that using a library quickly requires you to write more code than without anyway.&lt;/p&gt;
@@ -58,10 +58,10 @@ imap_conn.authenticate(&#39;XOAUTH2&#39;, lambda x: auth_string)
     
     <item>
       <title>Fetching all messages since last check with Python &#43; Imap</title>
-      <link>http://blog.yadutaf.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</link>
+      <link>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</link>
       <pubDate>Fri, 12 Apr 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</guid>
+      <guid>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</guid>
       <description>&lt;p&gt;Recently, in a freelance project I had to parse incoming mails wherever they are in the mail account and, preferably, avoid re-parsing the whole mail account only for a couple of new mails.&lt;/p&gt;
 
 &lt;p&gt;Fortunately, there is the low level &lt;a href=&#34;http://docs.python.org/3.2/library/imaplib.html&#34;&gt;imaplib&lt;/a&gt; module in Python&amp;rsquo;s toolbox. But, curiously enough, while the solution is quite simple, I have not been able to find any good solution on the net&amp;#8230;&lt;/p&gt;

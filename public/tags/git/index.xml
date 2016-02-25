@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Git on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/git/</link>
+    <link>http://localhost:1313/tags/git/</link>
     <description>Recent content in Git on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 30 Nov 2013 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/git/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/git/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Gérer son site avec GIT sur un serveur mutualisé</title>
-      <link>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
+      <link>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
       <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
+      <guid>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
       <description>
 
 &lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;

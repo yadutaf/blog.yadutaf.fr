@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Dev Web on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/categories/dev-web/</link>
+    <link>http://localhost:1313/categories/dev-web/</link>
     <description>Recent content in Dev Web on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 30 Nov 2013 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/categories/dev-web/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/categories/dev-web/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Gérer son site avec GIT sur un serveur mutualisé</title>
-      <link>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
+      <link>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
       <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
+      <guid>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
       <description>
 
 &lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
@@ -183,10 +183,10 @@ git push
     
     <item>
       <title>WordPress: from localhost to production</title>
-      <link>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</link>
+      <link>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</link>
       <pubDate>Wed, 03 Jul 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</guid>
+      <guid>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</guid>
       <description>&lt;p&gt;Yesterday, a friend of mine asked me urgent help. He fully developed a WP based website for a research project on &lt;em&gt;localhost/his_website&lt;/em&gt;. As WP stores &lt;em&gt;full links&lt;/em&gt; pretty much everywhere in the database, his website was obviously completely broken when he moved it to production on &lt;em&gt;his_website.com&lt;/em&gt;.&lt;/p&gt;
 
 &lt;p&gt;I quickly put some PHP lines of codes together to fix the whole DB at once. Feel free to re-use it in your own projects.&lt;/p&gt;
@@ -206,10 +206,10 @@ git push
     
     <item>
       <title>Gmail Oauth2 with Python and bottle</title>
-      <link>http://blog.yadutaf.fr/2013/05/29/gmail-oauth2-with-python-and-bottle/</link>
+      <link>http://localhost:1313/2013/05/29/gmail-oauth2-with-python-and-bottle/</link>
       <pubDate>Wed, 29 May 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/05/29/gmail-oauth2-with-python-and-bottle/</guid>
+      <guid>http://localhost:1313/2013/05/29/gmail-oauth2-with-python-and-bottle/</guid>
       <description>&lt;p&gt;Remember my previous post about &lt;a href=&#34;https://blog.jtlebi.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/&#34; title=&#34;Fetching all messages since last check with Python + Imap&#34;&gt;checking out only new mails from a IMAP account with Python&lt;/a&gt; ? The main issue with this was the absolute need for user&amp;rsquo;s password.&lt;/p&gt;
 
 &lt;p&gt;The solution for this OAuth2&amp;#8230; which has no decent support for Python 3. Well, it&amp;rsquo;s not exactly true. Guys behind &lt;a href=&#34;https://pypi.python.org/pypi/oauthlib&#34;&gt;oauthlib&lt;/a&gt; did quite a good job but OAuth2 is such a generic framework that using a library quickly requires you to write more code than without anyway.&lt;/p&gt;
@@ -253,10 +253,10 @@ imap_conn.authenticate(&#39;XOAUTH2&#39;, lambda x: auth_string)
     
     <item>
       <title>Fetching all messages since last check with Python &#43; Imap</title>
-      <link>http://blog.yadutaf.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</link>
+      <link>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</link>
       <pubDate>Fri, 12 Apr 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</guid>
+      <guid>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</guid>
       <description>&lt;p&gt;Recently, in a freelance project I had to parse incoming mails wherever they are in the mail account and, preferably, avoid re-parsing the whole mail account only for a couple of new mails.&lt;/p&gt;
 
 &lt;p&gt;Fortunately, there is the low level &lt;a href=&#34;http://docs.python.org/3.2/library/imaplib.html&#34;&gt;imaplib&lt;/a&gt; module in Python&amp;rsquo;s toolbox. But, curiously enough, while the solution is quite simple, I have not been able to find any good solution on the net&amp;#8230;&lt;/p&gt;
@@ -318,10 +318,10 @@ for mail in new_mail_generator(last_uid=42,
     
     <item>
       <title>Google HTTPS SEO (Nginx)</title>
-      <link>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</link>
+      <link>http://localhost:1313/2012/09/07/google-https-seo-nginx/</link>
       <pubDate>Fri, 07 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</guid>
+      <guid>http://localhost:1313/2012/09/07/google-https-seo-nginx/</guid>
       <description>&lt;p&gt;A couple of days ago, well, 5 to be precise, I moved this blog to a new server, new Nginx based stack. In the move, I decided to enforce secured HTTPS force all my services, including this blog. Privacy matters!&lt;/p&gt;
 
 &lt;p&gt;Surprisingly enough, I suddenly disappeared from Google at the very same time.&lt;/p&gt;
@@ -351,10 +351,10 @@ for mail in new_mail_generator(last_uid=42,
     
     <item>
       <title>Understanding MVC with Express/Node.js and mongo.db</title>
-      <link>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</link>
+      <link>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</link>
       <pubDate>Sun, 20 Nov 2011 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
+      <guid>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
       <description>
 
 &lt;p&gt;Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight &lt;a href=&#34;http://codeigniter.com/&#34;&gt;CodeIgniter&lt;/a&gt; or the very complete  &lt;a href=&#34;http://symfony.com/&#34;&gt;Symfony&lt;/a&gt; and I missed clean MVC coding. My previous node.js app barely stand in a single controller &lt;a href=&#34;http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/&#34; title=&#34;Node.Js reverse proxy&#34;&gt;as it was a reverse proxy&lt;/a&gt;. This time, I wondered how I could write a bare minimum clean registration form.&lt;/p&gt;
@@ -497,8 +497,8 @@ MemberSchema.path(&#39;date&#39;)
 html
   head
     title= title
-    link(rel=&#39;stylesheet&#39;, href=&#39;http://blog.yadutaf.fr/stylesheets/bootstrap.css&#39;)
-    link(rel=&#39;stylesheet&#39;, href=&#39;http://blog.yadutaf.fr/stylesheets/styles.css&#39;)
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/bootstrap.css&#39;)
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/styles.css&#39;)
     //if lt IE 9
         script(src=&#34;http://html5shim.googlecode.com/svn/trunk/html5.js&#34;, language=&#34;text/javascript&#34;)
   body!= body&lt;/pre&gt;
@@ -600,10 +600,10 @@ exports.csv = function(req, res){
     
     <item>
       <title>Node.Js reverse proxy</title>
-      <link>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</link>
+      <link>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</link>
       <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</guid>
+      <guid>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</guid>
       <description>&lt;p&gt;When I rented this OVH server, I wanted to be able to host all my web tools on it on port 80 using both my IPv6 and IPv4 stack. This is usually done with Apache&amp;rsquo;s &amp;#8220;ports.conf&amp;#8221; and VHost feature.&lt;/p&gt;
 
 &lt;p&gt;In fact, most of my favorite applications are written using &lt;a href=&#34;http://nodejs.org/&#34;&gt;Node.Js&lt;/a&gt; and as such embeds there own server logic. It is not possible anymore to bind each of them to *:80.&lt;/p&gt;

@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Duplicity on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/duplicity/</link>
+    <link>http://localhost:1313/tags/duplicity/</link>
     <description>Recent content in Duplicity on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 08 Sep 2012 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/duplicity/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/duplicity/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Lazy man backup strategy with duplicity</title>
-      <link>http://blog.yadutaf.fr/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
+      <link>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</link>
       <pubDate>Sat, 08 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
+      <guid>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</guid>
       <description>&lt;p&gt;I recently moved to a new dedicated server and decided it also was a good to time do start doing things &amp;#8220;the good way&amp;#8221; &lt;sup&gt;tm&lt;/sup&gt;. A good backup strategy was especially needed.&lt;/p&gt;
 
 &lt;p&gt;Most articles I found on the net explains how to backup your data and they do it well. But they lack something essential that might someday become a real issue in case there is a disaster. Main disk crash ? Yes, you know what I mean &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;

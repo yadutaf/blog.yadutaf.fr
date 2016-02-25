@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Wordpress on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/wordpress/</link>
+    <link>http://localhost:1313/tags/wordpress/</link>
     <description>Recent content in Wordpress on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 03 Jul 2013 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/wordpress/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/wordpress/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>WordPress: from localhost to production</title>
-      <link>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</link>
+      <link>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</link>
       <pubDate>Wed, 03 Jul 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</guid>
+      <guid>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</guid>
       <description>&lt;p&gt;Yesterday, a friend of mine asked me urgent help. He fully developed a WP based website for a research project on &lt;em&gt;localhost/his_website&lt;/em&gt;. As WP stores &lt;em&gt;full links&lt;/em&gt; pretty much everywhere in the database, his website was obviously completely broken when he moved it to production on &lt;em&gt;his_website.com&lt;/em&gt;.&lt;/p&gt;
 
 &lt;p&gt;I quickly put some PHP lines of codes together to fix the whole DB at once. Feel free to re-use it in your own projects.&lt;/p&gt;

@@ -2,19 +2,59 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Posts on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/post/</link>
+    <link>http://localhost:1313/post/</link>
     <description>Recent content in Posts on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 25 Aug 2015 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/post/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 26 Feb 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/post/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Security as a commercial strategy</title>
+      <link>http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/</link>
+      <pubDate>Fri, 26 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/</guid>
+      <description>&lt;p&gt;This post is an essay. I am not a business expert. I am not working for Cloudflare. Actually, I&amp;rsquo;m working for a &lt;a href=&#34;https://www.ovh.com/&#34;&gt;competitor&lt;/a&gt;. This is an attempt to understand Cloudflare&amp;rsquo;s strategy, based on my own (rather short) experience.&lt;/p&gt;
+
+&lt;p&gt;2 days ago, Cloudflare &lt;a href=&#34;https://blog.cloudflare.com/introducing-cloudflare-registrar/&#34;&gt;announced&lt;/a&gt; they created a new Registrar, but not one like all the quadrillions other registrars. A registrar for security concerned companies. Just in case, a &lt;a href=&#34;https://en.wikipedia.org/wiki/Domain_name_registrar&#34;&gt;registrar&lt;/a&gt; is the guy who lends you a domain name.&lt;/p&gt;
+
+&lt;p&gt;Long story short, their reasoning is pretty straight-forward:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;domain names are critical to an organization&lt;/li&gt;
+&lt;li&gt;most registrar authenticate organization as any individual&lt;/li&gt;
+&lt;li&gt;people knowing the authentication secret eventually leave&lt;/li&gt;
+&lt;li&gt;people knowing the authentication secret eventually &lt;em&gt;might&lt;/em&gt; be abused&lt;/li&gt;
+&lt;li&gt;in turn, domain names &lt;em&gt;might&lt;/em&gt; eventually be abused&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;So they told themselves, why not fixing this, like they did for content distribution?&lt;/p&gt;
+
+&lt;p&gt;But here is the catch: unlike content distribution which requires a pretty big initial investment, anybody can bootstrap a registrar with only a handful of cheap servers from any cloud provider. The costs stay low. If you have no customer, you pay close to nothing. You can even bootstrap your activity &lt;a href=&#34;https://partners.ovh.com/&#34;&gt;as a reseller&lt;/a&gt; for a couple of bucks. This is cheap, this is easy. The landscape is &lt;a href=&#34;https://www.icann.org/registrar-reports/accredited-list.html&#34;&gt;crowded&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;So, you want to be a registrar? Great. How different are you?&lt;/p&gt;
+
+&lt;p&gt;With this in mind, CloudFlare&amp;rsquo;s move is a clever one. By focusing on security, they bootstrap their registrar activity with a limited number of high level, technically skilled, big paying customers with easy to implement things on their side (ACLs). All this while capitalizing on their existing image. Remember, the AntiDDos thing.&lt;/p&gt;
+
+&lt;p&gt;Then, in a second time, they&amp;rsquo;ll most probably generalize (if not yet done) this security to all accounts and services AND most probably open their registrar offers to any one. And maybe even offer free domains with a custom &lt;a href=&#34;https://en.wikipedia.org/wiki/Generic_top-level_domain&#34;&gt;gTLD&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;One step at a time.&lt;/p&gt;
+
+&lt;p&gt;More generally, their strategy to attract bigger customers seems to be security. The most obvious way is their &lt;a href=&#34;https://www.cloudflare.com/ddos/&#34;&gt;L7 attack mitigation&lt;/a&gt;. On the same trend, they developed a way to offer SSL termination on their side without giving them the secret key (basically, &lt;a href=&#34;https://blog.cloudflare.com/keyless-ssl-the-nitty-gritty-technical-details/&#34;&gt;a patch in OpenSSL&lt;/a&gt; to implement the Oracle pattern). They did this to target banks (in this case, a BitCoin exchange) by offering them scalability without compromising on the security. Again, security.&lt;/p&gt;
+
+&lt;p&gt;Should security be your main concern for your business? No idea. Seriously, I don&amp;rsquo;t know it, you do. It &lt;em&gt;is&lt;/em&gt; important, for sure. What I can tell you is CloudFlare was clever. They turned what most see as a constraint not only as a commercial argument but as the core of their commercial strategy. A constraint turned into a strength.&lt;/p&gt;
+
+&lt;p&gt;What is your future strength?&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Of being hacked, found guilty of spam</title>
-      <link>http://blog.yadutaf.fr/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
+      <link>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
       <pubDate>Tue, 25 Aug 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
+      <guid>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
       <description>&lt;p&gt;A few days ago, my hosting company sent me an automated email notifying me that port 25 had been blocked on my personal server. Cause: It had been found guilty of sending spam. As I&amp;rsquo;m not (at least officially) in the spam business, this could only mean one thing: I got hacked.&lt;/p&gt;
 
 &lt;p&gt;I was shocked. If felt to me as though I was having a car accident.&lt;/p&gt;
@@ -52,10 +92,10 @@
     
     <item>
       <title>Force a remote host to reboot via VNC</title>
-      <link>http://blog.yadutaf.fr/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
+      <link>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</link>
       <pubDate>Mon, 04 May 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
+      <guid>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</guid>
       <description>&lt;p&gt;Yesterday, dealt with a machine in a pretty bad state:&lt;/p&gt;
 
 &lt;ul&gt;
@@ -93,10 +133,10 @@ rfb.sendKey(0xffe9, 0);
     
     <item>
       <title>How I shrunk a Docker image by 98.8% – featuring fanotify</title>
-      <link>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
+      <link>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</link>
       <pubDate>Sat, 25 Apr 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
+      <guid>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
       <description>
 
 &lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
@@ -404,10 +444,10 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
     
     <item>
       <title>How to run Docker behind an Nginx reverse proxy</title>
-      <link>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
+      <link>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</link>
       <pubDate>Fri, 12 Dec 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
+      <guid>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
       <description>
 
 &lt;p&gt;A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.&lt;/p&gt;
@@ -558,10 +598,10 @@ Upgrade: websocket
     
     <item>
       <title>Getting Docker to run on Power8</title>
-      <link>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</link>
+      <link>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</link>
       <pubDate>Tue, 28 Oct 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</guid>
+      <guid>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</guid>
       <description>
 
 &lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
@@ -881,10 +921,10 @@ sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
     
     <item>
       <title>Using Docker to triage Nasty-Bugs(tm)</title>
-      <link>http://blog.yadutaf.fr/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
+      <link>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
       <pubDate>Sat, 27 Sep 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
+      <guid>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
       <description>&lt;p&gt;Docker is the container system for reproducible builds. This is precisely what you want when dealing with bugs, especially the nastiest one: an environment where to reproduce it in a fully deterministic way.&lt;/p&gt;
 
 &lt;p&gt;Not long ago, I had to troubleshoot the install process of a new cool piece of software. The weird and really uncool thing with this bug is that it only occurred on the first install install attempt. Even with a full (well, in theory) wipe, there still remained some kind of side effect on the system causing the subsequents install attempts to succeed. Anyone who has ever dealt with Q/A will know what I mean when I say this is pretty damn frustrating. (1)&lt;/p&gt;
@@ -938,10 +978,10 @@ WORKDIR /usr/src/my-project
     
     <item>
       <title>Introduction to seccomp: BPF linux syscall filter</title>
-      <link>http://blog.yadutaf.fr/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</link>
+      <link>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</link>
       <pubDate>Thu, 29 May 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</guid>
+      <guid>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</guid>
       <description>&lt;p&gt;Seccomp is basic yet efficient way to filter syscalls issued by a program. It is especially useful when running untrusted third party programs. Actually, it was first &lt;a href=&#34;http://git.kernel.org/cgit/linux/kernel/git/tglx/history.git/commit/?id=d949d0ec9c601f2b148bed3cdb5f87c052968554&#34; title=&#34;Initial seccomp commit&#34;&gt;introduced in linux 2.6.12&lt;/a&gt; as an essential building block of &lt;a href=&#34;http://mashable.com/2005/12/21/cpushare-distributed-computing-marketplace/&#34;&gt;&amp;#8220;cpushare&amp;#8221; program&lt;/a&gt;. The idea behind this project was to allow anyone with the proper agent installed to rent cpu cycles to third parties, without compromising its the security.&lt;/p&gt;
 
 &lt;p&gt;The initial implementation, also known as &amp;#8220;mode 1 seccomp&amp;#8221; only allowed &amp;#8216;&lt;code&gt;read&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;write&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;_exit&lt;/code&gt;&amp;#8216; and &amp;#8216;&lt;code&gt;sigreturn&lt;/code&gt;&amp;#8216; syscalls to be issued making it only possible to read/write to already opened files and to exit. It is also trivial get started with:&lt;/p&gt;
@@ -1166,10 +1206,10 @@ Status: 159        &amp;lt;------ 128+31 ==&amp;gt; SIGSYS
     
     <item>
       <title>Introduction to Linux namespaces – Part 5: NET</title>
-      <link>http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
+      <link>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</link>
       <pubDate>Sun, 19 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
+      <guid>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/&#34; title=&#34;Introduction to Linux namespaces – Part 4: PID&#34;&gt;previous post on PID namespace&lt;/a&gt; (Restart process numbering to &amp;#8220;1&amp;#8221;), would like to go further and fly eve closer to full-featured VMs ? Great ! The two last posts of this series will precisely focus on this. Isolate network interfaces with the &amp;#8220;NET&amp;#8221; namespace (Yes, really) and user/group identifier for even more transparency. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-5.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -1356,10 +1396,10 @@ jean-tiare@jeantiare-Ubuntu:~$
     
     <item>
       <title>Introduction to Linux namespaces - Part 4: NS (FS)</title>
-      <link>http://blog.yadutaf.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
+      <link>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</link>
       <pubDate>Sun, 12 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
+      <guid>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/&#34; title=&#34;Introduction to Linux namespaces – Part 4: NS (FS)&#34;&gt;previous post on FS namespace&lt;/a&gt; (mountpoints table isolation), we will now have a look at an amazing one: isolated mount table. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-4.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -1465,10 +1505,10 @@ int main()
     
     <item>
       <title>Introduction to Linux namespaces - Part 3: PID</title>
-      <link>http://blog.yadutaf.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
+      <link>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</link>
       <pubDate>Sun, 05 Jan 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
+      <guid>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/&#34; title=&#34;Introduction to Linux namespaces – Part 2: IPC&#34;&gt;previous post on IPC namespace&lt;/a&gt; (Inter Process Communication isolation), I would now like to introduce my personal favorite one (as sysadmin): PID namespaces. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-3.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -1606,10 +1646,10 @@ Error, do this: mount -t proc proc /proc
     
     <item>
       <title>Introduction to Linux namespaces - Part 2: IPC</title>
-      <link>http://blog.yadutaf.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
+      <link>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</link>
       <pubDate>Sat, 28 Dec 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
+      <guid>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</guid>
       <description>&lt;p&gt;Following the &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;previous post on UTS namespace&lt;/a&gt; (hostname isolation), we will now go deeper and look at a more security oriented namespace: IPC, Inter-Process Communications. If you haven&amp;rsquo;t done so already, I encourage you to read &lt;a href=&#34;https://blog.jtlebi.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34; title=&#34;Introduction to Linux namespaces – Part 1: UTS&#34;&gt;the first post of this series for an introduction to linux namespace isolation mechanism&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-2.html&#34;&gt;here&lt;/a&gt;&lt;/p&gt;
@@ -1741,10 +1781,10 @@ int main()
     
     <item>
       <title>Introduction to Linux namespaces - Part 1: UTS</title>
-      <link>http://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</link>
+      <link>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</link>
       <pubDate>Sun, 22 Dec 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</guid>
+      <guid>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</guid>
       <description>&lt;p&gt;As a part of my job at &lt;a href=&#34;http://www.ovh.com/&#34;&gt;OVH&lt;/a&gt; I dealt with Linux Namespaces as a security mechanism in a &amp;#8220;yet to be announced&amp;#8221; product. I was astonished by both how powerful and poorly documented it is.&lt;/p&gt;
 
 &lt;p&gt;[EDIT 2014-01-08] A Chinese translation of this post is available &lt;a href=&#34;http://blog.lucode.net/linux/intro-Linux-namespace-1.html&#34;&gt;here&lt;/a&gt;:&lt;/p&gt;
@@ -1869,10 +1909,10 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
     
     <item>
       <title>Gérer son site avec GIT sur un serveur mutualisé</title>
-      <link>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
+      <link>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
       <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
+      <guid>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
       <description>
 
 &lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
@@ -2041,10 +2081,10 @@ git push
     
     <item>
       <title>Anatomy of a virus: iTunesHelper.vbe 2/2</title>
-      <link>http://blog.yadutaf.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
+      <link>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
       <pubDate>Wed, 20 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
+      <guid>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
       <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
 
 &lt;p&gt;This post is the source-code analysis part of the article. For an introduction to the iTunesHelper.vbe virus and a more qualitative approach, &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/&#34; title=&#34;Anatomy of a virus 1/2: iTunesHelper.vbe&#34;&gt;you may be interested in reading the first part&amp;#8230; first&lt;/a&gt;.&lt;/p&gt;
@@ -2218,139 +2258,6 @@ End Sub
 &lt;li&gt;&amp;#8220;What are all theses shortcuts doing here ???&amp;#8221; user suspicion.&lt;/li&gt;
 &lt;li&gt;and HEAVY on memory usage !&lt;/li&gt;
 &lt;/ul&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Anatomy of a virus: iTunesHelper.vbe 1/2</title>
-      <link>http://blog.yadutaf.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</link>
-      <pubDate>Mon, 18 Nov 2013 00:00:00 +0000</pubDate>
-      
-      <guid>http://blog.yadutaf.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</guid>
-      <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
-
-&lt;p&gt;I recently identified a virus called &amp;#8220;iTunesHelper.vbe&amp;#8221; on my Dad&amp;rsquo;s personal laptop. By the time we noticed it it already had infected the whole House. Let aside the (pretty bad) surprise I found interesting that none of the (up to date) Antivirus were able to detect it. And, interestingly enough this virus is script based, hence easily studied. Let&amp;rsquo;s dive in it.&lt;/p&gt;
-
-&lt;p&gt;This first post is a purely qualitative approach, voluntarily avoiding any source reading. For a more in-depth approach, you may be interested in reading the &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;second part of this post&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;1/ Lab system&lt;/strong&gt;&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Windows XP, in a virtual Machine&lt;/li&gt;
-&lt;li&gt;NO updates&lt;/li&gt;
-&lt;li&gt;NO antivirus software&lt;/li&gt;
-&lt;li&gt;&amp;gt;1GB RAM&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Infection test was run from this VM. Analysis was performed directly on my Linux laptop with no special security as it lacks the required runtime.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;2/ Symptoms&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;When an infected USB mass storage is connected to a target system, all files on its root folder appears as shortcuts instead of plain files. This set aside, icons are as expected and &amp;#8220;files&amp;#8221; behaves apparently behave as expected too.&lt;/p&gt;
-
-&lt;div id=&#34;attachment_344&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
-  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-344&#34; alt=&#34;iTuneHelper, only shortcuts visible&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible-300x225.png&#34; width=&#34;300&#34; height=&#34;225&#34; /&gt;&lt;/a&gt;
-  
-  &lt;p class=&#34;wp-caption-text&#34;&gt;
-    iTuneHelper, only shortcut visible
-  &lt;/p&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Diving a little deeper the shortcut appears to &lt;em&gt;really&lt;/em&gt; be a shortcut:&lt;/p&gt;
-
-&lt;div id=&#34;attachment_346&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
-  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-3-really.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-346&#34; alt=&#34;iTunesHelper. The shortcut is the virus vector&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-3-really-300x298.png&#34; width=&#34;300&#34; height=&#34;298&#34; /&gt;&lt;/a&gt;
-  
-  &lt;p class=&#34;wp-caption-text&#34;&gt;
-    iTunesHelper. The shortcut is the virus vector
-  &lt;/p&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Here is the full, plain text target:&lt;/p&gt;
-
-&lt;pre class=&#34;brush: plain; title: pseudo shortcut target; notranslate&#34; title=&#34;pseudo shortcut target&#34;&gt;C:\WINDOWS\system32\cmd.exe /c start iTunesHelper.vbe&amp;start Secret&#34; &#34;Text&#34; &#34;File.txt&amp;exit
-&lt;/pre&gt;
-
-&lt;p&gt;Which basically means:&lt;/p&gt;
-
-&lt;ol&gt;
-&lt;li&gt;run &amp;#8220;iTunesHelper.vbe&amp;#8221;&lt;/li&gt;
-&lt;li&gt;open the real &amp;#8220;Secret Text File.txt&amp;#8221;&lt;/li&gt;
-&lt;li&gt;and you&amp;rsquo;re done&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;Huh huh, interesting. But where are theses files located ? Turning off &amp;#8220;Hide protected operating system files&amp;#8221; in &amp;#8220;Folder Options&amp;#8221; will do the trick. Yes ! This nice piece of software pretends to be an essential piece of the Operating System. Simple and efficient way to &lt;em&gt;dissimulate&lt;/em&gt; itself from almost all computers. Here is what one could then see:&lt;/p&gt;
-
-&lt;div id=&#34;attachment_345&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
-  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-2-all.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-345&#34; alt=&#34;iTuneHelper, payload and real files when system files are visible&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-2-all-300x225.png&#34; width=&#34;300&#34; height=&#34;225&#34; /&gt;&lt;/a&gt;
-  
-  &lt;p class=&#34;wp-caption-text&#34;&gt;
-    iTuneHelper, payload and real files when system files are visible
-  &lt;/p&gt;
-&lt;/div&gt;
-
-&lt;p&gt;Last but not least, the name &amp;#8220;iTunesHelper.vbe&amp;#8221; itself has been chosen for dissimulation. &amp;#8220;iTunesHelper.&lt;strong&gt;exe&lt;/strong&gt;&amp;#8221; being an actual.. &amp;#8220;iTunes background Helper&amp;#8221;.&lt;/p&gt;
-
-&lt;p&gt;Long story short: The virus dissimulate itself under the name of a common software and pretending to be an essential system file. Nonetheless, it is still quite easy to suspect it&amp;rsquo;s presence as it replaces all files on the root of the drive by shortcuts.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;2/ Propagation Mechanism&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;With all this initial analysis done it is now straightforward to guess the virus&amp;rsquo; propagation mechanism:&lt;/p&gt;
-
-&lt;ol&gt;
-&lt;li&gt;System is clean&lt;/li&gt;
-&lt;li&gt;Infected drive is inserted. Nothing happens&lt;/li&gt;
-&lt;li&gt;A file is opened from the drive&lt;/li&gt;
-&lt;li&gt;The virus payload is executed, then the real file is opened&lt;/li&gt;
-&lt;li&gt;[hypothesis] The virus installs itself&lt;/li&gt;
-&lt;li&gt;[hypothesis] The virus manages to watch for new USB drives&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;The last point is easy to check: Insert a clean drive and observe: files will quickly be replaced by shortcuts.&lt;/p&gt;
-
-&lt;p&gt;In fact the virus remains in memory. Speaking of memory, it consumes quite a lot of it&amp;#8230; Around 1/2GB!&lt;/p&gt;
-
-&lt;div id=&#34;attachment_347&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
-  &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-4-resources.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-347&#34; alt=&#34;iTunesHelper, quite a lot of memory !&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-4-resources-300x292.png&#34; width=&#34;300&#34; height=&#34;292&#34; /&gt;&lt;/a&gt;
-  
-  &lt;p class=&#34;wp-caption-text&#34;&gt;
-    iTunesHelper, quite a lot of memory !
-  &lt;/p&gt;
-&lt;/div&gt;
-
-&lt;p&gt;When the computer is rebooted, the virus is reloaded with it via the registry. Even more Ironic, being a script ran by &amp;#8220;wscript.exe&amp;#8221; from Microsoft, its is reported as a Microsoft program. Trustworthy? Simple and efficient.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;3/ Counter measures, cleaning&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;All these informations gathered It is also possible to guess a way to efficiently get rid of it:&lt;/p&gt;
-
-&lt;ol&gt;
-&lt;li&gt;Remove any USB drive from the computer&lt;/li&gt;
-&lt;li&gt;Kill any &amp;#8220;wscript.exe&amp;#8221; process, especially if it eats up all your memory !&lt;/li&gt;
-&lt;li&gt;Disable further automatic restarts. A tool like CCleaner will help. It will also give the path to the resident payload&lt;/li&gt;
-&lt;li&gt;Delete the resident Payload&lt;/li&gt;
-&lt;li&gt;Show system protected files&lt;/li&gt;
-&lt;li&gt;For each infected drive:
-
-&lt;ol&gt;
-&lt;li&gt;Insert it. DO NOT open &lt;em&gt;any&lt;/em&gt; file from it&lt;/li&gt;
-&lt;li&gt;Delete iTunesHelper.vbe along with &lt;em&gt;ALL&lt;/em&gt; shortcuts&lt;/li&gt;
-&lt;li&gt;Reset files to regular attributes&lt;/li&gt;
-&lt;/ol&gt;&lt;/li&gt;
-&lt;li&gt;Hide system protected files&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;Which also appears to be quite close from the real uninstall procedure, hardcoded in the virus.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;4/ Last word&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;This Post dived into a virus from a purely qualitative point of view, following the same general approach the author used to quickly get rid of this file. All the informations from this post have been cross-verified against the virus source code which appears to be only poorly obfuscated. But that&amp;rsquo;s another topic, for a future post.&lt;/p&gt;
-
-&lt;p&gt;This virus has been reported to an antivirus editor. Hopefully it&amp;rsquo;s signature will quickly be added to official databases.&lt;/p&gt;
-
-&lt;p&gt;[&lt;/p&gt;
-
-&lt;p&gt;For a more technical approach, please read on: second part.]&lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;1&lt;/a&gt;&lt;/p&gt;
 </description>
     </item>
     

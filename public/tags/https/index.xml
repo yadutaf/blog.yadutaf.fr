@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Https on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/https/</link>
+    <link>http://localhost:1313/tags/https/</link>
     <description>Recent content in Https on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Fri, 07 Sep 2012 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/https/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/https/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Google HTTPS SEO (Nginx)</title>
-      <link>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</link>
+      <link>http://localhost:1313/2012/09/07/google-https-seo-nginx/</link>
       <pubDate>Fri, 07 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</guid>
+      <guid>http://localhost:1313/2012/09/07/google-https-seo-nginx/</guid>
       <description>&lt;p&gt;A couple of days ago, well, 5 to be precise, I moved this blog to a new server, new Nginx based stack. In the move, I decided to enforce secured HTTPS force all my services, including this blog. Privacy matters!&lt;/p&gt;
 
 &lt;p&gt;Surprisingly enough, I suddenly disappeared from Google at the very same time.&lt;/p&gt;
@@ -44,10 +44,10 @@
     
     <item>
       <title>Nginx: IPv6 and SSL termination</title>
-      <link>http://blog.yadutaf.fr/2012/09/02/nginx-ipv6-and-ssl-termination/</link>
+      <link>http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/</link>
       <pubDate>Sun, 02 Sep 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2012/09/02/nginx-ipv6-and-ssl-termination/</guid>
+      <guid>http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/</guid>
       <description>&lt;p&gt;I just installed the beautiful NGINX reverse proxy on my personal server. I use it to run various personal web-based services like this blog, Etherpad or Gitlab. That&amp;rsquo;s 3 different programming languages, PHP, JS, Ruby. Wow.&lt;/p&gt;
 
 &lt;p&gt;Sadly, none of them handles natively HTTPS nor IPv6 moreover, they all require a standalone port to run on. Hopefully, reverse proxies are here to solve the problem. And I chose NGINX. I was previously using a home grown one which is much, much easier to configure but not really state of the art. So Bye Bye &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;

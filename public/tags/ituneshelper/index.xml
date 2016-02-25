@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Ituneshelper on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/ituneshelper/</link>
+    <link>http://localhost:1313/tags/ituneshelper/</link>
     <description>Recent content in Ituneshelper on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 20 Nov 2013 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/ituneshelper/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/ituneshelper/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Anatomy of a virus: iTunesHelper.vbe 2/2</title>
-      <link>http://blog.yadutaf.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
+      <link>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</link>
       <pubDate>Wed, 20 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
+      <guid>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</guid>
       <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
 
 &lt;p&gt;This post is the source-code analysis part of the article. For an introduction to the iTunesHelper.vbe virus and a more qualitative approach, &lt;a href=&#34;https://blog.jtlebi.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/&#34; title=&#34;Anatomy of a virus 1/2: iTunesHelper.vbe&#34;&gt;you may be interested in reading the first part&amp;#8230; first&lt;/a&gt;.&lt;/p&gt;
@@ -193,10 +193,10 @@ End Sub
     
     <item>
       <title>Anatomy of a virus: iTunesHelper.vbe 1/2</title>
-      <link>http://blog.yadutaf.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</link>
+      <link>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</link>
       <pubDate>Mon, 18 Nov 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</guid>
+      <guid>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</guid>
       <description>&lt;p&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;: This post is about a real virus, really seen in the wild. It was written on the sole goal of helping the reader to better protect itself. This post is &lt;em&gt;NOT&lt;/em&gt; about writing viruses. I will &lt;em&gt;NOT&lt;/em&gt; provide any source code nor any directions to build a virus. If this is what you were looking for: Please, I beg you to change your mind and start building something useful to the community instead of attacking it. Thanks for reading.&lt;/p&gt;
 
 &lt;p&gt;I recently identified a virus called &amp;#8220;iTunesHelper.vbe&amp;#8221; on my Dad&amp;rsquo;s personal laptop. By the time we noticed it it already had infected the whole House. Let aside the (pretty bad) surprise I found interesting that none of the (up to date) Antivirus were able to detect it. And, interestingly enough this virus is script based, hence easily studied. Let&amp;rsquo;s dive in it.&lt;/p&gt;

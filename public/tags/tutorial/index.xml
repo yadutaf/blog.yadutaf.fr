@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Tutorial on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/tutorial/</link>
+    <link>http://localhost:1313/tags/tutorial/</link>
     <description>Recent content in Tutorial on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 27 Sep 2014 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/tutorial/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/tutorial/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Using Docker to triage Nasty-Bugs(tm)</title>
-      <link>http://blog.yadutaf.fr/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
+      <link>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</link>
       <pubDate>Sat, 27 Sep 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
+      <guid>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</guid>
       <description>&lt;p&gt;Docker is the container system for reproducible builds. This is precisely what you want when dealing with bugs, especially the nastiest one: an environment where to reproduce it in a fully deterministic way.&lt;/p&gt;
 
 &lt;p&gt;Not long ago, I had to troubleshoot the install process of a new cool piece of software. The weird and really uncool thing with this bug is that it only occurred on the first install install attempt. Even with a full (well, in theory) wipe, there still remained some kind of side effect on the system causing the subsequents install attempts to succeed. Anyone who has ever dealt with Q/A will know what I mean when I say this is pretty damn frustrating. (1)&lt;/p&gt;
@@ -68,10 +68,10 @@ WORKDIR /usr/src/my-project
     
     <item>
       <title>Testing X2go on OVH Public Cloud</title>
-      <link>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
+      <link>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</link>
       <pubDate>Tue, 17 Jan 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
+      <guid>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
       <description>
 
 &lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;

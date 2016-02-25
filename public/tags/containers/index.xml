@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Containers on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/containers/</link>
+    <link>http://localhost:1313/tags/containers/</link>
     <description>Recent content in Containers on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Thu, 29 May 2014 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/containers/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/containers/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Introduction to seccomp: BPF linux syscall filter</title>
-      <link>http://blog.yadutaf.fr/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</link>
+      <link>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</link>
       <pubDate>Thu, 29 May 2014 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</guid>
+      <guid>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</guid>
       <description>&lt;p&gt;Seccomp is basic yet efficient way to filter syscalls issued by a program. It is especially useful when running untrusted third party programs. Actually, it was first &lt;a href=&#34;http://git.kernel.org/cgit/linux/kernel/git/tglx/history.git/commit/?id=d949d0ec9c601f2b148bed3cdb5f87c052968554&#34; title=&#34;Initial seccomp commit&#34;&gt;introduced in linux 2.6.12&lt;/a&gt; as an essential building block of &lt;a href=&#34;http://mashable.com/2005/12/21/cpushare-distributed-computing-marketplace/&#34;&gt;&amp;#8220;cpushare&amp;#8221; program&lt;/a&gt;. The idea behind this project was to allow anyone with the proper agent installed to rent cpu cycles to third parties, without compromising its the security.&lt;/p&gt;
 
 &lt;p&gt;The initial implementation, also known as &amp;#8220;mode 1 seccomp&amp;#8221; only allowed &amp;#8216;&lt;code&gt;read&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;write&lt;/code&gt;&amp;#8216;, &amp;#8216;&lt;code&gt;_exit&lt;/code&gt;&amp;#8216; and &amp;#8216;&lt;code&gt;sigreturn&lt;/code&gt;&amp;#8216; syscalls to be issued making it only possible to read/write to already opened files and to exit. It is also trivial get started with:&lt;/p&gt;

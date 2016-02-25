@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Node.Js on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/node/index.js/</link>
+    <link>http://localhost:1313/tags/node/index.js/</link>
     <description>Recent content in Node.Js on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 20 Nov 2011 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/node.js/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/node.js/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Understanding MVC with Express/Node.js and mongo.db</title>
-      <link>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</link>
+      <link>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</link>
       <pubDate>Sun, 20 Nov 2011 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
+      <guid>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
       <description>
 
 &lt;p&gt;Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight &lt;a href=&#34;http://codeigniter.com/&#34;&gt;CodeIgniter&lt;/a&gt; or the very complete  &lt;a href=&#34;http://symfony.com/&#34;&gt;Symfony&lt;/a&gt; and I missed clean MVC coding. My previous node.js app barely stand in a single controller &lt;a href=&#34;http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/&#34; title=&#34;Node.Js reverse proxy&#34;&gt;as it was a reverse proxy&lt;/a&gt;. This time, I wondered how I could write a bare minimum clean registration form.&lt;/p&gt;
@@ -157,8 +157,8 @@ MemberSchema.path(&#39;date&#39;)
 html
   head
     title= title
-    link(rel=&#39;stylesheet&#39;, href=&#39;http://blog.yadutaf.fr/stylesheets/bootstrap.css&#39;)
-    link(rel=&#39;stylesheet&#39;, href=&#39;http://blog.yadutaf.fr/stylesheets/styles.css&#39;)
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/bootstrap.css&#39;)
+    link(rel=&#39;stylesheet&#39;, href=&#39;http://localhost:1313/stylesheets/styles.css&#39;)
     //if lt IE 9
         script(src=&#34;http://html5shim.googlecode.com/svn/trunk/html5.js&#34;, language=&#34;text/javascript&#34;)
   body!= body&lt;/pre&gt;
@@ -260,10 +260,10 @@ exports.csv = function(req, res){
     
     <item>
       <title>About proxying wget http 1.0 using http 1.1 headers</title>
-      <link>http://blog.yadutaf.fr/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</link>
+      <link>http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</link>
       <pubDate>Wed, 21 Sep 2011 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</guid>
+      <guid>http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</guid>
       <description>&lt;p&gt;When &lt;a href=&#34;http://www.grapsus.net/&#34;&gt;a friend&lt;/a&gt; tried to syndicate my blog on his, his server was unable to complete the sync. Page &lt;a href=&#34;http://blog.jtlebi.fr/feed/&#34;&gt;http://blog.jtlebi.fr/feed/&lt;/a&gt; simply timed out. After quite a few tests, we noticed that this issue never happened with a browser like Firefox. Aside,  Wget hanged for 2 minutes after downloading more than Firefox. Strange&lt;/p&gt;
 
 &lt;p&gt;In my previous post, I explained that WordPress is hosted behind Apache2, Apache2 behind itself reachable behind &lt;a href=&#34;https://github.com/jtlebi/nodejs-proxy&#34;&gt;my house-made reverse-proxy&lt;/a&gt;. The main goal being to host all services on port 80.&lt;/p&gt;
@@ -323,10 +323,10 @@ Client &amp;lt;----&amp;gt; Reverse-Proxy |&amp;lt;-----&amp;gt; Etherpad
     
     <item>
       <title>Node.Js reverse proxy</title>
-      <link>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</link>
+      <link>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</link>
       <pubDate>Mon, 19 Sep 2011 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</guid>
+      <guid>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</guid>
       <description>&lt;p&gt;When I rented this OVH server, I wanted to be able to host all my web tools on it on port 80 using both my IPv6 and IPv4 stack. This is usually done with Apache&amp;rsquo;s &amp;#8220;ports.conf&amp;#8221; and VHost feature.&lt;/p&gt;
 
 &lt;p&gt;In fact, most of my favorite applications are written using &lt;a href=&#34;http://nodejs.org/&#34;&gt;Node.Js&lt;/a&gt; and as such embeds there own server logic. It is not possible anymore to bind each of them to *:80.&lt;/p&gt;

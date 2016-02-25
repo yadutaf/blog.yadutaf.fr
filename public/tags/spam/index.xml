@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Spam on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/spam/</link>
+    <link>http://localhost:1313/tags/spam/</link>
     <description>Recent content in Spam on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Tue, 25 Aug 2015 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://blog.yadutaf.fr/tags/spam/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/spam/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Of being hacked, found guilty of spam</title>
-      <link>http://blog.yadutaf.fr/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
+      <link>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</link>
       <pubDate>Tue, 25 Aug 2015 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
+      <guid>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</guid>
       <description>&lt;p&gt;A few days ago, my hosting company sent me an automated email notifying me that port 25 had been blocked on my personal server. Cause: It had been found guilty of sending spam. As I&amp;rsquo;m not (at least officially) in the spam business, this could only mean one thing: I got hacked.&lt;/p&gt;
 
 &lt;p&gt;I was shocked. If felt to me as though I was having a car accident.&lt;/p&gt;

@@ -2,173 +2,178 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>http://blog.yadutaf.fr/</loc>
-    <lastmod>2015-08-25T00:00:00+00:00</lastmod>
+    <loc>http://localhost:1313/</loc>
+    <lastmod>2016-02-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2015/08/25/of-being-hacked-found-guilty-of-spam/</loc>
+    <loc>http://localhost:1313/2016/02/26/security-as-a-commercial-strategy/</loc>
+    <lastmod>2016-02-26T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://localhost:1313/2015/08/25/of-being-hacked-found-guilty-of-spam/</loc>
     <lastmod>2015-08-25T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</loc>
+    <loc>http://localhost:1313/2015/05/04/force-a-remote-host-to-reboot-via-vnc/</loc>
     <lastmod>2015-05-04T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</loc>
+    <loc>http://localhost:1313/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</loc>
     <lastmod>2015-04-25T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</loc>
+    <loc>http://localhost:1313/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</loc>
     <lastmod>2014-12-12T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</loc>
+    <loc>http://localhost:1313/2014/10/28/getting-docker-to-run-on-power8/</loc>
     <lastmod>2014-10-28T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2014/09/27/using-docker-to-triage-nasty-bugs/</loc>
+    <loc>http://localhost:1313/2014/09/27/using-docker-to-triage-nasty-bugs/</loc>
     <lastmod>2014-09-27T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</loc>
+    <loc>http://localhost:1313/2014/05/29/introduction-to-seccomp-bpf-linux-syscall-filter/</loc>
     <lastmod>2014-05-29T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/</loc>
+    <loc>http://localhost:1313/2014/01/19/introduction-to-linux-namespaces-part-5-net/</loc>
     <lastmod>2014-01-19T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</loc>
+    <loc>http://localhost:1313/2014/01/12/introduction-to-linux-namespaces-part-4-ns-fs/</loc>
     <lastmod>2014-01-12T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</loc>
+    <loc>http://localhost:1313/2014/01/05/introduction-to-linux-namespaces-part-3-pid/</loc>
     <lastmod>2014-01-05T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</loc>
+    <loc>http://localhost:1313/2013/12/28/introduction-to-linux-namespaces-part-2-ipc/</loc>
     <lastmod>2013-12-28T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</loc>
+    <loc>http://localhost:1313/2013/12/22/introduction-to-linux-namespaces-part-1-uts/</loc>
     <lastmod>2013-12-22T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</loc>
+    <loc>http://localhost:1313/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</loc>
     <lastmod>2013-11-30T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</loc>
+    <loc>http://localhost:1313/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/</loc>
     <lastmod>2013-11-20T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</loc>
+    <loc>http://localhost:1313/2013/11/19/anatomy-of-a-virus-1-of-2-ituneshelper-vbe/</loc>
     <lastmod>2013-11-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</loc>
+    <loc>http://localhost:1313/2013/07/03/wordpress-from-localhost-to-production/</loc>
     <lastmod>2013-07-03T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/05/29/gmail-oauth2-with-python-and-bottle/</loc>
+    <loc>http://localhost:1313/2013/05/29/gmail-oauth2-with-python-and-bottle/</loc>
     <lastmod>2013-05-29T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</loc>
+    <loc>http://localhost:1313/2013/04/12/fetching-all-messages-since-last-check-with-python-imap/</loc>
     <lastmod>2013-04-12T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2013/03/04/mounting-nexus-4-device-under-ubuntu/</loc>
+    <loc>http://localhost:1313/2013/03/04/mounting-nexus-4-device-under-ubuntu/</loc>
     <lastmod>2013-03-04T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/10/15/1982-introducing-the-unix-operating-system/</loc>
+    <loc>http://localhost:1313/2012/10/15/1982-introducing-the-unix-operating-system/</loc>
     <lastmod>2012-10-14T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/10/11/investigating-dynamodb-5sec-latency/</loc>
+    <loc>http://localhost:1313/2012/10/11/investigating-dynamodb-5sec-latency/</loc>
     <lastmod>2012-10-11T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</loc>
+    <loc>http://localhost:1313/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</loc>
     <lastmod>2012-10-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</loc>
+    <loc>http://localhost:1313/2012/09/08/lazy-man-backup-strategy-with-duplicity-part-1/</loc>
     <lastmod>2012-09-08T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</loc>
+    <loc>http://localhost:1313/2012/09/07/google-https-seo-nginx/</loc>
     <lastmod>2012-09-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/09/02/nginx-ipv6-and-ssl-termination/</loc>
+    <loc>http://localhost:1313/2012/09/02/nginx-ipv6-and-ssl-termination/</loc>
     <lastmod>2012-09-02T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</loc>
+    <loc>http://localhost:1313/2012/07/10/ipv6-failure-on-ovh-kimsufi-servers/</loc>
     <lastmod>2012-07-10T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</loc>
+    <loc>http://localhost:1313/2012/05/24/economie-de-la-culture-ou-communisme-du-savoir/</loc>
     <lastmod>2012-05-24T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/04/24/pourquoi-je-soutiens-lafnic/</loc>
+    <loc>http://localhost:1313/2012/04/24/pourquoi-je-soutiens-lafnic/</loc>
     <lastmod>2012-04-24T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</loc>
+    <loc>http://localhost:1313/2012/01/17/testing-x2go-on-ovh-public-cloud/</loc>
     <lastmod>2012-01-17T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</loc>
+    <loc>http://localhost:1313/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</loc>
     <lastmod>2011-11-20T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</loc>
+    <loc>http://localhost:1313/2011/09/21/about-proxying-wget-http-1-0-using-http-1-1-headers/</loc>
     <lastmod>2011-09-21T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/about/</loc>
+    <loc>http://localhost:1313/about/</loc>
     <lastmod>2011-09-19T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</loc>
+    <loc>http://localhost:1313/2011/09/19/nodejs-reverse-proxy/</loc>
     <lastmod>2011-09-19T00:00:00+00:00</lastmod>
   </url>
   
