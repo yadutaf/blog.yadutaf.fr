@@ -3,8 +3,13 @@
   
   <url>
     <loc>http://blog.yadutaf.fr/</loc>
-    <lastmod>2016-02-26T00:00:00+00:00</lastmod>
+    <lastmod>2016-03-30T00:00:00+00:00</lastmod>
     <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>http://blog.yadutaf.fr/2016/03/30/turn-any-syscall-into-event-introducing-ebpf-kernel-probes/</loc>
+    <lastmod>2016-03-30T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -168,12 +173,12 @@
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/about/</loc>
+    <loc>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</loc>
     <lastmod>2011-09-19T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>http://blog.yadutaf.fr/2011/09/19/nodejs-reverse-proxy/</loc>
+    <loc>http://blog.yadutaf.fr/about/</loc>
     <lastmod>2011-09-19T00:00:00+00:00</lastmod>
   </url>
   
