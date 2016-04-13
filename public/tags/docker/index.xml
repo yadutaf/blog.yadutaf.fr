@@ -6,8 +6,178 @@
     <description>Recent content in Docker on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 25 Apr 2015 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 14 Apr 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://blog.yadutaf.fr/tags/docker/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Docker for your users - Introducing user namespace</title>
+      <link>http://blog.yadutaf.fr/2016/04/14/docker-for-your-users-introducing-user-namespace/</link>
+      <pubDate>Thu, 14 Apr 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://blog.yadutaf.fr/2016/04/14/docker-for-your-users-introducing-user-namespace/</guid>
+      <description>
+
+&lt;p&gt;A few years ago, back when I was a student, my school had rooms full of counters running Linux that any student could use at any time. We all had a personal account on the machines and the machine management was done by a dedicated team.&lt;/p&gt;
+
+&lt;p&gt;Every once in a while, we found ourselves needing a specific tool like &lt;code&gt;valgrind&lt;/code&gt; which was not readily available or a more recent version of another tool. Like &lt;code&gt;gcc&lt;/code&gt;. Replace &amp;ldquo;valgring&amp;rdquo; and &amp;ldquo;gcc&amp;rdquo; with &amp;ldquo;Node&amp;rdquo;, &amp;ldquo;Rust&amp;rdquo; or &amp;ldquo;Go&amp;rdquo;. You get the idea.&lt;/p&gt;
+
+&lt;p&gt;At that point, we basically had 2 options. Either the tool was vital to our study, and it was possible to get it installed for everybody. Or it was not, we were just experimenting on our own as part of a random project.&lt;/p&gt;
+
+&lt;p&gt;In the later case, the only solution was to build it from scratch, put it in our &lt;code&gt;$HOME&lt;/code&gt;, mess up with^W^W^W tweak the &lt;code&gt;$PATH&lt;/code&gt; and &lt;code&gt;$LD_LIBRARY_PATH&lt;/code&gt; environment variables and sometime get some voodoo involved.&lt;/p&gt;
+
+&lt;p&gt;It &lt;em&gt;usually&lt;/em&gt; worked.&lt;/p&gt;
+
+&lt;p&gt;A year ago, I was giving a talk to introduce Docker and, in the question section, I was asked whether I believed Docker could be a solution to this kind of problem. I answered that it was a dangerous idea. Giving docker access to user was basically like giving him the &lt;code&gt;root&lt;/code&gt; password. He would be better with traditional VMs&lt;/p&gt;
+
+&lt;p&gt;Recently, the question came back to me.&lt;/p&gt;
+
+&lt;p&gt;As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my &lt;a href=&#34;https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34;&gt;introduction to Linux Namespaces&lt;/a&gt;&amp;hellip; But I will soon #teaser.&lt;/p&gt;
+
+&lt;h3 id=&#34;user-namespaces-and-docker:da0206e8fd44b9406d04fbf5a43b5c25&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
+
+&lt;p&gt;(If you don&amp;rsquo;t like or care about the technical background, you can safely skip this part)&lt;/p&gt;
+
+&lt;p&gt;In a nutshell, a user namespace is a special Linux kernel mechanism allowing Docker container&amp;rsquo;s to have a &amp;ldquo;faked&amp;rdquo; root user. For example, the root user in a container would be able to manage it&amp;rsquo;s root owned files in the container, act as any user in the container, manage his own network interfaces and some of his mountpoints (restrictions apply) and at the same time being &amp;ldquo;mapped&amp;rdquo; or &amp;ldquo;translated&amp;rdquo; to, say, user &amp;ldquo;ubuntu&amp;rdquo; with uid 1000 on the host system.&lt;/p&gt;
+
+&lt;p&gt;User namespaces are have been introduced as early as Linux 3.5 and are considered as stable &lt;a href=&#34;https://lwn.net/Articles/657432/&#34;&gt;starting with Linux 4.3&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;I won&amp;rsquo;t dive too much in the details of user namespaces here, I&amp;rsquo;d really love too, low level bits are by far my favorite topic, but that would be far out of the scope of this post. But stay tuned. While writing this post, I started a more technical one on this very subject ;)&lt;/p&gt;
+
+&lt;p&gt;As far as docker is concerned, starting with Docker 1.10 (the current stable version at the time of writing), it supports a new &lt;code&gt;daemon&lt;/code&gt; option &lt;code&gt;--userns-remap=[USERNAME]&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Neat.&lt;/p&gt;
+
+&lt;p&gt;Wait, does this &amp;ldquo;&amp;ndash;userns-remap&amp;rdquo; and &amp;ldquo;[USERNAME]&amp;rdquo; stuff stand for exactly?&lt;/p&gt;
+
+&lt;p&gt;As suggested just earlier, user namespace works by mapping some virtual user ids like root to other user ids on the host. Hence the option name &lt;code&gt;--userns-remap&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Regarding, &amp;ldquo;[USERNAME]&amp;ldquo;, refers to &lt;a href=&#34;http://man7.org/linux/man-pages/man5/subuid.5.html&#34;&gt;&lt;code&gt;/etc/subuid&lt;/code&gt; and &lt;code&gt;/etc/subgid&lt;/code&gt;&lt;/a&gt; files. In a word, these files define the user and group ids a given user can use, beyond his own user id. Just like root can impersonate any user id. If you wonder where this file come from, it&amp;rsquo;s from &lt;a href=&#34;https://github.com/shadow-maint/shadow/blob/ef45bb2496182b5df90ad0323bef75d1a5d69887/src/useradd.c#L2188&#34;&gt;stock &lt;code&gt;useradd&lt;/code&gt; command&lt;/a&gt;. Every time a real user (not a system user) is created on the system, a range of 65536 sub-ids is allocated.&lt;/p&gt;
+
+&lt;p&gt;Does is sound new? Well, not that much. It was &lt;a href=&#34;https://github.com/shadow-maint/shadow/commit/f28ad4b251a42a35c29685850d1686a083cac725&#34;&gt;introduced in early August&amp;hellip; 2013&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Anyway, it maintains simple flat text files looking like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;yadutaf:100000:65536
+somuser:165536:65536
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It reads as: &amp;ldquo;Let user &amp;lsquo;yadutaf&amp;rsquo; use 65536 uids, starting at 100000&amp;rdquo; and &amp;ldquo;Let user &amp;lsquo;someuser&amp;rsquo; use 65536 uids, starting at 165536&amp;rdquo;. Which is basically the next adjacent range.&lt;/p&gt;
+
+&lt;p&gt;The rule is not set in stone, but the start sub-uid can be guessed as&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;FIRST_SUB_UID = 100000 + (UID - 1000) * 65536
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Again, this is only a convention. We can do something slightly different like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;yadutaf:1000:1
+yadutaf:100000:65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It reads as &amp;ldquo;let user yadutaf use his own uid as well as 65535 uids, starting at 100000 and making the total of uids to 65536&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;And this won&amp;rsquo;t break anything.&lt;/p&gt;
+
+&lt;p&gt;Well, actually, this is where is starts to get interesting.&lt;/p&gt;
+
+&lt;p&gt;When starting docker with &lt;code&gt;docker daemon --userns-remap=yadutaf&lt;/code&gt;, docker will parse the subuid and subgid files for &lt;code&gt;yadutaf&lt;/code&gt;, sort all read entries by growing start id and generate kernel userns mapping rules. Without diving too much into the details, this will generate the following rules in &lt;code&gt;/proc/[PID]/uid_map&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;         0       1000          1
+         1     100000      65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Which should look familiar. This structures looks like the one above, but the meaning it slightly different. This time, it reads as:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&amp;ldquo;Let uid 1000 &lt;em&gt;outside&lt;/em&gt; the container act as &lt;code&gt;root&lt;/code&gt; &lt;em&gt;inside&lt;/em&gt; the container&amp;rdquo;&lt;/li&gt;
+&lt;li&gt;&amp;ldquo;Let the 65535 uids starting with 100000 &lt;em&gt;outside&lt;/em&gt; the container act the 65535 uids starting with 1 &lt;em&gt;inside&lt;/em&gt;&amp;ldquo;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;In other words, 1000 will be 1 and 100002 will be 3.&lt;/p&gt;
+
+&lt;p&gt;This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.&lt;/p&gt;
+
+&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise:da0206e8fd44b9406d04fbf5a43b5c25&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
+
+&lt;p&gt;With all this in mind, we can put the pieces together and let the magic happen. We need to:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;get latest Docker release (&amp;gt;=1.10.0)&lt;/li&gt;
+&lt;li&gt;configure the subids so that our user will act as root in the container&lt;/li&gt;
+&lt;li&gt;configure docker so that it used our ranges&lt;/li&gt;
+&lt;li&gt;use real-world applications&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Of course, as the name is passed on the command line of the docker daemon, this will only work for a single user. But keep in mind that Docker 1.10 is the first version to support this feature. It may evolve in the future and get more flexible&lt;/p&gt;
+
+&lt;p&gt;OK, let&amp;rsquo;s start. Assuming our user is &amp;ldquo;yadutaf&amp;rdquo; (that&amp;rsquo;s me) with uid 1000, we&amp;rsquo;ll want &lt;code&gt;/etc/subuid&lt;/code&gt; and &lt;code&gt;/etc/subgid&lt;/code&gt; to contain:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;yadutaf:1000:1
+yadutaf:100000:65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And we want docker daemon to use it, without messing with systemd&amp;rsquo;s unit files (trust me, you don&amp;rsquo;t want to), so we&amp;rsquo;ll use the docker configuration file &lt;code&gt;/etc/docker/daemon.json&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;{
+        &amp;quot;userns-remap&amp;quot;: &amp;quot;yadutaf&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;All we have to do is restart the daemon, run an innocent, random, test container and see the result:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ sudo systemctl restart docker
+$ docker run -d --name redis-userns redis
+$ cat /proc/$(docker inspect -f &#39;{{ .State.Pid }}&#39; redis-userns)/uid_map
+         0       1000          1
+         1     100000      65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Hooray!&lt;/p&gt;
+
+&lt;p&gt;What about graphical? What about sound? You promised read applications didn&amp;rsquo;t you? Sure I did. Here is a working Firefox:&lt;/p&gt;
+
+&lt;p&gt;First, the Dockerfile:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;FROM ubuntu
+MAINTAINER Jean-Tiare Le Bigot &amp;lt;jt AT yadutaf DOT fr&amp;gt;
+
+# Get PulseAudio for the sound, Firefox for, well, you know...
+RUN apt-get update &amp;amp;&amp;amp; apt-get -y install firefox pulseaudio
+
+ENTRYPOINT [&amp;quot;firefox&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Build and run it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ docker build -t firefox .
+$ docker run --rm -it \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v /run/user/$UID/pulse/native:/run/pulse \
+    -e DISPLAY=unix$DISPLAY \
+    -e PULSE_SERVER=unix:/run/pulse \
+    --name firefox \
+    firefox --new-instance &amp;quot;https://www.youtube.com/watch?v=k1-TrAvp_xs&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;What it does is:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;share the X11 socket&lt;/li&gt;
+&lt;li&gt;share the user&amp;rsquo;s pulseaudio socket as root&amp;rsquo;s&lt;/li&gt;
+&lt;li&gt;expose them via environment variables&lt;/li&gt;
+&lt;li&gt;start it!&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As a (desirable) side-effect, setting docker daemon with user namespaces effectively disables a variety of security sensitive options like starting privileged containers or sharing the host&amp;rsquo;s network. This extra-security comes with the kernel&amp;rsquo;s implementation and we&amp;rsquo;ll certainly not refuse it!&lt;/p&gt;
+
+&lt;p&gt;Of course, this has limitations. For example, if you try with chrome, you&amp;rsquo;ll be disappointed to realize there is no sound. This is because chrome requires the older Alsa sound system which are only accessible to the &amp;ldquo;audio&amp;rdquo; group. But this group is not and can&amp;rsquo;t be mapped in Docker just yet. This is supported by the kernel though. Just not Docker. By the way, if you want to test out chrome, make sure to add the &lt;code&gt;--disable-setuid-sandbox&lt;/code&gt; flag&lt;/p&gt;
+
+&lt;p&gt;This limitation aside, this is fairly interesting. Using similar setups, you can have docker on your host, exploit most of it power, without ever taking the risk to compromise your security or integrity.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>How I shrunk a Docker image by 98.8% – featuring fanotify</title>

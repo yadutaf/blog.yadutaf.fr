@@ -1,0 +1,327 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Docker for your users - Introducing user namespace | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.yadutaf.fr/2016/04/14/docker-for-your-users-introducing-user-namespace/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://blog.yadutaf.fr/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://blog.yadutaf.fr/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://blog.yadutaf.fr/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Docker for your users - Introducing user namespace</h1>
+      <div class="meta">
+        Apr 14, 2016 &nbsp;
+        
+          #<a href="/tags/linux">linux</a>&nbsp;
+        
+          #<a href="/tags/userns">userns</a>&nbsp;
+        
+          #<a href="/tags/docker">docker</a>&nbsp;
+        
+          #<a href="/tags/security">security</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<p>A few years ago, back when I was a student, my school had rooms full of counters running Linux that any student could use at any time. We all had a personal account on the machines and the machine management was done by a dedicated team.</p>
+
+<p>Every once in a while, we found ourselves needing a specific tool like <code>valgrind</code> which was not readily available or a more recent version of another tool. Like <code>gcc</code>. Replace &ldquo;valgring&rdquo; and &ldquo;gcc&rdquo; with &ldquo;Node&rdquo;, &ldquo;Rust&rdquo; or &ldquo;Go&rdquo;. You get the idea.</p>
+
+<p>At that point, we basically had 2 options. Either the tool was vital to our study, and it was possible to get it installed for everybody. Or it was not, we were just experimenting on our own as part of a random project.</p>
+
+<p>In the later case, the only solution was to build it from scratch, put it in our <code>$HOME</code>, mess up with^W^W^W tweak the <code>$PATH</code> and <code>$LD_LIBRARY_PATH</code> environment variables and sometime get some voodoo involved.</p>
+
+<p>It <em>usually</em> worked.</p>
+
+<p>A year ago, I was giving a talk to introduce Docker and, in the question section, I was asked whether I believed Docker could be a solution to this kind of problem. I answered that it was a dangerous idea. Giving docker access to user was basically like giving him the <code>root</code> password. He would be better with traditional VMs</p>
+
+<p>Recently, the question came back to me.</p>
+
+<p>As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my <a href="https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/">introduction to Linux Namespaces</a>&hellip; But I will soon #teaser.</p>
+
+<h3 id="user-namespaces-and-docker:da0206e8fd44b9406d04fbf5a43b5c25">User Namespaces and Docker</h3>
+
+<p>(If you don&rsquo;t like or care about the technical background, you can safely skip this part)</p>
+
+<p>In a nutshell, a user namespace is a special Linux kernel mechanism allowing Docker container&rsquo;s to have a &ldquo;faked&rdquo; root user. For example, the root user in a container would be able to manage it&rsquo;s root owned files in the container, act as any user in the container, manage his own network interfaces and some of his mountpoints (restrictions apply) and at the same time being &ldquo;mapped&rdquo; or &ldquo;translated&rdquo; to, say, user &ldquo;ubuntu&rdquo; with uid 1000 on the host system.</p>
+
+<p>User namespaces are have been introduced as early as Linux 3.5 and are considered as stable <a href="https://lwn.net/Articles/657432/">starting with Linux 4.3</a>.</p>
+
+<p>I won&rsquo;t dive too much in the details of user namespaces here, I&rsquo;d really love too, low level bits are by far my favorite topic, but that would be far out of the scope of this post. But stay tuned. While writing this post, I started a more technical one on this very subject ;)</p>
+
+<p>As far as docker is concerned, starting with Docker 1.10 (the current stable version at the time of writing), it supports a new <code>daemon</code> option <code>--userns-remap=[USERNAME]</code>.</p>
+
+<p>Neat.</p>
+
+<p>Wait, does this &ldquo;&ndash;userns-remap&rdquo; and &ldquo;[USERNAME]&rdquo; stuff stand for exactly?</p>
+
+<p>As suggested just earlier, user namespace works by mapping some virtual user ids like root to other user ids on the host. Hence the option name <code>--userns-remap</code>.</p>
+
+<p>Regarding, &ldquo;[USERNAME]&ldquo;, refers to <a href="http://man7.org/linux/man-pages/man5/subuid.5.html"><code>/etc/subuid</code> and <code>/etc/subgid</code></a> files. In a word, these files define the user and group ids a given user can use, beyond his own user id. Just like root can impersonate any user id. If you wonder where this file come from, it&rsquo;s from <a href="https://github.com/shadow-maint/shadow/blob/ef45bb2496182b5df90ad0323bef75d1a5d69887/src/useradd.c#L2188">stock <code>useradd</code> command</a>. Every time a real user (not a system user) is created on the system, a range of 65536 sub-ids is allocated.</p>
+
+<p>Does is sound new? Well, not that much. It was <a href="https://github.com/shadow-maint/shadow/commit/f28ad4b251a42a35c29685850d1686a083cac725">introduced in early August&hellip; 2013</a>.</p>
+
+<p>Anyway, it maintains simple flat text files looking like:</p>
+
+<pre><code>yadutaf:100000:65536
+somuser:165536:65536
+...
+</code></pre>
+
+<p>It reads as: &ldquo;Let user &lsquo;yadutaf&rsquo; use 65536 uids, starting at 100000&rdquo; and &ldquo;Let user &lsquo;someuser&rsquo; use 65536 uids, starting at 165536&rdquo;. Which is basically the next adjacent range.</p>
+
+<p>The rule is not set in stone, but the start sub-uid can be guessed as</p>
+
+<pre><code>FIRST_SUB_UID = 100000 + (UID - 1000) * 65536
+</code></pre>
+
+<p>Again, this is only a convention. We can do something slightly different like:</p>
+
+<pre><code>yadutaf:1000:1
+yadutaf:100000:65535
+</code></pre>
+
+<p>It reads as &ldquo;let user yadutaf use his own uid as well as 65535 uids, starting at 100000 and making the total of uids to 65536&rdquo;.</p>
+
+<p>And this won&rsquo;t break anything.</p>
+
+<p>Well, actually, this is where is starts to get interesting.</p>
+
+<p>When starting docker with <code>docker daemon --userns-remap=yadutaf</code>, docker will parse the subuid and subgid files for <code>yadutaf</code>, sort all read entries by growing start id and generate kernel userns mapping rules. Without diving too much into the details, this will generate the following rules in <code>/proc/[PID]/uid_map</code>:</p>
+
+<pre><code>         0       1000          1
+         1     100000      65535
+</code></pre>
+
+<p>Which should look familiar. This structures looks like the one above, but the meaning it slightly different. This time, it reads as:</p>
+
+<blockquote>
+<ul>
+<li>&ldquo;Let uid 1000 <em>outside</em> the container act as <code>root</code> <em>inside</em> the container&rdquo;</li>
+<li>&ldquo;Let the 65535 uids starting with 100000 <em>outside</em> the container act the 65535 uids starting with 1 <em>inside</em>&ldquo;</li>
+</ul>
+</blockquote>
+
+<p>In other words, 1000 will be 1 and 100002 will be 3.</p>
+
+<p>This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.</p>
+
+<h3 id="give-power-back-to-the-user-no-security-compromise:da0206e8fd44b9406d04fbf5a43b5c25">Give power back to the user, no (security) compromise</h3>
+
+<p>With all this in mind, we can put the pieces together and let the magic happen. We need to:</p>
+
+<ul>
+<li>get latest Docker release (&gt;=1.10.0)</li>
+<li>configure the subids so that our user will act as root in the container</li>
+<li>configure docker so that it used our ranges</li>
+<li>use real-world applications</li>
+</ul>
+
+<p>Of course, as the name is passed on the command line of the docker daemon, this will only work for a single user. But keep in mind that Docker 1.10 is the first version to support this feature. It may evolve in the future and get more flexible</p>
+
+<p>OK, let&rsquo;s start. Assuming our user is &ldquo;yadutaf&rdquo; (that&rsquo;s me) with uid 1000, we&rsquo;ll want <code>/etc/subuid</code> and <code>/etc/subgid</code> to contain:</p>
+
+<pre><code>yadutaf:1000:1
+yadutaf:100000:65535
+</code></pre>
+
+<p>And we want docker daemon to use it, without messing with systemd&rsquo;s unit files (trust me, you don&rsquo;t want to), so we&rsquo;ll use the docker configuration file <code>/etc/docker/daemon.json</code>:</p>
+
+<pre><code>{
+        &quot;userns-remap&quot;: &quot;yadutaf&quot;
+}
+</code></pre>
+
+<p>All we have to do is restart the daemon, run an innocent, random, test container and see the result:</p>
+
+<pre><code>$ sudo systemctl restart docker
+$ docker run -d --name redis-userns redis
+$ cat /proc/$(docker inspect -f '{{ .State.Pid }}' redis-userns)/uid_map
+         0       1000          1
+         1     100000      65535
+</code></pre>
+
+<p>Hooray!</p>
+
+<p>What about graphical? What about sound? You promised read applications didn&rsquo;t you? Sure I did. Here is a working Firefox:</p>
+
+<p>First, the Dockerfile:</p>
+
+<pre><code>FROM ubuntu
+MAINTAINER Jean-Tiare Le Bigot &lt;jt AT yadutaf DOT fr&gt;
+
+# Get PulseAudio for the sound, Firefox for, well, you know...
+RUN apt-get update &amp;&amp; apt-get -y install firefox pulseaudio
+
+ENTRYPOINT [&quot;firefox&quot;]
+</code></pre>
+
+<p>Build and run it:</p>
+
+<pre><code>$ docker build -t firefox .
+$ docker run --rm -it \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v /run/user/$UID/pulse/native:/run/pulse \
+    -e DISPLAY=unix$DISPLAY \
+    -e PULSE_SERVER=unix:/run/pulse \
+    --name firefox \
+    firefox --new-instance &quot;https://www.youtube.com/watch?v=k1-TrAvp_xs&quot;
+</code></pre>
+
+<p>What it does is:</p>
+
+<ul>
+<li>share the X11 socket</li>
+<li>share the user&rsquo;s pulseaudio socket as root&rsquo;s</li>
+<li>expose them via environment variables</li>
+<li>start it!</li>
+</ul>
+
+<p>As a (desirable) side-effect, setting docker daemon with user namespaces effectively disables a variety of security sensitive options like starting privileged containers or sharing the host&rsquo;s network. This extra-security comes with the kernel&rsquo;s implementation and we&rsquo;ll certainly not refuse it!</p>
+
+<p>Of course, this has limitations. For example, if you try with chrome, you&rsquo;ll be disappointed to realize there is no sound. This is because chrome requires the older Alsa sound system which are only accessible to the &ldquo;audio&rdquo; group. But this group is not and can&rsquo;t be mapped in Docker just yet. This is supported by the kernel though. Just not Docker. By the way, if you want to test out chrome, make sure to add the <code>--disable-setuid-sandbox</code> flag</p>
+
+<p>This limitation aside, this is fairly interesting. Using similar setups, you can have docker on your host, exploit most of it power, without ever taking the risk to compromise your security or integrity.</p>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://blog.yadutaf.fr/2016/03/30/turn-any-syscall-into-event-introducing-ebpf-kernel-probes/" rel="prev">How to turn any syscall into an event: Introducing eBPF Kernel probes</a></span>
+    
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+</body>
+</html>
+

@@ -255,7 +255,7 @@ Status: 159        &amp;lt;------ 128+31 ==&amp;gt; SIGSYS
 
 &lt;p&gt;Which outputs something like:&lt;/p&gt;
 
-&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 2: eth0: &amp;lt;NO-CARRIER,BROADCAST,MULTICAST,UP&amp;gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
     link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
@@ -276,7 +276,7 @@ ip netns exec demo ip link list
 
 &lt;p&gt;Output is now:&lt;/p&gt;
 
-&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK&amp;gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK&amp;gt; mtu 65536 qdisc noop state DOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 &lt;/pre&gt;
 
@@ -414,9 +414,9 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
 &lt;p&gt;This is what you would have seen if, from another terminal, you had:&lt;/p&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
-Hi !    
+Hi !
 Bye...
-jean-tiare@jeantiare-Ubuntu:~$ 
+jean-tiare@jeantiare-Ubuntu:~$
 &lt;/pre&gt;
 
 &lt;p&gt;To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &amp;#8230;&lt;/p&gt;

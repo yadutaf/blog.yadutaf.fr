@@ -6,8 +6,178 @@
     <description>Recent content in Posts on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 30 Mar 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 14 Apr 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://blog.yadutaf.fr/post/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Docker for your users - Introducing user namespace</title>
+      <link>http://blog.yadutaf.fr/2016/04/14/docker-for-your-users-introducing-user-namespace/</link>
+      <pubDate>Thu, 14 Apr 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://blog.yadutaf.fr/2016/04/14/docker-for-your-users-introducing-user-namespace/</guid>
+      <description>
+
+&lt;p&gt;A few years ago, back when I was a student, my school had rooms full of counters running Linux that any student could use at any time. We all had a personal account on the machines and the machine management was done by a dedicated team.&lt;/p&gt;
+
+&lt;p&gt;Every once in a while, we found ourselves needing a specific tool like &lt;code&gt;valgrind&lt;/code&gt; which was not readily available or a more recent version of another tool. Like &lt;code&gt;gcc&lt;/code&gt;. Replace &amp;ldquo;valgring&amp;rdquo; and &amp;ldquo;gcc&amp;rdquo; with &amp;ldquo;Node&amp;rdquo;, &amp;ldquo;Rust&amp;rdquo; or &amp;ldquo;Go&amp;rdquo;. You get the idea.&lt;/p&gt;
+
+&lt;p&gt;At that point, we basically had 2 options. Either the tool was vital to our study, and it was possible to get it installed for everybody. Or it was not, we were just experimenting on our own as part of a random project.&lt;/p&gt;
+
+&lt;p&gt;In the later case, the only solution was to build it from scratch, put it in our &lt;code&gt;$HOME&lt;/code&gt;, mess up with^W^W^W tweak the &lt;code&gt;$PATH&lt;/code&gt; and &lt;code&gt;$LD_LIBRARY_PATH&lt;/code&gt; environment variables and sometime get some voodoo involved.&lt;/p&gt;
+
+&lt;p&gt;It &lt;em&gt;usually&lt;/em&gt; worked.&lt;/p&gt;
+
+&lt;p&gt;A year ago, I was giving a talk to introduce Docker and, in the question section, I was asked whether I believed Docker could be a solution to this kind of problem. I answered that it was a dangerous idea. Giving docker access to user was basically like giving him the &lt;code&gt;root&lt;/code&gt; password. He would be better with traditional VMs&lt;/p&gt;
+
+&lt;p&gt;Recently, the question came back to me.&lt;/p&gt;
+
+&lt;p&gt;As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my &lt;a href=&#34;https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34;&gt;introduction to Linux Namespaces&lt;/a&gt;&amp;hellip; But I will soon #teaser.&lt;/p&gt;
+
+&lt;h3 id=&#34;user-namespaces-and-docker:da0206e8fd44b9406d04fbf5a43b5c25&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
+
+&lt;p&gt;(If you don&amp;rsquo;t like or care about the technical background, you can safely skip this part)&lt;/p&gt;
+
+&lt;p&gt;In a nutshell, a user namespace is a special Linux kernel mechanism allowing Docker container&amp;rsquo;s to have a &amp;ldquo;faked&amp;rdquo; root user. For example, the root user in a container would be able to manage it&amp;rsquo;s root owned files in the container, act as any user in the container, manage his own network interfaces and some of his mountpoints (restrictions apply) and at the same time being &amp;ldquo;mapped&amp;rdquo; or &amp;ldquo;translated&amp;rdquo; to, say, user &amp;ldquo;ubuntu&amp;rdquo; with uid 1000 on the host system.&lt;/p&gt;
+
+&lt;p&gt;User namespaces are have been introduced as early as Linux 3.5 and are considered as stable &lt;a href=&#34;https://lwn.net/Articles/657432/&#34;&gt;starting with Linux 4.3&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;I won&amp;rsquo;t dive too much in the details of user namespaces here, I&amp;rsquo;d really love too, low level bits are by far my favorite topic, but that would be far out of the scope of this post. But stay tuned. While writing this post, I started a more technical one on this very subject ;)&lt;/p&gt;
+
+&lt;p&gt;As far as docker is concerned, starting with Docker 1.10 (the current stable version at the time of writing), it supports a new &lt;code&gt;daemon&lt;/code&gt; option &lt;code&gt;--userns-remap=[USERNAME]&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Neat.&lt;/p&gt;
+
+&lt;p&gt;Wait, does this &amp;ldquo;&amp;ndash;userns-remap&amp;rdquo; and &amp;ldquo;[USERNAME]&amp;rdquo; stuff stand for exactly?&lt;/p&gt;
+
+&lt;p&gt;As suggested just earlier, user namespace works by mapping some virtual user ids like root to other user ids on the host. Hence the option name &lt;code&gt;--userns-remap&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Regarding, &amp;ldquo;[USERNAME]&amp;ldquo;, refers to &lt;a href=&#34;http://man7.org/linux/man-pages/man5/subuid.5.html&#34;&gt;&lt;code&gt;/etc/subuid&lt;/code&gt; and &lt;code&gt;/etc/subgid&lt;/code&gt;&lt;/a&gt; files. In a word, these files define the user and group ids a given user can use, beyond his own user id. Just like root can impersonate any user id. If you wonder where this file come from, it&amp;rsquo;s from &lt;a href=&#34;https://github.com/shadow-maint/shadow/blob/ef45bb2496182b5df90ad0323bef75d1a5d69887/src/useradd.c#L2188&#34;&gt;stock &lt;code&gt;useradd&lt;/code&gt; command&lt;/a&gt;. Every time a real user (not a system user) is created on the system, a range of 65536 sub-ids is allocated.&lt;/p&gt;
+
+&lt;p&gt;Does is sound new? Well, not that much. It was &lt;a href=&#34;https://github.com/shadow-maint/shadow/commit/f28ad4b251a42a35c29685850d1686a083cac725&#34;&gt;introduced in early August&amp;hellip; 2013&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Anyway, it maintains simple flat text files looking like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;yadutaf:100000:65536
+somuser:165536:65536
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It reads as: &amp;ldquo;Let user &amp;lsquo;yadutaf&amp;rsquo; use 65536 uids, starting at 100000&amp;rdquo; and &amp;ldquo;Let user &amp;lsquo;someuser&amp;rsquo; use 65536 uids, starting at 165536&amp;rdquo;. Which is basically the next adjacent range.&lt;/p&gt;
+
+&lt;p&gt;The rule is not set in stone, but the start sub-uid can be guessed as&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;FIRST_SUB_UID = 100000 + (UID - 1000) * 65536
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Again, this is only a convention. We can do something slightly different like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;yadutaf:1000:1
+yadutaf:100000:65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It reads as &amp;ldquo;let user yadutaf use his own uid as well as 65535 uids, starting at 100000 and making the total of uids to 65536&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;And this won&amp;rsquo;t break anything.&lt;/p&gt;
+
+&lt;p&gt;Well, actually, this is where is starts to get interesting.&lt;/p&gt;
+
+&lt;p&gt;When starting docker with &lt;code&gt;docker daemon --userns-remap=yadutaf&lt;/code&gt;, docker will parse the subuid and subgid files for &lt;code&gt;yadutaf&lt;/code&gt;, sort all read entries by growing start id and generate kernel userns mapping rules. Without diving too much into the details, this will generate the following rules in &lt;code&gt;/proc/[PID]/uid_map&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;         0       1000          1
+         1     100000      65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Which should look familiar. This structures looks like the one above, but the meaning it slightly different. This time, it reads as:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&amp;ldquo;Let uid 1000 &lt;em&gt;outside&lt;/em&gt; the container act as &lt;code&gt;root&lt;/code&gt; &lt;em&gt;inside&lt;/em&gt; the container&amp;rdquo;&lt;/li&gt;
+&lt;li&gt;&amp;ldquo;Let the 65535 uids starting with 100000 &lt;em&gt;outside&lt;/em&gt; the container act the 65535 uids starting with 1 &lt;em&gt;inside&lt;/em&gt;&amp;ldquo;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;In other words, 1000 will be 1 and 100002 will be 3.&lt;/p&gt;
+
+&lt;p&gt;This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.&lt;/p&gt;
+
+&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise:da0206e8fd44b9406d04fbf5a43b5c25&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
+
+&lt;p&gt;With all this in mind, we can put the pieces together and let the magic happen. We need to:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;get latest Docker release (&amp;gt;=1.10.0)&lt;/li&gt;
+&lt;li&gt;configure the subids so that our user will act as root in the container&lt;/li&gt;
+&lt;li&gt;configure docker so that it used our ranges&lt;/li&gt;
+&lt;li&gt;use real-world applications&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Of course, as the name is passed on the command line of the docker daemon, this will only work for a single user. But keep in mind that Docker 1.10 is the first version to support this feature. It may evolve in the future and get more flexible&lt;/p&gt;
+
+&lt;p&gt;OK, let&amp;rsquo;s start. Assuming our user is &amp;ldquo;yadutaf&amp;rdquo; (that&amp;rsquo;s me) with uid 1000, we&amp;rsquo;ll want &lt;code&gt;/etc/subuid&lt;/code&gt; and &lt;code&gt;/etc/subgid&lt;/code&gt; to contain:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;yadutaf:1000:1
+yadutaf:100000:65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And we want docker daemon to use it, without messing with systemd&amp;rsquo;s unit files (trust me, you don&amp;rsquo;t want to), so we&amp;rsquo;ll use the docker configuration file &lt;code&gt;/etc/docker/daemon.json&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;{
+        &amp;quot;userns-remap&amp;quot;: &amp;quot;yadutaf&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;All we have to do is restart the daemon, run an innocent, random, test container and see the result:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ sudo systemctl restart docker
+$ docker run -d --name redis-userns redis
+$ cat /proc/$(docker inspect -f &#39;{{ .State.Pid }}&#39; redis-userns)/uid_map
+         0       1000          1
+         1     100000      65535
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Hooray!&lt;/p&gt;
+
+&lt;p&gt;What about graphical? What about sound? You promised read applications didn&amp;rsquo;t you? Sure I did. Here is a working Firefox:&lt;/p&gt;
+
+&lt;p&gt;First, the Dockerfile:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;FROM ubuntu
+MAINTAINER Jean-Tiare Le Bigot &amp;lt;jt AT yadutaf DOT fr&amp;gt;
+
+# Get PulseAudio for the sound, Firefox for, well, you know...
+RUN apt-get update &amp;amp;&amp;amp; apt-get -y install firefox pulseaudio
+
+ENTRYPOINT [&amp;quot;firefox&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Build and run it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ docker build -t firefox .
+$ docker run --rm -it \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v /run/user/$UID/pulse/native:/run/pulse \
+    -e DISPLAY=unix$DISPLAY \
+    -e PULSE_SERVER=unix:/run/pulse \
+    --name firefox \
+    firefox --new-instance &amp;quot;https://www.youtube.com/watch?v=k1-TrAvp_xs&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;What it does is:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;share the X11 socket&lt;/li&gt;
+&lt;li&gt;share the user&amp;rsquo;s pulseaudio socket as root&amp;rsquo;s&lt;/li&gt;
+&lt;li&gt;expose them via environment variables&lt;/li&gt;
+&lt;li&gt;start it!&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As a (desirable) side-effect, setting docker daemon with user namespaces effectively disables a variety of security sensitive options like starting privileged containers or sharing the host&amp;rsquo;s network. This extra-security comes with the kernel&amp;rsquo;s implementation and we&amp;rsquo;ll certainly not refuse it!&lt;/p&gt;
+
+&lt;p&gt;Of course, this has limitations. For example, if you try with chrome, you&amp;rsquo;ll be disappointed to realize there is no sound. This is because chrome requires the older Alsa sound system which are only accessible to the &amp;ldquo;audio&amp;rdquo; group. But this group is not and can&amp;rsquo;t be mapped in Docker just yet. This is supported by the kernel though. Just not Docker. By the way, if you want to test out chrome, make sure to add the &lt;code&gt;--disable-setuid-sandbox&lt;/code&gt; flag&lt;/p&gt;
+
+&lt;p&gt;This limitation aside, this is fairly interesting. Using similar setups, you can have docker on your host, exploit most of it power, without ever taking the risk to compromise your security or integrity.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>How to turn any syscall into an event: Introducing eBPF Kernel probes</title>
@@ -1532,7 +1702,7 @@ Status: 159        &amp;lt;------ 128+31 ==&amp;gt; SIGSYS
 
 &lt;p&gt;Which outputs something like:&lt;/p&gt;
 
-&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK,UP,LOWER_UP&amp;gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 2: eth0: &amp;lt;NO-CARRIER,BROADCAST,MULTICAST,UP&amp;gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
     link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
@@ -1553,7 +1723,7 @@ ip netns exec demo ip link list
 
 &lt;p&gt;Output is now:&lt;/p&gt;
 
-&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK&amp;gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;1: lo: &amp;lt;LOOPBACK&amp;gt; mtu 65536 qdisc noop state DOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 &lt;/pre&gt;
 
@@ -1691,9 +1861,9 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
 &lt;p&gt;This is what you would have seen if, from another terminal, you had:&lt;/p&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
-Hi !    
+Hi !
 Bye...
-jean-tiare@jeantiare-Ubuntu:~$ 
+jean-tiare@jeantiare-Ubuntu:~$
 &lt;/pre&gt;
 
 &lt;p&gt;To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &amp;#8230;&lt;/p&gt;
@@ -2214,178 +2384,6 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
 &lt;p&gt;And that&amp;rsquo;s all folks! (for this first article, at least). Getting started with namespaces is pretty damn easy: clone, set appropriate &amp;#8220;CLONE_NEW*&amp;#8221; flags, setup the new env, done!&lt;/p&gt;
 
 &lt;p&gt;Would like to go further ? You might be interested in reading also the &lt;a href=&#34;http://lwn.net/Articles/531114/&#34; title=&#34;Linux namespaces, LWN&#34;&gt;excellent LWN article series on namespaces&lt;/a&gt;.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Gérer son site avec GIT sur un serveur mutualisé</title>
-      <link>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</link>
-      <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
-      
-      <guid>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
-      <description>
-
-&lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;Prérequis&lt;/strong&gt;:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Compte Mutualisé avec accès SSH (&lt;a href=&#34;http://www.ovh.com/fr/hebergement-web/&#34; title=&#34;Hébergement Web chez OVH&#34;&gt;à partir de l&amp;rsquo;offre pro chez OVH par ex&lt;/a&gt;)&lt;/li&gt;
-&lt;li&gt;Connaissance de base de GIT ainsi qu&amp;rsquo;un client fonctionnel (&lt;a href=&#34;http://git-scm.com/documentation&#34; title=&#34;Introduction à GIT&#34;&gt;documentation&lt;/a&gt;)&lt;/li&gt;
-&lt;li&gt;Connaissances de bases de SSH/Bash&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&#34;première-étape-initialiser-un-dépôt-distant:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Première étape: Initialiser un dépôt distant&lt;/h2&gt;
-
-&lt;p&gt;&lt;strong&gt;Dans votre &amp;#8220;/homez.123/&lt;votre identifiant&gt;&amp;#8221;:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git init --bare site-perso.git
-# Initialized empty Git repository in /homez.123/identifiant/site-perso.git/
-&lt;/pre&gt;
-
-&lt;p&gt;Cette commande initialise un dépôt git &amp;#8220;nue&amp;#8221; (bare) dans le dossier `site-perso.git`. Aucune copie de travail ne sera présente sur le serveur. Et c&amp;rsquo;est probablement ce que vous voulez 😉&lt;/p&gt;
-
-&lt;h2 id=&#34;deuxième-étape-clone-local-et-première-publication:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Deuxième étape: Clone local et première publication&lt;/h2&gt;
-
-&lt;p&gt;&lt;strong&gt;Clone local:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git clone identifiant@ftp.cluster012.ovh.net:site-perso.git
-# Cloning into &#39;site-perso&#39;...
-# warning: You appear to have cloned an empty repository.
-# Checking connectivity... done
-cd site-perso/
-&lt;/pre&gt;
-
-&lt;p&gt;&lt;strong&gt;Création d&amp;rsquo;une première page:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;echo &#34;Bienvenu sur mon nouveau site&#34; &amp;gt; index.html
-git add index.html
-git commit -am &#34;ajoute la page d&#39;accueil&#34;
-# [master (root-commit) 87a0483] ajoute la page d&#39;accueil
-#  1 file changed, 1 insertion(+)
-#  create mode 100644 index.html
-&lt;/pre&gt;
-
-&lt;p&gt;&lt;strong&gt;Publication:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;git push origin master
-# Counting objects: 3, done.
-# Writing objects: 100% (3/3), 262 bytes | 0 bytes/s, done.
-# Total 3 (delta 0), reused 0 (delta 0)
-# To identifiant@ftp.cluster012.ovh.net:site-perso.git
-#  * [new branch]      master -&amp;gt; master
-&lt;/pre&gt;
-
-&lt;p&gt;On a maintenant un site avec une page statique versionné. Une copie du dépôt GIT se trouve directement sur le serveur web. Toute personne disposant d&amp;rsquo;un accès à ce compte SSH aura la possibilité de contribuer au dépôt.&lt;/p&gt;
-
-&lt;h2 id=&#34;troisième-étape-optionnelle-accès-collaborateurs-et-public:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Troisième étape (optionnelle): Accès collaborateurs et Public&lt;/h2&gt;
-
-&lt;p&gt;&lt;strong&gt;Accès en écriture pour les collaborateurs, restreint à GIT:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;Dans la mesure où l&amp;rsquo;on a pas la main sur le système d&amp;rsquo;authentification système, on va utiliser l&amp;rsquo;authentification par clé publique ssh en forçant la commande &amp;#8220;git-shell&amp;#8221;. De cette manière, on bloque l&amp;rsquo;accès à toutes actions autres que GIT (sftp, shell, tunnel, &amp;#8230;). Pour plus d&amp;rsquo;information sur l&amp;rsquo;authentification par clé publique SSH, je vous invite à consulter &lt;a href=&#34;http://git-scm.com/book/fr/Git-sur-le-serveur-G%C3%A9n%C3%A9ration-des-cl%C3%A9s-publiques-SSH&#34; title=&#34;Manuel GIT - authentification par clé publique SSH&#34;&gt;l’excellent manuel de GIT&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Dans le fichier &lt;code&gt;~/.ssh/authorized_keys&lt;/code&gt;, ajoutez une ligne du type:&lt;/p&gt;
-
-&lt;pre class=&#34;brush: plain; title: ; notranslate&#34; title=&#34;&#34;&gt;command=&#34;git-shell&#34;,no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-rsa AAAAD3NzaC1yc2EABBBCIwAAAQEAtRFmADxUSCX97CS/Uh7/N0y0vL...
-&lt;/pre&gt;
-
-&lt;p&gt;En utilisant une technique comparable il serait possible de mettre en place un contrôle d&amp;rsquo;autorisation fine mais cela sort du cadre de cet article. Pour plus d&amp;rsquo;informations sur une piste possible, je vous invite à consulter le très complet &lt;a href=&#34;https://github.com/sitaramc/gitolite/&#34;&gt;projet gitolite&lt;/a&gt;. Bien qu&amp;rsquo;il ne soit pas très adapté à un hébergement mutualisé, ses techniques pourront servir de référence.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;Accès en public en lecture seule:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;Exemple: ouvrir un accès public à &lt;code&gt;site-perso.git&lt;/code&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;# Dans votre &#34;/homez.123/&amp;lt;votre identifiant&amp;gt;&#34;
-
-# 1/ activer la publication automatique
-mv site-perso.git/hooks/post-update.sample site-perso.git/hooks/post-update
-chmod +x site-perso.git/hooks/post-update
-
-# 2/ publication dans le dossier web `public-git`
-mkdir -p www/public-git
-cd www/public-git
-ln -s ../../site-perso.git ./
-&lt;/pre&gt;
-
-&lt;p&gt;Votre dépôt peut maintenant être cloné avec &lt;code&gt;git clone http://www.example.com/public-git/site-perso.git&lt;/code&gt;. Pour révoquer l&amp;rsquo;accès, il suffit de supprimer le lien dans &lt;code&gt;www/public-git/site-perso.git&lt;/code&gt;. Il n&amp;rsquo;est pas nécessaire de supprimer le &amp;#8220;hook&amp;#8221;. Pour ajouter une authentification minimale, la méthode habituelle par &amp;#8220;htaccess&amp;#8221; pourra être employée.&lt;/p&gt;
-
-&lt;h2 id=&#34;quatrième-étape-optionnelle-déploiement-continue-oh-yeah:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Quatrième étape (optionnelle): Déploiement continue (Oh Yeah !)&lt;/h2&gt;
-
-&lt;p&gt;La crème de la crème avec GIT, ce sont les &amp;#8220;hook&amp;#8221; que je traduirai par &amp;#8220;prises&amp;#8221; en français. Ce sont des points sur lesquels on se branche aisément pour personnaliser un traitement. On a déjà utilisé l&amp;rsquo;un de ceux qui sont fourni à titre d&amp;rsquo;exemple dans tout dépôt GIT pour le rendre disponible en HTTP.&lt;/p&gt;
-
-&lt;p&gt;Ici, nous avons besoin d&amp;rsquo;une &amp;#8220;prise&amp;#8221; sur mesure qui va se charger de mettre à jour &lt;code&gt;site-perso&lt;/code&gt; à chaque fois qu&amp;rsquo;une mise à jour est &amp;#8220;poussée&amp;#8221; (publiée) sur la branche &amp;#8220;prod&amp;#8221;.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;Exemple de &amp;#8220;prise&amp;#8221; GIT assurant la publication automatique:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: site-perso.git/hooks/post-receive; notranslate&#34; title=&#34;site-perso.git/hooks/post-receive&#34;&gt;#!/bin/bash
-
-# Pour chaque branche affectée par un &#34;push&#34;, GIT
-# nous passe sur une ligne et dans cet ordre:
-# &amp;lt;ancienne révision&amp;gt; &amp;lt;nouvelle révision&amp;gt; &amp;lt;~nom de la branche&amp;gt;
-while read oldrev newrev ref
-do
-    branch=`echo $ref | cut -d/ -f3`
-    # mise à jour de la version de production ?
-    if [ &#34;$branch&#34; == &#34;prod&#34; ]
-    then
-        reponame=$(basename `pwd` | sed &#39;s/\.git$//&#39;)
-        # 1/ passer le site en maintenance
-        echo &#34;[$reponame] 1/4 Passage en mode maintenance&#34;
-        # 2/ mettre à jour le code 
-        echo &#34;[$reponame] 2/4 Mise à jour&#34;
-        GIT_WORK_TREE=~/$reponame git checkout -f $branch
-        # 3/ Paramètrage, migration de schéma, ...
-        echo &#34;[$reponame] 3/4 Migration&#34;
-        # 4/ rendre le site à nouveau disponible
-        echo &#34;[$reponame] 4/4 Passage en mode production&#34;
-    fi
-done
-&lt;/pre&gt;
-
-&lt;p&gt;&lt;strong&gt;Activer la prise:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;chmod +x site-perso.git/hooks/post-receive&lt;/pre&gt;
-
-&lt;p&gt;&lt;strong&gt;Exemple de fonctionnement:&lt;/strong&gt;&lt;/p&gt;
-
-&lt;pre class=&#34;brush: bash; title: session git locale &amp;#039;site-perso&amp;#039;; notranslate&#34; title=&#34;session git locale &amp;#039;site-perso&amp;#039;&#34;&gt;git checkout master
-# Switched to branch &#39;master&#39;
-
-echo &#34;version 1.2&#34; &amp;gt;&amp;gt; CHANGELOG
-git commit -am &#34;Update CHANGELOG&#34;
-# [master 75c770c] Update CHANGELOG
-#  1 file changed, 1 insertion(+)
-
-git checkout prod
-# Switched to branch &#39;prod&#39;
-
-git merge master
-# Updating 2f8b5ca..75c770c
-# Fast-forward
-#  CHANGELOG | 1 +
-#  1 file changed, 1 insertion(+)
-
-git push
-# Counting objects: 5, done.
-# Delta compression using up to 4 threads.
-# Compressing objects: 100% (2/2), done.
-# Writing objects: 100% (3/3), 312 bytes | 0 bytes/s, done.
-# Total 3 (delta 0), reused 0 (delta 0)
-# remote: [site-perso] 1/4 Passage en mode maintenance
-# remote: [site-perso] 2/4 Mise a jour
-# remote: Switched to branch &#39;prod&#39;
-# remote: [site-perso] 3/4 Migration
-# remote: [site-perso] 4/4 Passage en mode production
-# To lj75593x1@ftp.cluster012.ovh.net:site-perso.git
-#    2f8b5ca..75c770c  master -&amp;gt; master
-#    2f8b5ca..75c770c  prod -&amp;gt; prod
-&lt;/pre&gt;
-
-&lt;h2 id=&#34;conclusion:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Conclusion&lt;/h2&gt;
-
-&lt;p&gt;GIT est incroyablement puissant, mais ça vous le saviez déjà. Bien maîtrisé, il permet de mettre en place à moindre frais une véritable solution de déploiement continue et de travail collaboratif pour un site Web. Un grand &amp;#8220;plus&amp;#8221; en terme de professionnalisme. D&amp;rsquo;autre part, cette solution à l&amp;rsquo;immense avantage de fonctionner avec une offre d&amp;rsquo;hébergement mutualisé en disposant d&amp;rsquo;un simple accès SSH+GIT.&lt;/p&gt;
-
-&lt;p&gt;Happy GITing !&lt;/p&gt;
 </description>
     </item>
     

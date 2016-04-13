@@ -111,7 +111,7 @@
 
 <p>Which outputs something like:</p>
 
-<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 2: eth0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
     link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
@@ -132,7 +132,7 @@ ip netns exec demo ip link list
 
 <p>Output is now:</p>
 
-<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK&gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK&gt; mtu 65536 qdisc noop state DOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 </pre>
 
@@ -270,9 +270,9 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
 <p>This is what you would have seen if, from another terminal, you had:</p>
 
 <pre class="brush: bash; title: ; notranslate" title="">jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
-Hi !    
+Hi !
 Bye...
-jean-tiare@jeantiare-Ubuntu:~$ 
+jean-tiare@jeantiare-Ubuntu:~$
 </pre>
 
 <p>To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &#8230;</p>
