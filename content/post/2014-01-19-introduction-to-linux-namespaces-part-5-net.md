@@ -17,7 +17,7 @@ Following the [previous post on PID namespace][1] (Restart process numbering to 
 
 For once we won't start with the addition of the &#8220;CLONE_NEWNET&#8221; flag to the &#8220;clone&#8221; syscall. I keep it for later. For now, IMHO, the best way to get started with this namespace is the incredibly mighty &#8220;[iproute2][4]&#8221; net-admin swiss army knife. If you don't have it (yet) I highly encourage you to install it. Nonetheless, if don't want to / can't, you may as well skip the explanation part and go straight to the full code sample.
 
-First, let's see what network interfaces we have at the moment: 
+First, let's see what network interfaces we have at the moment:
 
 <!--more-->
 
@@ -25,7 +25,7 @@ First, let's see what network interfaces we have at the moment:
 
 Which outputs something like:
 
-<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT 
+<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 2: eth0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt; mtu 1500 qdisc pfifo_fast state DOWN mode DEFAULT qlen 1000
     link/ether **:**:**:**:**:** brd ff:ff:ff:ff:ff:ff
@@ -46,7 +46,7 @@ ip netns exec demo ip link list
 
 Output is now:
 
-<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK&gt; mtu 65536 qdisc noop state DOWN mode DEFAULT 
+<pre class="brush: plain; title: ; notranslate" title="">1: lo: &lt;LOOPBACK&gt; mtu 65536 qdisc noop state DOWN mode DEFAULT
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 </pre>
 
@@ -184,13 +184,13 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # done !
 This is what you would have seen if, from another terminal, you had:
 
 <pre class="brush: bash; title: ; notranslate" title="">jean-tiare@jeantiare-Ubuntu:~$ nc 169.254.1.2 4242
-Hi !    
+Hi !
 Bye...
-jean-tiare@jeantiare-Ubuntu:~$ 
+jean-tiare@jeantiare-Ubuntu:~$
 </pre>
 
 To go further on the path to network virtualization, you could have a look at new interfaces types recently introduced in the Linux kernel: macvlan, vlan, vxlans, &#8230;
-  
+
 If you feel that running a bunch of `system()` calls into a production system is a dirty hack (and it is !), you could have look at the `rtnetlink` kernel communication interface. This is the barely documented API used by iproute under the hood.
 
 That's all for &#8220;NET&#8221; namespace. It's so powerful that it's used as the foundation of the [&#8220;CORE&#8221; lightweight network simulator][6]. With the next article we'll explore the last and most tricky namespace &#8220;USER&#8221;. Thanks for reading !
