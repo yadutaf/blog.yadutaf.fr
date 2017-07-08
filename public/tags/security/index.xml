@@ -33,7 +33,7 @@
 
 &lt;p&gt;As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my &lt;a href=&#34;https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34;&gt;introduction to Linux Namespaces&lt;/a&gt;&amp;hellip; But I will soon #teaser.&lt;/p&gt;
 
-&lt;h3 id=&#34;user-namespaces-and-docker:da0206e8fd44b9406d04fbf5a43b5c25&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
+&lt;h3 id=&#34;user-namespaces-and-docker:beda4b7909718c488f1040442ce702e5&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
 
 &lt;p&gt;(If you don&amp;rsquo;t like or care about the technical background, you can safely skip this part)&lt;/p&gt;
 
@@ -47,7 +47,7 @@
 
 &lt;p&gt;Neat.&lt;/p&gt;
 
-&lt;p&gt;Wait, does this &amp;ldquo;&amp;ndash;userns-remap&amp;rdquo; and &amp;ldquo;[USERNAME]&amp;rdquo; stuff stand for exactly?&lt;/p&gt;
+&lt;p&gt;Wait, what does this &lt;code&gt;--userns-remap&lt;/code&gt; and &lt;code&gt;[USERNAME]&lt;/code&gt; stuff stand for exactly?&lt;/p&gt;
 
 &lt;p&gt;As suggested just earlier, user namespace works by mapping some virtual user ids like root to other user ids on the host. Hence the option name &lt;code&gt;--userns-remap&lt;/code&gt;.&lt;/p&gt;
 
@@ -100,7 +100,7 @@ yadutaf:100000:65535
 
 &lt;p&gt;This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.&lt;/p&gt;
 
-&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise:da0206e8fd44b9406d04fbf5a43b5c25&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
+&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise:beda4b7909718c488f1040442ce702e5&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
 
 &lt;p&gt;With all this in mind, we can put the pieces together and let the magic happen. We need to:&lt;/p&gt;
 
