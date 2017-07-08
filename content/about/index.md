@@ -11,7 +11,7 @@ The linguist in you may wonder what "yadutaf" stands for. You may think of it as
 
 Need to reach me ?
 
-  * [Twiter][2]
+  * [Twitter][2]
   * [Linkedin][3]
   * [Github][4]
   * E-Mail: jt [AT] yadutaf [DOT] fr
