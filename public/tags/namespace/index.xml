@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Namespace on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/namespace/</link>
+    <link>http://blog.yadutaf.fr/tags/namespace/index.xml</link>
     <description>Recent content in Namespace on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 19 Jan 2014 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/namespace/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -22,6 +22,8 @@
 &lt;p&gt;For once we won&amp;rsquo;t start with the addition of the &amp;#8220;CLONE_NEWNET&amp;#8221; flag to the &amp;#8220;clone&amp;#8221; syscall. I keep it for later. For now, IMHO, the best way to get started with this namespace is the incredibly mighty &amp;#8220;&lt;a href=&#34;http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2&#34; title=&#34;IPRoute2 official website&#34;&gt;iproute2&lt;/a&gt;&amp;#8221; net-admin swiss army knife. If you don&amp;rsquo;t have it (yet) I highly encourage you to install it. Nonetheless, if don&amp;rsquo;t want to / can&amp;rsquo;t, you may as well skip the explanation part and go straight to the full code sample.&lt;/p&gt;
 
 &lt;p&gt;First, let&amp;rsquo;s see what network interfaces we have at the moment:&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;ip link list&lt;/pre&gt;
 
@@ -195,8 +197,7 @@ jean-tiare@jeantiare-Ubuntu:~$
 
 &lt;p&gt;If you feel that running a bunch of &lt;code&gt;system()&lt;/code&gt; calls into a production system is a dirty hack (and it is !), you could have look at the &lt;code&gt;rtnetlink&lt;/code&gt; kernel communication interface. This is the barely documented API used by iproute under the hood.&lt;/p&gt;
 
-&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NET&amp;#8221; namespace. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. With the next article we&amp;rsquo;ll explore the last and most tricky namespace &amp;#8220;USER&amp;#8221;. Thanks for reading !&lt;/p&gt;
-</description>
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NET&amp;#8221; namespace. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. With the next article we&amp;rsquo;ll explore the last and most tricky namespace &amp;#8220;USER&amp;#8221;. Thanks for reading !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -216,6 +217,8 @@ jean-tiare@jeantiare-Ubuntu:~$
 &lt;p&gt;Once activated, any (un)mount operations from the child will only affect the child and vice-versa.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s start experimenting. In the previous example, just activate the NS:&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;pre class=&#34;brush: cpp; first-line: 43; title: activate-ns-snippet.c; notranslate&#34; title=&#34;activate-ns-snippet.c&#34;&gt;int child_pid = clone(child_main, child_stack+STACK_SIZE, 
       CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
@@ -304,8 +307,7 @@ int main()
 
 &lt;p&gt;To leverage the power of this technique you could now prepare and enter a chroot to further enhance the isolation. Steps involved would be to prepare a &amp;#8220;debootstrap&amp;#8221;, remount some essentials filesystems like &amp;#8220;/tmp&amp;#8221;, &amp;#8220;/dev/shm&amp;#8221;, &amp;#8220;/proc&amp;#8221;, optionally all or part of &amp;#8220;/dev&amp;#8221; and &amp;#8220;/sys&amp;#8221; and then &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/2/chdir&#34; title=&#34;man chdir&#34;&gt;chdir&lt;/a&gt;&amp;#8221; + &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/1/chroot&#34; title=&#34;man Chroot&#34;&gt;chroot&lt;/a&gt;&amp;#8220;. I&amp;rsquo;ll leave it as an exercise for the reader.&lt;/p&gt;
 
-&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NS&amp;#8221; namespace. With the next article we&amp;rsquo;ll explore an incredibly powerful namespace &amp;#8220;NET&amp;#8221;. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. Thanks for reading !&lt;/p&gt;
-</description>
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NS&amp;#8221; namespace. With the next article we&amp;rsquo;ll explore an incredibly powerful namespace &amp;#8220;NET&amp;#8221;. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. Thanks for reading !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -323,6 +325,8 @@ int main()
 &lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWPID&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
 
 &lt;p&gt;Once activated, the result of getpid() from child process will invariably be &amp;#8220;1&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;But, WAIT! I know have to &amp;#8220;1&amp;#8221; process right ? What about process management ?&lt;/p&gt;
 
@@ -445,8 +449,7 @@ diskstats  kcore        mtrr           sysrq-trigger
 Error, do this: mount -t proc proc /proc
 &lt;/pre&gt;
 
-&lt;p&gt;That&amp;rsquo;s all for PID namespace. With the next article, we&amp;rsquo;ll be able to re-mount /proc itself and hence fix &amp;#8220;top&amp;#8221; and any similar tools without breaking the parent namespace. Thanks for reading !&lt;/p&gt;
-</description>
+&lt;p&gt;That&amp;rsquo;s all for PID namespace. With the next article, we&amp;rsquo;ll be able to re-mount /proc itself and hence fix &amp;#8220;top&amp;#8221; and any similar tools without breaking the parent namespace. Thanks for reading !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -464,6 +467,8 @@ Error, do this: mount -t proc proc /proc
 &lt;p&gt;Once activated, you are free to create any IPC as usual, even named one, without any risk of collision with other applications.&lt;/p&gt;
 
 &lt;p&gt;But, WAIT! My &amp;#8220;parent process&amp;#8221; is now isolated from my &amp;#8220;child process&amp;#8221; right ? What if I need to do some kind of communication between them ?&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;That&amp;rsquo;s a good question. A common use case for this is you need some additional setup from the parent before letting the child take full control. Fortunately, not everything is isolated and clone shares memory space with its parent so that you can still use:&lt;/p&gt;
 
@@ -580,8 +585,7 @@ int main()
 
 &lt;p&gt;That&amp;rsquo;s all for IPC. IPC in itself is nothing complicated. It just becomes tricky when it comes to parent/child synchronization as we will do later. This is where the &amp;#8220;pipe&amp;#8221; technique comes as a handy solution. It actually works and is used in production.&lt;/p&gt;
 
-&lt;p&gt;The next article will be on my favorite one (as sysadmin): PID namespaces.&lt;/p&gt;
-</description>
+&lt;p&gt;The next article will be on my favorite one (as sysadmin): PID namespaces.&lt;/p&gt;</description>
     </item>
     
   </channel>

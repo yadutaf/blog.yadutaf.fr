@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Imap on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/imap/</link>
+    <link>http://blog.yadutaf.fr/tags/imap/index.xml</link>
     <description>Recent content in Imap on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 29 May 2013 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/imap/index.xml" rel="self" type="application/rss+xml" />
     
     <item>

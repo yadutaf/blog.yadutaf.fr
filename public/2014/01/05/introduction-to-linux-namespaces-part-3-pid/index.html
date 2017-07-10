@@ -109,6 +109,8 @@
 
 <p>Once activated, the result of getpid() from child process will invariably be &#8220;1&#8221;.</p>
 
+<p></p>
+
 <p>But, WAIT! I know have to &#8220;1&#8221; process right ? What about process management ?</p>
 
 <p>Well, actually, this *really* is much like a &#8220;chroot&#8221;. That is to say, a change of view point.</p>
@@ -231,7 +233,6 @@ Error, do this: mount -t proc proc /proc
 </pre>
 
 <p>That&rsquo;s all for PID namespace. With the next article, we&rsquo;ll be able to re-mount /proc itself and hence fix &#8220;top&#8221; and any similar tools without breaking the parent namespace. Thanks for reading !</p>
-
       
       
       <div id="share-this" class="col span_10">

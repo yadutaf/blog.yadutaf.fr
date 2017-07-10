@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Userns on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/userns/</link>
+    <link>http://blog.yadutaf.fr/tags/userns/index.xml</link>
     <description>Recent content in Userns on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 14 Apr 2016 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/userns/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -33,7 +33,7 @@
 
 &lt;p&gt;As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my &lt;a href=&#34;https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34;&gt;introduction to Linux Namespaces&lt;/a&gt;&amp;hellip; But I will soon #teaser.&lt;/p&gt;
 
-&lt;h3 id=&#34;user-namespaces-and-docker:beda4b7909718c488f1040442ce702e5&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
+&lt;h3 id=&#34;user-namespaces-and-docker&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
 
 &lt;p&gt;(If you don&amp;rsquo;t like or care about the technical background, you can safely skip this part)&lt;/p&gt;
 
@@ -100,7 +100,7 @@ yadutaf:100000:65535
 
 &lt;p&gt;This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.&lt;/p&gt;
 
-&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise:beda4b7909718c488f1040442ce702e5&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
+&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
 
 &lt;p&gt;With all this in mind, we can put the pieces together and let the magic happen. We need to:&lt;/p&gt;
 

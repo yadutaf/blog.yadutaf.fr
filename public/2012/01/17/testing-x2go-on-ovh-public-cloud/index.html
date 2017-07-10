@@ -113,13 +113,13 @@
       </div>
     </div>
     <article>
-      
-
-<p>About 1 month ago, <a href="http://www.ovh.com/" title="OVH website">OVH</a> launched its &#8220;Public Cloud&#8221;. This basically is a solution taking inspiration from Amazon&rsquo;s AWS without being subject to the Patriot Act. At the moment, the &#8220;Public Cloud&#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&rsquo;s on the way.</p>
+      <p>About 1 month ago, <a href="http://www.ovh.com/" title="OVH website">OVH</a> launched its &#8220;Public Cloud&#8221;. This basically is a solution taking inspiration from Amazon&rsquo;s AWS without being subject to the Patriot Act. At the moment, the &#8220;Public Cloud&#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&rsquo;s on the way.</p>
 
 <p><a href="http://www.x2go.org/" title="X2go official Website">X2go</a> is an open source remote desktop solution based on the very per-formant NX protocol. It feels very much like the remote server is in the same room. After a very quick test, it seems to much lighter and responsive than RDP.</p>
 
-<h1 id="remote-instance-setup:9bf64dc3af8100b999fc0a9936364179">Remote instance setup</h1>
+<p></p>
+
+<h1 id="remote-instance-setup">Remote instance setup</h1>
 
 <p>Subscriptions to the gamma test OVH&rsquo;s Cloud are here: <a href="http://www.ovh.com/fr/cloud/" title="OVH public Cloud Subscription">http://www.ovh.com/fr/cloud/</a>. They provide us with a nice and easy to use web interface as well as a full SOAP API and a shell script to automate instance and project management.</p>
 
@@ -180,7 +180,7 @@ instanceId function    status finishDate zone comment lastUpdate                
 
 <pre class="brush: bash; title: ; notranslate" title="">$ ./ovhcloud instance getLoginInformations</pre>
 
-<h1 id="installing-x2go-on-the-instance:9bf64dc3af8100b999fc0a9936364179">Installing X2go on the instance</h1>
+<h1 id="installing-x2go-on-the-instance">Installing X2go on the instance</h1>
 
 <p>This part is (almost) independent from the previous one. I&rsquo;ll assume you are connected to a remote server running Ubuntu 10.04. It should be fine with any supported flavor of Ubuntu but I did not test it.</p>
 
@@ -202,7 +202,7 @@ $ sudo apt-get install x2gognomebindings #brings some integration </pre>
 
 <pre class="brush: bash; title: ; notranslate" title="">$ sudo apt-get install x2goclient </pre>
 
-<h1 id="conclusion:9bf64dc3af8100b999fc0a9936364179">Conclusion</h1>
+<h1 id="conclusion">Conclusion</h1>
 
 <p>You should now be able to run a Cloud desktop. It is possible to start/stop it on demand with a simple shell command :</p>
 
@@ -213,7 +213,6 @@ $ sudo apt-get install x2gognomebindings #brings some integration </pre>
 <p>I encourage the reader to test sound, folder and printer sharing between the client and the remote desktop. My experience is that the sound only works from a theoretical point of view as it uses a huge BP. Folder sharing is OK and I could not manage to make printer sharing work (at the moment).</p>
 
 <p>Enjoy !</p>
-
       
       
       <div id="share-this" class="col span_10">

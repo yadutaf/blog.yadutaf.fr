@@ -109,9 +109,7 @@
       </div>
     </div>
     <article>
-      
-
-<p>Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight <a href="http://codeigniter.com/">CodeIgniter</a> or the very complete  <a href="http://symfony.com/">Symfony</a> and I missed clean MVC coding. My previous node.js app barely stand in a single controller <a href="http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/" title="Node.Js reverse proxy">as it was a reverse proxy</a>. This time, I wondered how I could write a bare minimum clean registration form.</p>
+      <p>Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight <a href="http://codeigniter.com/">CodeIgniter</a> or the very complete  <a href="http://symfony.com/">Symfony</a> and I missed clean MVC coding. My previous node.js app barely stand in a single controller <a href="http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/" title="Node.Js reverse proxy">as it was a reverse proxy</a>. This time, I wondered how I could write a bare minimum clean registration form.</p>
 
 <p>For this &#8220;application&#8221;, the goals were to</p>
 
@@ -120,6 +118,8 @@
 <li>Provide us with a registered user list and a CSV exporter</li>
 <li>Store the registrations in a Mongo.DB collection</li>
 </ul>
+
+<p></p>
 
 <p>As this post is pretty long, not all the source code will be provided in this post. You can download them as well as to test a simplified version of a real-world&trade; app I did to provide visitors in an event to register and leave their contact on my company&rsquo;s stand.</p>
 
@@ -135,7 +135,7 @@ node app.js</pre>
 
 <p>The following parts of this post will assume that you start from scratch, without this archive.</p>
 
-<h1 id="setup:37973bb4341bd246a575a1b01ee2d703">Setup</h1>
+<h1 id="setup">Setup</h1>
 
 <p>If not yet done, go to <a href="http://nodejs.org/">http://nodejs.org/</a> and download the Node.JS installer for your platform. For linux users, I recommend you to build it from source as this is a fast moving project and most distributions packages are outdated.</p>
 
@@ -188,7 +188,7 @@ express . #setup the project with default settings</pre>
 
 <p>In order to spare some time and focus on the development work, I suggest you to use the twitter css bootstrap. It will provide you with a nice and clean stylesheet. In the following code snippets of this article, I&rsquo;ll assume you are using this framework.</p>
 
-<h1 id="the-model:37973bb4341bd246a575a1b01ee2d703">The Model</h1>
+<h1 id="the-model">The Model</h1>
 
 <p>The model is the place where the data type is defined. The first step is to identify the required fields and their constraints. To keep the example minimal, I&rsquo;ll use just a little subset :</p>
 
@@ -239,7 +239,7 @@ MemberSchema.path('date')
 
 <pre class="brush: jscript; title: ; notranslate" title="">module.exports = mongoose.model('Members', MemberSchema);</pre>
 
-<h1 id="the-view:37973bb4341bd246a575a1b01ee2d703">The view</h1>
+<h1 id="the-view">The view</h1>
 
 <p>The view is the place where the actual web page you see is generated from data computed in the controller. In small projects such as this one, I usually code the controller at last since it is the &#8220;glue&#8221; between the Model and the View.</p>
 
@@ -294,7 +294,7 @@ header, section, article, nav, footer, aside, hgroup{
 
 <p>The body of views/list.jade basically loops over the members structures and displays all members in a table.</p>
 
-<h1 id="the-controller:37973bb4341bd246a575a1b01ee2d703">The controller</h1>
+<h1 id="the-controller">The controller</h1>
 
 <p>The controller is the part that glues the views and the models together. It takes the input from the user, routes it, handle it and then triggers the render of the view.</p>
 
@@ -346,10 +346,9 @@ exports.csv = function(req, res){
     });
 };</pre>
 
-<h1 id="conclusion:37973bb4341bd246a575a1b01ee2d703">Conclusion</h1>
+<h1 id="conclusion">Conclusion</h1>
 
 <p>This (long) post demonstrated and demystified quite a lot of modern technologies at once which may be a little confusing for a newcomer. Sadly, I could not get an in depth overview of these tools. It would have required many books ! Nonetheless, I hope it has been useful to you and help you getting started. have fun !</p>
-
       
       
       <div id="share-this" class="col span_10">

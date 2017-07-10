@@ -115,6 +115,8 @@
 
 <p>What&rsquo;s really interesting with Linux&rsquo; approach to containers is that precisely it does <em>not</em> provide a &#8220;back-box/magical&#8221; container solution but instead provides individual isolation building blocks called &#8220;Namespaces&#8221;, new one appearing from releases to release. It also allows you to use solely the one you actually need for your specific application.</p>
 
+<p></p>
+
 <p>As of 3.12, Linux supports 6 Namespaces:</p>
 
 <ol>
@@ -214,7 +216,6 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
 <p>And that&rsquo;s all folks! (for this first article, at least). Getting started with namespaces is pretty damn easy: clone, set appropriate &#8220;CLONE_NEW*&#8221; flags, setup the new env, done!</p>
 
 <p>Would like to go further ? You might be interested in reading also the <a href="http://lwn.net/Articles/531114/" title="Linux namespaces, LWN">excellent LWN article series on namespaces</a>.</p>
-
       
       
       <div id="share-this" class="col span_10">

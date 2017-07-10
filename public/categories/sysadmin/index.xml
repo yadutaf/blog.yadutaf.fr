@@ -2,12 +2,320 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Sysadmin on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/categories/sysadmin/</link>
+    <link>http://blog.yadutaf.fr/categories/sysadmin/index.xml</link>
     <description>Recent content in Sysadmin on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 14 Apr 2016 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/categories/sysadmin/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Tracing a packet journey thanks to eBPF</title>
+      <link>http://blog.yadutaf.fr/2017/07/11/tracing-a-packet-journey-thanks-to-ebpf/</link>
+      <pubDate>Tue, 11 Jul 2017 00:00:00 +0000</pubDate>
+      
+      <guid>http://blog.yadutaf.fr/2017/07/11/tracing-a-packet-journey-thanks-to-ebpf/</guid>
+      <description>
+
+&lt;p&gt;If you do networking, you are used to long debugging sessions, firing up a couple of &lt;code&gt;tcpdump&lt;/code&gt;, &lt;code&gt;mtr&lt;/code&gt; and &lt;code&gt;*ping&lt;/code&gt; along the expected/actual packet journey. At least, when there is routing involved, &lt;code&gt;mtr&lt;/code&gt; (or &lt;code&gt;traceroute&lt;/code&gt; if you have no choice) does a good at showing what&amp;rsquo;s going on. But not everything is L3. Since containers became popular on Linux, people found new &amp;lsquo;exciting&amp;rsquo; ways to torture the networking subsystem with (powerful) virtual interfaces like veth, macvlan bridge, V(x)LAN, &amp;hellip; Add a bunch of network namespaces [&lt;strong&gt;TODO LINK TO POST&lt;/strong&gt;] in the equation and debugging starts to get&amp;hellip; interesting. If not excitingly frustrating.&lt;/p&gt;
+
+&lt;p&gt;When I was working for OVH, I designed a significant part of the inner networking of the next generation of Load Balancers. Without revealing trade secrets / announcing not-yet-if-ever-released products, I can tell that it involved a fair amount of network namespaces, virtual interfaces and truly nasty routing tricks (like routing via an interface with no IP and using &lt;code&gt;dummy&lt;/code&gt; interfaces). At least, it did not involve multiple routing tables (at that time). For all this time, I whished I had a tool to trace a packet journey across the interfaces and network namespaces.&lt;/p&gt;
+
+&lt;p&gt;Latter, I was struggling with a network issue in a trivial 2 nodes Docker Swarm setup I use to play around &lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:play-around&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:play-around&#34;&gt;1&lt;/a&gt;&lt;/sup&gt;. Exactly half the connections timed out. It turned out to be the kind of bugs you end up fixing by rebooting&amp;hellip; the other node. Frustrating. I whished I had a tool to trace a packet journey across the interfaces and network namespaces.&lt;/p&gt;
+
+&lt;p&gt;In such situation, one usually ends up checking manually each possible ip route, ip table, iptables, iptables tables (!) in each possible network namespace / vrf, possibly firing a couple of tcpdumps as an attempt to make sense of the problem. Feels like a maze. At least, it does to me. You have to guess a path, check it, rinse, repeat. At least, in an actual maze, you can cheat by looking from above. &lt;code&gt;tcpdump&lt;/code&gt; would be a good tool even though tracing is not the area where it excels. To get the &amp;ldquo;view from above&amp;rdquo;, you could make it listen on the special &amp;ldquo;any&amp;rdquo; interface. But that won&amp;rsquo;t help when using multiple network namespaces. You&amp;rsquo;d need 1 tcpdump instance per network namespace. Doable. But cumbersome.&lt;/p&gt;
+
+&lt;h3 id=&#34;the-solution-enter-ebpf&#34;&gt;The solution: Enter eBPF&lt;/h3&gt;
+
+&lt;p&gt;Then, it hit me. When I wrote the solisten.py [&lt;strong&gt;TODO LINK TO POST&lt;/strong&gt;] tool to notify whenever a programs starts to listen on any network interface, in any network namespace, I used eBPF to hook on the main listen function in the kernel (inet_listen [&lt;strong&gt;TODO LINK TO KERNEL SOURCE&lt;/strong&gt;]) and send events. Maybe we can do the same to trace a packet? Sounds reasonable!&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s define the problem. We want to:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Trace a packet journey in the kernel, on a single node&lt;/li&gt;
+&lt;li&gt;List all crossed interface&lt;/li&gt;
+&lt;li&gt;List all crossed network namespace&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Ok, now that the problem is defined, this looks more like a trackable problem. Let&amp;rsquo;s translate these goals to needs. We need to:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Use bcc [&lt;strong&gt;TODO LINK TO BCC PROJECT&lt;/strong&gt;]. It comes with a C to eBPF compiler and a Python API. Seems reasonable for prototyping.&lt;/li&gt;
+&lt;li&gt;Trace ping packets. They are well known, have no side effect, contain an &amp;ldquo;identifier&amp;rdquo; and &amp;ldquo;sequence&amp;rdquo; field.&lt;/li&gt;
+&lt;li&gt;Find a function that is (almost) always called when a packet is queued on an interface. That would solve the &amp;ldquo;all crossed interface and network namespace&amp;rdquo;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;To keep things simple, distributed, TCP and UDP tracing are out of the scope. That would be perfectly feasible, but that would also be over-engineering in that specific case. Additionally, even though I did my proof of concept with IPv6 and IPv4 support, I&amp;rsquo;ll focus exclusively on IPv4 in the post for the sake of readability and link to the final code at the end of this post for curious people [&lt;strong&gt;TODO LINK TO THE FULL CODE&lt;/strong&gt;].&lt;/p&gt;
+
+&lt;h3 id=&#34;find-a-function-to-trace&#34;&gt;Find a function to trace&lt;/h3&gt;
+
+&lt;p&gt;We need a good function to trace. Long story short, we&amp;rsquo;ll use &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; on Linux 4.10 [&lt;strong&gt;TODO LINK&lt;/strong&gt;] for the sake of this post. This may not be the best / perfect pick. But it does the job.&lt;/p&gt;
+
+&lt;p&gt;As digging in the kernel source may seem intimidating, I&amp;rsquo;d like to broadly re-trace the process of finding one, in the hope it can help you find one next time you need to.&lt;/p&gt;
+
+&lt;p&gt;There are some constraints. We need a function that is never inlined. If it is inlined, it is potentially present in all the calling site and maybe optimized away. Moreover, it can not be a &amp;ldquo;static&amp;rdquo; function. Static functions are basically the C equivalent of private function in most languages. All in all, if the candidate is not present in &lt;code&gt;/proc/kallsyms&lt;/code&gt;, it won&amp;rsquo;t work. Some of them are special and can&amp;rsquo;t be traced either, but we&amp;rsquo;ll leave it aside.&lt;/p&gt;
+
+&lt;p&gt;Additionally, if possible, we&amp;rsquo;d prefer a function that is common to all or most of the devices and code path to limit the number of functions to trace. This is not a hard constraint, but that would surely help!&lt;/p&gt;
+
+&lt;p&gt;As I add no clue behind looking into &amp;ldquo;/net&amp;rdquo;, I started from the veth driver. It looked like a reasonable candidate to start. This is a reasonably simple virtual driver, there should not be too much noise in it. Use &amp;lsquo;find&amp;rsquo; to locate it and there you are &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c&lt;/a&gt;. Around 500 lines of code. For the kernel, that&amp;rsquo;s pretty small. Nice. Now, we need to check the functions in this file, looking for some good looking name. A good looking name would suggest that this function queues or forwards a packet on this interface. Good news, there is a single candidate, &amp;ldquo;vethxmit&amp;rdquo; &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L106&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L106&lt;/a&gt;. As this is a driver, if this function is actually the one used by to enqueue packets, it will be registered somewhere and called via a function pointer. This the kernel&amp;rsquo;s way to interfaces. A few lines below, it is registered under the name &amp;lsquo;ndo_start_xmit&amp;rsquo; &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L291&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L291&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Some &amp;lsquo;grep&amp;rsquo; later, we learn that &lt;code&gt;ndo_start_xmit()&lt;/code&gt; is mostly called from &lt;code&gt;__netdev_start_xmit&lt;/code&gt; in &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/include/linux/netdevice.h&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/include/linux/netdevice.h&lt;/a&gt;. There are 2 other call sites but they are related to usb and infiniband. We&amp;rsquo;ll ignore them for now. Bad news is, this is a static inline function. We&amp;rsquo;ll need another candidate.&lt;/p&gt;
+
+&lt;p&gt;This function is called from a couple of places [&lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/ident/netdev_start_xmit&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/ident/netdev_start_xmit&lt;/a&gt;]. There are multiple good candidates here. I guess we&amp;rsquo;d need to trace at least a couple of them. But we&amp;rsquo;ll start with the most likely candidate and maybe add more later. We&amp;rsquo;ll go for &lt;code&gt;xmit_one&lt;/code&gt; in &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2905&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2905&lt;/a&gt;. Unfortunately, this function is static, hence private, hence untraceable. On the bright side, it&amp;rsquo;s static so we know all call sites must be in the same module. In our case, there is a single call place in &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2922&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2922&lt;/a&gt;. a quick grep in &lt;code&gt;/proc/kallsyms&lt;/code&gt; confirms this simple is exported: we have our candidate!&lt;/p&gt;
+
+&lt;h3 id=&#34;install-bcc&#34;&gt;Install bcc&lt;/h3&gt;
+
+&lt;p&gt;If you already have it installed or are not intending to experiment (yet) on this PoC, you can safely skip this section. I should probably just skip it entirely anyway but install instruction are not exactly up to date. Hence, here is an updated, quick and dirty &amp;trade; procedure for Ubuntu 17.04 (Zesty).&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# Install dependencies
+sudo apt install bison build-essential cmake flex git libedit-dev python zlib1g-dev libelf-dev libllvm4.0 llvm-dev libclang-dev luajit luajit-5.1-dev
+
+# Grab the sources
+git clone https://github.com/iovisor/bcc.git
+
+# Build and install
+mkdir bcc/build
+cd bcc/build
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+make
+sudo make install
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;On Ubuntu 16.10 (Xenial) and older, install llvm3.7 instead.&lt;/p&gt;
+
+&lt;h3 id=&#34;trace-dev-hard-start-xmit-using-bcc&#34;&gt;Trace &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; using bcc&lt;/h3&gt;
+
+&lt;p&gt;That&amp;rsquo;s the fun part. We&amp;rsquo;ll attach a kernel probe (kprobe, you guessed it :)) to &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; and start building some events from the probe. Then we&amp;rsquo;ll use a piece of simple Python code to parse these events and print some info.&lt;/p&gt;
+
+&lt;p&gt;Even though probes look like regular C and is indeed build using a LLVM C compiler, this is only a restricted subset of C that compiles to eBPF. That is, a simple VM inside the kernel designed to allow safe observers (ie: not actors / modifiers) to look around, provided the meet some criterions. First, most loops won&amp;rsquo;t be allowed, the kernels needs to prove the program will always exit before starting it. Second, this is an observing program. You can not call arbitrary kernel functions for obvious security reasons. Some inline accessors defined in &amp;ldquo;.h&amp;rdquo; files are OK though. Third, you can not access memory outside the probe stack. If you need to do so, you need to be explicit about it and use bpf accessors. More on this later.&lt;/p&gt;
+
+&lt;p&gt;With this in place, we can proceed with a hello world probe. We&amp;rsquo;ll simply emit an event for each packet sent (don&amp;rsquo;t run it on a production system!). This event will only contain the owning programm name.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#include &amp;lt;bcc/proto.h&amp;gt;
+#include &amp;lt;linux/sched.h&amp;gt;
+
+// Event structure
+struct route_evt_t {
+    char comm[TASK_COMM_LEN];
+};
+BPF_PERF_OUTPUT(route_evt);
+
+int kprobe__dev_hard_start_xmit(struct pt_regs *ctx, struct sk_buff *first, struct net_device *dev, struct netdev_queue *txq, int *ret)
+{
+    // Built event for userland
+    struct route_evt_t evt = {};
+    bpf_get_current_comm(evt.comm, TASK_COMM_LEN);
+
+    // Send event to userland
+    route_evt.perf_submit(ctx, &amp;amp;evt, sizeof(evt));
+
+    return 0;
+};
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s look at what it does.&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Grab some definitions, just like a regular C program&lt;/li&gt;
+&lt;li&gt;Declare out event structure (&lt;code&gt;struct route_evt_t&lt;/code&gt;) and channel name (&lt;code&gt;BPF_PERF_OUTPUT(route_evt)&lt;/code&gt;)
+3/ Declare our probe (&lt;code&gt;kprobe__dev_hard_start_xmit&lt;/code&gt;). Notice the &lt;code&gt;kprobe__&lt;/code&gt; prefix and &lt;code&gt;struct pt_regs *ctx&lt;/code&gt; argument. bcc automatically detects the prefix and attaches it to the proper kernel function and will pass the context as first argument.
+4/ Use a special bpf helper function (&lt;code&gt;bpf_get_current_comm&lt;/code&gt;) to load the program name into the event structure. This is one of the rare function that can be called from eBPF!
+5/ Send the event (&lt;code&gt;route_evt.perf_submit()&lt;/code&gt;)&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;We can now integrate it in a simple Python program:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;#!/usr/bin/env python
+# coding: utf-8
+
+from socket import inet_ntop
+from bcc import BPF
+import ctypes as ct
+
+bpf_text = &#39;&#39;&#39;&amp;lt;SEE CODE SNIPPET ABOVE&amp;gt;&#39;&#39;&#39;
+
+TASK_COMM_LEN = 16 # linux/sched.h
+
+class RouteEvt(ct.Structure):
+    _fields_ = [
+        (&amp;quot;comm&amp;quot;,    ct.c_char * TASK_COMM_LEN),
+    ]
+
+def event_printer(cpu, data, size):
+    # Decode event
+    event = ct.cast(data, ct.POINTER(RouteEvt)).contents
+
+    # Print event
+    print &amp;quot;Just go a packet from %s&amp;quot; % (event.comm)
+
+if __name__ == &amp;quot;__main__&amp;quot;:
+    b = BPF(text=bpf_text)
+    b[&amp;quot;route_evt&amp;quot;].open_perf_buffer(event_printer)
+
+    while True:
+        b.kprobe_poll()
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;I won&amp;rsquo;t go too much into the details, here, this is mostly self-explanatory. This is basically te mirror of the setup on the eBPF side. Declare the event structure using ctypes to decode it, declare the probe, listen for events and print them.&lt;/p&gt;
+
+&lt;p&gt;If you run this program (as root), you&amp;rsquo;ll probably see something like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Just go a packet from ping
+Just go a packet from ping
+Just go a packet from Socket Thread
+Just go a packet from irq/46-iwlwifi
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You&amp;rsquo;ll notice that I have a ping running in the background and using WiFi. So you can rightfully guess I&amp;rsquo;m typing from this from my laptop. Indeed, eBPF is not reserved to datacenters :)&lt;/p&gt;
+
+&lt;h3 id=&#34;load-interface-name-netns-id-from-ipv4-packets&#34;&gt;Load interface name, netns id from IPv4 packets&lt;/h3&gt;
+
+&lt;p&gt;Once the plumbing is in place this is straightforward. If we can call straightforward to parse network packets from kernel structures :p. In this section, I&amp;rsquo;ll focus on &lt;code&gt;kprobe__dev_hard_start_xmit&lt;/code&gt; in the C/eBPF part of the probe. The structure and Python part can be easily extended. I&amp;rsquo;ll put a link to a complete version at the end of the post.&lt;/p&gt;
+
+&lt;p&gt;We&amp;rsquo;ll start by keeping only IPv4 packets:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Cast types. Intermediate cast not needed, kept for readability
+struct sock *sk = first-&amp;gt;sk;
+
+// Filter IPv4 packets
+if (sk-&amp;gt;sk_family != AF_INET) {
+	return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Here, there is no choice, you need to read the structure definitions in the kernel. Fortunately, this is one of the most active and documented subsystem of Linux.&lt;/p&gt;
+
+&lt;p&gt;While dealing with &lt;code&gt;sk&lt;/code&gt;, we can grab the network namespace internal identifier. This will not give you a pretty name like &lt;code&gt;ip netns&lt;/code&gt; does, that&amp;rsquo;s only a magic trick. Rather, it will return the numerical part of what you can see when using &lt;code&gt;readlink&lt;/code&gt; on some &lt;code&gt;/proc/[PID]/ns/net&lt;/code&gt; pseudo file.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Get netns id
+evt.netns = sk-&amp;gt;sk_net.net-&amp;gt;ns.inum;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Granted, this may require quite a bit of detective work to find! While we are at the low hanging fruits, we can load the interface name into the event structure as well, from the device:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Get interface name
+bpf_probe_read(&amp;amp;evt.ifname, IFNAMSIZ, dev-&amp;gt;name);
+__builtin_memcpy(&amp;amp;evt.ifname, dev-&amp;gt;name, IFNAMSIZ);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Notice the &lt;code&gt;bpf_probe_read&lt;/code&gt; function. This is the helper to use when reading data. It will handle the memory safety checks for you so that the kernel can trust your code, even though it may access memory outside the eBPF stack. Alternatively, you could use &lt;code&gt;__builtin_memcpy&lt;/code&gt; as well. Actually, this is what I used initially. But it feels hackish. Failing to do so may result in strange build errors like &amp;ldquo;error: extraneous closing brace (&amp;lsquo;}&amp;rsquo;)&amp;rdquo; if you used the more familiar &amp;ldquo;memcpy&amp;rdquo; or &amp;ldquo;Permission Denied&amp;rdquo; from the kernel if it failed to prove safe memory access at validation time, before your code even get a chance to run.&lt;/p&gt;
+
+&lt;h3 id=&#34;keep-only-icmp-echo-request-ping-and-echo-replies&#34;&gt;Keep only ICMP echo request (ping) and echo replies&lt;/h3&gt;
+
+&lt;p&gt;With these gratifying low hanging fruits in hands, we can focus on the packet itself. Depending on you point of view when reading this post, it may seem trivial or&amp;hellip; disheartening, wondering how one can find the necessary fields and offsets. I generally fall into the second category. That&amp;rsquo;s OK. You may use kernel structures for IP and ICMP to guess the fields and Wikipedia has really high quality pages about these foundation protocols.&lt;/p&gt;
+
+&lt;p&gt;Enough talking. Let&amp;rsquo;s get started. First, step, some grounding work. Let&amp;rsquo;s compute the IPv4 and ICMP headers addresses:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Pre-Compute header addresses
+char* ip_header_address   = first-&amp;gt;head + first-&amp;gt;network_header;
+char* icmp_header_address = first-&amp;gt;head + first-&amp;gt;transport_header;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Notice the manual inlining of &lt;code&gt;skb_network_header()&lt;/code&gt; and &lt;code&gt;skb_transport_header()&lt;/code&gt;. Although both are static inline, we can unfortunately not use them here. If we do, the kernel will complain about &amp;ldquo;R1 invalid mem access &amp;lsquo;inv&amp;rsquo;&amp;rdquo;. I suspect this is a compiler glitch as the code are strictly equivalent. Keep in mind eBPF and it&amp;rsquo;s bcc frontends are quite recent additions.&lt;/p&gt;
+
+&lt;p&gt;On the a side note, I accidentally lost quite some time using &lt;code&gt;first-&amp;gt;data&lt;/code&gt; instead of &lt;code&gt;first-&amp;gt;head&lt;/code&gt;. The former is the head of the buffer from which all offsets are computed, while the later is the offset of the first &amp;ldquo;meaningful&amp;rdquo; byte in the buffer.&lt;/p&gt;
+
+&lt;p&gt;Then, load the IP header and filter ICMP packets only, using the next &lt;code&gt;protocol&lt;/code&gt; field from the IPv4 header. We&amp;rsquo;ll use the kernel&amp;rsquo;s &lt;code&gt;struct iphdr&lt;/code&gt; definition to get the offsets right:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Filter ICMP packets
+struct iphdr* iphdr = (struct iphdr*)ip_header_address;
+if (iphdr-&amp;gt;protocol != IPPROTO_ICMP) {
+	return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You may wonder why I did not write the more compact &lt;code&gt;struct iphdr* iphdr = (struct iphdr*)(first-&amp;gt;head + first-&amp;gt;network_header)&lt;/code&gt;. This is the same reason as above. The generated code would fail to pass the kernel validation phase. As it generally helps with bcc, I split the statements into smaller ones to help the verifier.&lt;/p&gt;
+
+&lt;p&gt;We can now do the same with the ICMP header and keep only ICMP echo request and ICMP echo replies:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Filter ICMP echo request and echo reply
+struct icmphdr* icmphdr = (struct icmphdr*)icmp_header_address;
+if (icmphdr-&amp;gt;type != ICMP_ECHO &amp;amp;&amp;amp; icmphdr-&amp;gt;type != ICMP_ECHOREPLY) {
+	return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Last but not least: load relevant data into the event.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Get address and icmp info
+evt.saddr    = iphdr-&amp;gt;saddr;
+evt.daddr    = iphdr-&amp;gt;daddr;
+evt.icmptype = icmphdr-&amp;gt;type;
+evt.icmpid   = icmphdr-&amp;gt;un.echo.id;
+evt.icmpseq  = icmphdr-&amp;gt;un.echo.sequence;
+
+// Fix endian
+evt.icmpid  = be16_to_cpu(evt.icmpid);
+evt.icmpseq = be16_to_cpu(evt.icmpseq);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And we&amp;rsquo;re done! We now have an event ready to send to user space with all relevant information.&lt;/p&gt;
+
+&lt;p&gt;Note: If you intend to add IPv6 support, please note that the ICMP protocol number is NOT the same as with IPv4 and echo request/replay have different op codes, even though the general packet structure looks similar. I lost quite some time on this&amp;hellip;&lt;/p&gt;
+
+&lt;h3 id=&#34;show-time&#34;&gt;Show time&lt;/h3&gt;
+
+&lt;p&gt;With some trivial Python to handle the event, we can test it in a couple of scenarios. Start the program as root, launch some &amp;ldquo;ping&amp;rdquo; in another terminal and observe:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;# ping -4 localhost
+[  4026531957]               lo request #32693.001 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo   reply #32693.001 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo request #32693.002 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo   reply #32693.002 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo request #32693.003 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo   reply #32693.003 127.0.0.1 -&amp;gt; 127.0.0.1
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We clearly see the first 3 ping sent the process 32693 (the ICMP id on Linux&amp;rsquo;s ping) on the loopback interface as well as the generated reply. Mission accomplished!&lt;/p&gt;
+
+&lt;p&gt;What about some external &amp;ldquo;random&amp;rdquo; target IP?&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;# ping -4 google.com
+[  4026531957]           wlp2s0 request #31348.001 192.168.1.11 -&amp;gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.002 192.168.1.11 -&amp;gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.003 192.168.1.11 -&amp;gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.004 192.168.1.11 -&amp;gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.005 192.168.1.11 -&amp;gt; 216.58.198.206
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We clearly see the 5 first pings sent via my WiFi interface from my home network to Google. Interestingly, we don&amp;rsquo;t see the reply here. This is probably due the hypothesis we did above when choosing a function to trace. We certainly should add some tracing points to be exhaustive, but the general principle says the same. The point is proven !&lt;/p&gt;
+
+&lt;p&gt;And my personal favorite: let&amp;rsquo;s ping a Docker container:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;# ping -4 172.17.0.2
+[  4026531957]          docker0 request #01952.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026531957]      veth0e65931 request #01952.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026532395]             eth0   reply #01952.001 172.17.0.2 -&amp;gt; 172.17.0.1
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Like the Google example, this is not perfect BUT we do see the change of network namespace and can reasonably guess that the packet journey goes:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;       Host netns           | Container netns
++---------------------------+-----------------+
+| docker0 ---&amp;gt; veth0e65931 ---&amp;gt; eth0          |
++---------------------------+-----------------+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;final-word&#34;&gt;Final word&lt;/h3&gt;
+
+&lt;p&gt;eBPF can be used to instrument the kernel and trace the journey of an arbitrary bit of information in the kernel. I would not pretend this is a &amp;ldquo;quick way&amp;rdquo; to instrument the kernel. It&amp;rsquo;s not. And the C-like language limitations can feel frustrating at first. But once this initial frustration step is over, this is an extremely powerful tool. I hope this post gave you a good taste of it and helped ease the initial journey in eBPF. I intentionally pasted full error messages in this post in the hope they may be indexed and help you if you meet them (and you will ^^).&lt;/p&gt;
+
+&lt;p&gt;As far as this demo is concerned, it would benefit from additional tracing point. Some packets are clearly missing. It would also be interesting to instrument the routing and filtering phases to better help troubleshoot common routing issues.&lt;/p&gt;
+
+&lt;p&gt;I did not measure the performance impact. I know there is one. Kernel probes work by inserting jumps in the kernel on tracing points. This tracing point ends up being called for each packet. On production system that would mean a &lt;em&gt;LOT&lt;/em&gt;. It should not matter. I would not install LLVM and a build toolchain a production system for the sole sake of debugging anyway!&lt;/p&gt;
+
+&lt;p&gt;As promised, the full code for this post is available on Github, with IPv4 and IPv6 support: &lt;a href=&#34;https://github.com/yadutaf/tracepkt&#34;&gt;https://github.com/yadutaf/tracepkt&lt;/a&gt;&lt;/p&gt;
+&lt;div class=&#34;footnotes&#34;&gt;
+
+&lt;hr /&gt;
+
+&lt;ol&gt;
+&lt;li id=&#34;fn:play-around&#34;&gt;That is, if by &amp;ldquo;play around&amp;rdquo; you mean &amp;ldquo;host a hobby application with literally 10s of thousands clients syncing on a daily basis&amp;rdquo;.
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:play-around&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Docker for your users - Introducing user namespace</title>
@@ -33,7 +341,7 @@
 
 &lt;p&gt;As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my &lt;a href=&#34;https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34;&gt;introduction to Linux Namespaces&lt;/a&gt;&amp;hellip; But I will soon #teaser.&lt;/p&gt;
 
-&lt;h3 id=&#34;user-namespaces-and-docker:beda4b7909718c488f1040442ce702e5&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
+&lt;h3 id=&#34;user-namespaces-and-docker&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
 
 &lt;p&gt;(If you don&amp;rsquo;t like or care about the technical background, you can safely skip this part)&lt;/p&gt;
 
@@ -100,7 +408,7 @@ yadutaf:100000:65535
 
 &lt;p&gt;This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.&lt;/p&gt;
 
-&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise:beda4b7909718c488f1040442ce702e5&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
+&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
 
 &lt;p&gt;With all this in mind, we can put the pieces together and let the magic happen. We need to:&lt;/p&gt;
 
@@ -191,7 +499,7 @@ $ docker run --rm -it \
 
 &lt;p&gt;If you are not familiar with eBPF or linux tracing, you really should read the full post. It tries to progressively go through the pitfalls I stumbled unpon while playing around with bcc / eBPF while saving you a lot of the time I spent searching and digging.&lt;/p&gt;
 
-&lt;h3 id=&#34;a-note-on-push-vs-pull-in-a-linux-world:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;A note on push vs pull in a Linux world&lt;/h3&gt;
+&lt;h3 id=&#34;a-note-on-push-vs-pull-in-a-linux-world&#34;&gt;A note on push vs pull in a Linux world&lt;/h3&gt;
 
 &lt;p&gt;When I started to work on containers, I was wondering how we could update a load balancer configuration dynamically based on actual system state. A common strategy, which works, it to let the container orchestrator trigger a load balancer configuration update whenever it starts a container and then let the load balancer poll the container until some health check passes. It may be a simple &amp;ldquo;SYN&amp;rdquo; test.&lt;/p&gt;
 
@@ -214,7 +522,7 @@ $ docker run --rm -it \
 
 &lt;p&gt;Ideally, we&amp;rsquo;d need a generic way to do it. How?&lt;/p&gt;
 
-&lt;h3 id=&#34;kernel-tracing-and-ebpf-a-bit-of-history:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Kernel tracing and eBPF, a bit of history&lt;/h3&gt;
+&lt;h3 id=&#34;kernel-tracing-and-ebpf-a-bit-of-history&#34;&gt;Kernel tracing and eBPF, a bit of history&lt;/h3&gt;
 
 &lt;p&gt;Until recently the only way was to patch the kernel or resort on SystemTap. &lt;a href=&#34;https://en.wikipedia.org/wiki/SystemTap&#34;&gt;SytemTap&lt;/a&gt; is a tracing Linux system. In a nutshell, it provides a DSL which is then compiled into a kernel module which is then live-loaded into the running kernel. Except that some production system disable dynamic module loading for security reasons. Including the one I was working on at that time. The other way would be to patch the kernel to trigger some events, probably based on netlink. This is not really convenient. Kernel hacking come with downsides including &amp;ldquo;interesting&amp;rdquo; new &amp;ldquo;features&amp;rdquo; and increased maintenance burden.&lt;/p&gt;
 
@@ -226,7 +534,7 @@ $ docker run --rm -it \
 
 &lt;p&gt;Let&amp;rsquo;s get started.&lt;/p&gt;
 
-&lt;h3 id=&#34;hello-from-from-inet-listen:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Hello from from &lt;code&gt;inet_listen&lt;/code&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;hello-from-from-inet-listen&#34;&gt;Hello from from &lt;code&gt;inet_listen&lt;/code&gt;&lt;/h3&gt;
 
 &lt;p&gt;As writing assembly is not the most convenient task, even for the best of us, we&amp;rsquo;ll use &lt;a href=&#34;https://github.com/iovisor/bcc&#34;&gt;bcc&lt;/a&gt;. bcc is a collection of tools based on LLVM and Python abstracting the underlying machinery. Probes are written in C and the results can be exploited from python allowing to easily write non trivial applications.&lt;/p&gt;
 
@@ -279,7 +587,7 @@ ubuntu@bcc:~$ nc -l 0 4242
 
 &lt;p&gt;Yay!&lt;/p&gt;
 
-&lt;h3 id=&#34;grab-the-backlog:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Grab the backlog&lt;/h3&gt;
+&lt;h3 id=&#34;grab-the-backlog&#34;&gt;Grab the backlog&lt;/h3&gt;
 
 &lt;p&gt;Now, let&amp;rsquo;s print some easily accessible data. Say the &amp;ldquo;backlog&amp;rdquo;. The backlog is the number of pending established TCP connections, pending to be &lt;code&gt;accept()&lt;/code&gt;ed.&lt;/p&gt;
 
@@ -298,7 +606,7 @@ ubuntu@bcc:~$ nc -l 0 4242
 
 &lt;p&gt;Easy hue? Now let&amp;rsquo;s get the port.&lt;/p&gt;
 
-&lt;h3 id=&#34;grab-the-port-and-ip:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Grab the port and IP&lt;/h3&gt;
+&lt;h3 id=&#34;grab-the-port-and-ip&#34;&gt;Grab the port and IP&lt;/h3&gt;
 
 &lt;p&gt;Studying &lt;code&gt;inet_listen&lt;/code&gt; source from the kernel, we know that we need to get the &lt;code&gt;inet_sock&lt;/code&gt; from the &lt;code&gt;socket&lt;/code&gt; object. Just copy from the sources, and insert at the beginning of the tracer:&lt;/p&gt;
 
@@ -383,7 +691,7 @@ while True:
 
 &lt;p&gt;All done, one more piece: We want to get the related container. In the context of networking, that&amp;rsquo;s means we want the network namespace. The network namespace being the building block of containers allowing them to have isolated networks.&lt;/p&gt;
 
-&lt;h3 id=&#34;grab-the-network-namespace-a-forced-introduction-to-perf-events:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Grab the network namespace: a forced introduction to perf events&lt;/h3&gt;
+&lt;h3 id=&#34;grab-the-network-namespace-a-forced-introduction-to-perf-events&#34;&gt;Grab the network namespace: a forced introduction to perf events&lt;/h3&gt;
 
 &lt;p&gt;On the userland, the network namespace can be determined by checking the target of &lt;code&gt;/proc/PID/ns/net&lt;/code&gt;. It should look like &lt;code&gt;net:[4026531957]&lt;/code&gt;. The number between brackets is the inode number of the network namespace. This said, we could grab it by scrapping &amp;lsquo;/proc&amp;rsquo; but this is racy, we may be dealing with short-lived processes. And races are never good. We&amp;rsquo;ll grab the inode number directly from the kernel. Fortunately, that&amp;rsquo;s an easy one:&lt;/p&gt;
 
@@ -481,7 +789,7 @@ Listening on 0 6379 with 128 pending connections in container 4026532165
 Listening on 7f000001 6588 with 1 pending connections in container 4026531957
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;last-word:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Last word&lt;/h3&gt;
+&lt;h3 id=&#34;last-word&#34;&gt;Last word&lt;/h3&gt;
 
 &lt;p&gt;Absolutely everything is now setup to use trigger events from arbitrary function calls in the kernel using eBPF, and you should have seen most of the common pitfalls I hit while learning eBPF. If you want to see the full version of this tool, along with some more tricks like IPv6 support, have a look at &lt;a href=&#34;https://github.com/iovisor/bcc/blob/master/tools/solisten.py&#34;&gt;https://github.com/iovisor/bcc/blob/master/tools/solisten.py&lt;/a&gt;. It&amp;rsquo;s now an official tool, thanks to the support of the bcc team.&lt;/p&gt;
 
@@ -577,9 +885,7 @@ rfb.sendKey(0xffe9, 0);
       <pubDate>Sat, 25 Apr 2015 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2015/04/25/how-i-shrunk-a-docker-image-by-98-8-featuring-fanotify/</guid>
-      <description>
-
-&lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
+      <description>&lt;p&gt;Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &amp;#8220;diet program for Docker Images&amp;#8221; ?&lt;/p&gt;
 
 &lt;p&gt;You can find a couple of pretty decent common-sense powered approach &lt;a href=&#34;https://intercityup.com/blog/downsizing-docker-containers.html&#34;&gt;on the web&lt;/a&gt; like removing well known cache folders, temporary files, installing all superfluous packages and flatten layers if not the full image. There is also the &lt;code&gt;-slim&lt;/code&gt; declination of the official language images.&lt;/p&gt;
 
@@ -588,6 +894,8 @@ rfb.sendKey(0xffe9, 0);
 &lt;p&gt;Whaou! Is there any chance to do something comparable, deterministic with any random application?&lt;/p&gt;
 
 &lt;p&gt;It turns out there could be one. The idea is simple: We could profile the image at run time one way or another to determine which files are ever accessed/opened/&amp;#8230;, then remove all the remaining files. Hmm, sounds promising. Let&amp;rsquo;s PoC it.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Target definition&lt;/strong&gt;:&lt;/p&gt;
 
@@ -862,7 +1170,7 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 
 &lt;p&gt;Resulting Docker image is 83.5 &lt;em&gt;times&lt;/em&gt; smaller&lt;sup&gt;3&lt;/sup&gt;. That&amp;rsquo;s a 98.8% reduction. Looks good to me, I&amp;rsquo;ll accept it. If you agree.&lt;/p&gt;
 
-&lt;h3 id=&#34;last-thought:ed6b7f79feba98b85e08740dab416986&#34;&gt;Last Thought&lt;/h3&gt;
+&lt;h3 id=&#34;last-thought&#34;&gt;Last Thought&lt;/h3&gt;
 
 &lt;p&gt;Like all profiling based method, it will only tell you about what&amp;rsquo;s actually done/used in a specific scenario. For example, try to run &lt;code&gt;/bin/ls -l&lt;/code&gt; in the resulting image and see by yourself. (spoiler: it does not work. Well it does, but not as expected).&lt;/p&gt;
 
@@ -870,7 +1178,7 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 
 &lt;p&gt;If I were to build a production shrinker, I would probably go for a &lt;code&gt;ptrace&lt;/code&gt; based method.&lt;/p&gt;
 
-&lt;h3 id=&#34;footnotes:ed6b7f79feba98b85e08740dab416986&#34;&gt;Footnotes&lt;/h3&gt;
+&lt;h3 id=&#34;footnotes&#34;&gt;Footnotes&lt;/h3&gt;
 
 &lt;ol&gt;
 &lt;li&gt;&lt;p&gt;Let&amp;rsquo;s face the truth: What I really wanted, was experimenting with this syscall. Docker images are more of a (good) pretext.&lt;/p&gt;&lt;/li&gt;
@@ -878,8 +1186,7 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 &lt;li&gt;&lt;p&gt;Actually, one could use &lt;code&gt;FAN_UNLIMITED_QUEUE&lt;/code&gt; well calling &lt;code&gt;fanotify_init&lt;/code&gt; to remove this limitation, provided that the calling process is at least &lt;code&gt;CAP_SYS_ADMIN&lt;/code&gt;&lt;/p&gt;&lt;/li&gt;
 
 &lt;li&gt;&lt;p&gt;That&amp;rsquo;s also 2.4 times smaller that the 6.13MB image I mentioned at the beginning of this post. But the comparison is not fair.&lt;/p&gt;&lt;/li&gt;
-&lt;/ol&gt;
-</description>
+&lt;/ol&gt;</description>
     </item>
     
     <item>
@@ -888,9 +1195,7 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
       <pubDate>Tue, 28 Oct 2014 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</guid>
-      <description>
-
-&lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
+      <description>&lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
 
 &lt;p&gt;[UPDATE 2014-11-19]: IBM is currently porting Docker to gccgo/Power8, see the comments below for more informations.&lt;/p&gt;
 
@@ -899,6 +1204,8 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 &lt;p&gt;Docker is a tool helping developers to build, ship and run code anywhere just like containers helps shipping anything anywhere. It is increasingly used in production to cleanly isolate processes on a same physical machine without the overhead of a Virtual Machine.&lt;/p&gt;
 
 &lt;p&gt;So, let&amp;rsquo;s get started. My goal was to get docker running and, if possible the latest version (it turns out it actually **is** the latest version). The goal was not to make it the shiniest way. That&amp;rsquo;s for later.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;Here is the state of the art:&lt;/p&gt;
 
@@ -931,7 +1238,7 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 &lt;li&gt;celebrate&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;1-get-a-power8-machine:843e6337e67e60d94f17e70050c565c9&#34;&gt;1. Get a Power8 Machine&lt;/h3&gt;
+&lt;h3 id=&#34;1-get-a-power8-machine&#34;&gt;1. Get a Power8 Machine&lt;/h3&gt;
 
 &lt;p&gt;The easiest way to get one is to &lt;a href=&#34;http://labs.runabove.com/power8/&#34;&gt;join RunAbove&amp;rsquo;s public beta&lt;/a&gt; which comes with a $32 Voucher. That&amp;rsquo;s one month worth of Power8.&lt;/p&gt;
 
@@ -942,14 +1249,14 @@ sudo apt-get -y update
 sudo apt-get -y install subversion mercurial git build-essential gccgo-go
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;2-grab-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;2. Grab GCC&lt;/h3&gt;
+&lt;h3 id=&#34;2-grab-gcc&#34;&gt;2. Grab GCC&lt;/h3&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
 svn checkout svn://gcc.gnu.org/svn/gcc/trunk gcc
 # Be *very* patient
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;3-grab-go-dev-power64:843e6337e67e60d94f17e70050c565c9&#34;&gt;3. Grab Go dev.power64&lt;/h3&gt;
+&lt;h3 id=&#34;3-grab-go-dev-power64&#34;&gt;3. Grab Go dev.power64&lt;/h3&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
 hg clone -u release https://code.google.com/p/go
@@ -957,7 +1264,7 @@ cd go
 hg update dev.power64
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;4-patch-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;4. Patch GCC&lt;/h3&gt;
+&lt;h3 id=&#34;4-patch-gcc&#34;&gt;4. Patch GCC&lt;/h3&gt;
 
 &lt;p&gt;GCC&amp;rsquo;s libcgo implementation lakes elf parsing supporting for PPC64 instruction set. As this is required by &lt;code&gt;cgo&lt;/code&gt;, we&amp;rsquo;ll get it from Go itself.&lt;/p&gt;
 
@@ -1014,7 +1321,7 @@ cp go/src/debug/elf/elf.go gcc/libgo/go/debug/elf/
 
 &lt;p&gt;If you&amp;rsquo;re planning on making a break, just wait one more minute. We&amp;rsquo;ll launch GCC&amp;rsquo;s build&amp;#8230;&lt;/p&gt;
 
-&lt;h3 id=&#34;5-build-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;5. Build GCC&lt;/h3&gt;
+&lt;h3 id=&#34;5-build-gcc&#34;&gt;5. Build GCC&lt;/h3&gt;
 
 &lt;p&gt;As usual, except that we built it out of tree.&lt;/p&gt;
 
@@ -1036,7 +1343,7 @@ echo &#34;/opt/gcc-trunk/lib64&#34; | sudo tee /etc/ld.so.conf.d/gcc-trunk.conf
 sudo ldconfig
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;6-build-and-install-cgo:843e6337e67e60d94f17e70050c565c9&#34;&gt;6. Build (and install) CGO&lt;/h3&gt;
+&lt;h3 id=&#34;6-build-and-install-cgo&#34;&gt;6. Build (and install) CGO&lt;/h3&gt;
 
 &lt;p&gt;Cgo is the component bridging the gap between Go and C world. It is notably required to build the devmapper driver of Docker.&lt;/p&gt;
 
@@ -1059,7 +1366,7 @@ sudo cp * /usr/src/cmd/cgo
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;export CGO_ENABLED=1
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;7-grab-docker-1-3-0:843e6337e67e60d94f17e70050c565c9&#34;&gt;7. Grab Docker 1.3.0&lt;/h3&gt;
+&lt;h3 id=&#34;7-grab-docker-1-3-0&#34;&gt;7. Grab Docker 1.3.0&lt;/h3&gt;
 
 &lt;p&gt;This is the last stable release at the time of writing. Let&amp;rsquo;s use it.&lt;/p&gt;
 
@@ -1077,7 +1384,7 @@ export PATH=/opt/gcc-trunk/bin/:$PATH
 export GOPATH=/go:/go/src/github.com/docker/docker/vendor
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;8-build-docker:843e6337e67e60d94f17e70050c565c9&#34;&gt;8. Build Docker&lt;/h3&gt;
+&lt;h3 id=&#34;8-build-docker&#34;&gt;8. Build Docker&lt;/h3&gt;
 
 &lt;p&gt;Just issue &amp;#8216;docker build&amp;rsquo;. I&amp;rsquo;m kidding.&lt;/p&gt;
 
@@ -1201,8 +1508,7 @@ cd docker
 sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
 &lt;/pre&gt;
 
-&lt;p&gt;And we&amp;rsquo;re done !&lt;/p&gt;
-</description>
+&lt;p&gt;And we&amp;rsquo;re done !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -1218,6 +1524,8 @@ sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
 &lt;p&gt;For once we won&amp;rsquo;t start with the addition of the &amp;#8220;CLONE_NEWNET&amp;#8221; flag to the &amp;#8220;clone&amp;#8221; syscall. I keep it for later. For now, IMHO, the best way to get started with this namespace is the incredibly mighty &amp;#8220;&lt;a href=&#34;http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2&#34; title=&#34;IPRoute2 official website&#34;&gt;iproute2&lt;/a&gt;&amp;#8221; net-admin swiss army knife. If you don&amp;rsquo;t have it (yet) I highly encourage you to install it. Nonetheless, if don&amp;rsquo;t want to / can&amp;rsquo;t, you may as well skip the explanation part and go straight to the full code sample.&lt;/p&gt;
 
 &lt;p&gt;First, let&amp;rsquo;s see what network interfaces we have at the moment:&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;ip link list&lt;/pre&gt;
 
@@ -1391,8 +1699,7 @@ jean-tiare@jeantiare-Ubuntu:~$
 
 &lt;p&gt;If you feel that running a bunch of &lt;code&gt;system()&lt;/code&gt; calls into a production system is a dirty hack (and it is !), you could have look at the &lt;code&gt;rtnetlink&lt;/code&gt; kernel communication interface. This is the barely documented API used by iproute under the hood.&lt;/p&gt;
 
-&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NET&amp;#8221; namespace. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. With the next article we&amp;rsquo;ll explore the last and most tricky namespace &amp;#8220;USER&amp;#8221;. Thanks for reading !&lt;/p&gt;
-</description>
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NET&amp;#8221; namespace. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. With the next article we&amp;rsquo;ll explore the last and most tricky namespace &amp;#8220;USER&amp;#8221;. Thanks for reading !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -1412,6 +1719,8 @@ jean-tiare@jeantiare-Ubuntu:~$
 &lt;p&gt;Once activated, any (un)mount operations from the child will only affect the child and vice-versa.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s start experimenting. In the previous example, just activate the NS:&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;pre class=&#34;brush: cpp; first-line: 43; title: activate-ns-snippet.c; notranslate&#34; title=&#34;activate-ns-snippet.c&#34;&gt;int child_pid = clone(child_main, child_stack+STACK_SIZE, 
       CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
@@ -1500,8 +1809,7 @@ int main()
 
 &lt;p&gt;To leverage the power of this technique you could now prepare and enter a chroot to further enhance the isolation. Steps involved would be to prepare a &amp;#8220;debootstrap&amp;#8221;, remount some essentials filesystems like &amp;#8220;/tmp&amp;#8221;, &amp;#8220;/dev/shm&amp;#8221;, &amp;#8220;/proc&amp;#8221;, optionally all or part of &amp;#8220;/dev&amp;#8221; and &amp;#8220;/sys&amp;#8221; and then &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/2/chdir&#34; title=&#34;man chdir&#34;&gt;chdir&lt;/a&gt;&amp;#8221; + &amp;#8220;&lt;a href=&#34;http://linux.die.net/man/1/chroot&#34; title=&#34;man Chroot&#34;&gt;chroot&lt;/a&gt;&amp;#8220;. I&amp;rsquo;ll leave it as an exercise for the reader.&lt;/p&gt;
 
-&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NS&amp;#8221; namespace. With the next article we&amp;rsquo;ll explore an incredibly powerful namespace &amp;#8220;NET&amp;#8221;. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. Thanks for reading !&lt;/p&gt;
-</description>
+&lt;p&gt;That&amp;rsquo;s all for &amp;#8220;NS&amp;#8221; namespace. With the next article we&amp;rsquo;ll explore an incredibly powerful namespace &amp;#8220;NET&amp;#8221;. It&amp;rsquo;s so powerful that it&amp;rsquo;s used as the foundation of the &lt;a href=&#34;http://cs.itd.nrl.navy.mil/work/core/index.php&#34;&gt;&amp;#8220;CORE&amp;#8221; lightweight network simulator&lt;/a&gt;. Thanks for reading !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -1519,6 +1827,8 @@ int main()
 &lt;p&gt;Activating it is only a matter of adding &amp;#8220;CLONE_NEWPID&amp;#8221; to the &amp;#8220;clone&amp;#8221; call. It requires no additional setup. It may also be freely combined with other namespaces.&lt;/p&gt;
 
 &lt;p&gt;Once activated, the result of getpid() from child process will invariably be &amp;#8220;1&amp;#8221;.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;But, WAIT! I know have to &amp;#8220;1&amp;#8221; process right ? What about process management ?&lt;/p&gt;
 
@@ -1641,8 +1951,7 @@ diskstats  kcore        mtrr           sysrq-trigger
 Error, do this: mount -t proc proc /proc
 &lt;/pre&gt;
 
-&lt;p&gt;That&amp;rsquo;s all for PID namespace. With the next article, we&amp;rsquo;ll be able to re-mount /proc itself and hence fix &amp;#8220;top&amp;#8221; and any similar tools without breaking the parent namespace. Thanks for reading !&lt;/p&gt;
-</description>
+&lt;p&gt;That&amp;rsquo;s all for PID namespace. With the next article, we&amp;rsquo;ll be able to re-mount /proc itself and hence fix &amp;#8220;top&amp;#8221; and any similar tools without breaking the parent namespace. Thanks for reading !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -1660,6 +1969,8 @@ Error, do this: mount -t proc proc /proc
 &lt;p&gt;Once activated, you are free to create any IPC as usual, even named one, without any risk of collision with other applications.&lt;/p&gt;
 
 &lt;p&gt;But, WAIT! My &amp;#8220;parent process&amp;#8221; is now isolated from my &amp;#8220;child process&amp;#8221; right ? What if I need to do some kind of communication between them ?&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;That&amp;rsquo;s a good question. A common use case for this is you need some additional setup from the parent before letting the child take full control. Fortunately, not everything is isolated and clone shares memory space with its parent so that you can still use:&lt;/p&gt;
 
@@ -1776,8 +2087,7 @@ int main()
 
 &lt;p&gt;That&amp;rsquo;s all for IPC. IPC in itself is nothing complicated. It just becomes tricky when it comes to parent/child synchronization as we will do later. This is where the &amp;#8220;pipe&amp;#8221; technique comes as a handy solution. It actually works and is used in production.&lt;/p&gt;
 
-&lt;p&gt;The next article will be on my favorite one (as sysadmin): PID namespaces.&lt;/p&gt;
-</description>
+&lt;p&gt;The next article will be on my favorite one (as sysadmin): PID namespaces.&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -1805,6 +2115,8 @@ int main()
 &lt;p&gt;Let&amp;rsquo;s start.&lt;/p&gt;
 
 &lt;p&gt;What&amp;rsquo;s really interesting with Linux&amp;rsquo; approach to containers is that precisely it does &lt;em&gt;not&lt;/em&gt; provide a &amp;#8220;back-box/magical&amp;#8221; container solution but instead provides individual isolation building blocks called &amp;#8220;Namespaces&amp;#8221;, new one appearing from releases to release. It also allows you to use solely the one you actually need for your specific application.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;As of 3.12, Linux supports 6 Namespaces:&lt;/p&gt;
 
@@ -1904,8 +2216,7 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
 
 &lt;p&gt;And that&amp;rsquo;s all folks! (for this first article, at least). Getting started with namespaces is pretty damn easy: clone, set appropriate &amp;#8220;CLONE_NEW*&amp;#8221; flags, setup the new env, done!&lt;/p&gt;
 
-&lt;p&gt;Would like to go further ? You might be interested in reading also the &lt;a href=&#34;http://lwn.net/Articles/531114/&#34; title=&#34;Linux namespaces, LWN&#34;&gt;excellent LWN article series on namespaces&lt;/a&gt;.&lt;/p&gt;
-</description>
+&lt;p&gt;Would like to go further ? You might be interested in reading also the &lt;a href=&#34;http://lwn.net/Articles/531114/&#34; title=&#34;Linux namespaces, LWN&#34;&gt;excellent LWN article series on namespaces&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -1914,9 +2225,7 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
       <pubDate>Sat, 30 Nov 2013 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2013/11/30/gerer-son-site-avec-git-sur-un-serveur-mutualise/</guid>
-      <description>
-
-&lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
+      <description>&lt;p&gt;Que l&amp;rsquo;on souhaite disposer simplement d&amp;rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &amp;#8220;d&amp;rsquo;Intégration Continue&amp;#8221; (&amp;#8220;Continuous Integration&amp;#8221; en anglais ou &amp;#8220;CI&amp;#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Prérequis&lt;/strong&gt;:&lt;/p&gt;
 
@@ -1926,7 +2235,9 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
 &lt;li&gt;Connaissances de bases de SSH/Bash&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;première-étape-initialiser-un-dépôt-distant:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Première étape: Initialiser un dépôt distant&lt;/h2&gt;
+&lt;h2 id=&#34;première-étape-initialiser-un-dépôt-distant&#34;&gt;Première étape: Initialiser un dépôt distant&lt;/h2&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Dans votre &amp;#8220;/homez.123/&lt;votre identifiant&gt;&amp;#8221;:&lt;/strong&gt;&lt;/p&gt;
 
@@ -1936,7 +2247,7 @@ jean-tiare@jeantiare-Ubuntu:~/blog$ # outside the container
 
 &lt;p&gt;Cette commande initialise un dépôt git &amp;#8220;nue&amp;#8221; (bare) dans le dossier `site-perso.git`. Aucune copie de travail ne sera présente sur le serveur. Et c&amp;rsquo;est probablement ce que vous voulez 😉&lt;/p&gt;
 
-&lt;h2 id=&#34;deuxième-étape-clone-local-et-première-publication:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Deuxième étape: Clone local et première publication&lt;/h2&gt;
+&lt;h2 id=&#34;deuxième-étape-clone-local-et-première-publication&#34;&gt;Deuxième étape: Clone local et première publication&lt;/h2&gt;
 
 &lt;p&gt;&lt;strong&gt;Clone local:&lt;/strong&gt;&lt;/p&gt;
 
@@ -1969,7 +2280,7 @@ git commit -am &#34;ajoute la page d&#39;accueil&#34;
 
 &lt;p&gt;On a maintenant un site avec une page statique versionné. Une copie du dépôt GIT se trouve directement sur le serveur web. Toute personne disposant d&amp;rsquo;un accès à ce compte SSH aura la possibilité de contribuer au dépôt.&lt;/p&gt;
 
-&lt;h2 id=&#34;troisième-étape-optionnelle-accès-collaborateurs-et-public:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Troisième étape (optionnelle): Accès collaborateurs et Public&lt;/h2&gt;
+&lt;h2 id=&#34;troisième-étape-optionnelle-accès-collaborateurs-et-public&#34;&gt;Troisième étape (optionnelle): Accès collaborateurs et Public&lt;/h2&gt;
 
 &lt;p&gt;&lt;strong&gt;Accès en écriture pour les collaborateurs, restreint à GIT:&lt;/strong&gt;&lt;/p&gt;
 
@@ -2000,7 +2311,7 @@ ln -s ../../site-perso.git ./
 
 &lt;p&gt;Votre dépôt peut maintenant être cloné avec &lt;code&gt;git clone http://www.example.com/public-git/site-perso.git&lt;/code&gt;. Pour révoquer l&amp;rsquo;accès, il suffit de supprimer le lien dans &lt;code&gt;www/public-git/site-perso.git&lt;/code&gt;. Il n&amp;rsquo;est pas nécessaire de supprimer le &amp;#8220;hook&amp;#8221;. Pour ajouter une authentification minimale, la méthode habituelle par &amp;#8220;htaccess&amp;#8221; pourra être employée.&lt;/p&gt;
 
-&lt;h2 id=&#34;quatrième-étape-optionnelle-déploiement-continue-oh-yeah:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Quatrième étape (optionnelle): Déploiement continue (Oh Yeah !)&lt;/h2&gt;
+&lt;h2 id=&#34;quatrième-étape-optionnelle-déploiement-continue-oh-yeah&#34;&gt;Quatrième étape (optionnelle): Déploiement continue (Oh Yeah !)&lt;/h2&gt;
 
 &lt;p&gt;La crème de la crème avec GIT, ce sont les &amp;#8220;hook&amp;#8221; que je traduirai par &amp;#8220;prises&amp;#8221; en français. Ce sont des points sur lesquels on se branche aisément pour personnaliser un traitement. On a déjà utilisé l&amp;rsquo;un de ceux qui sont fourni à titre d&amp;rsquo;exemple dans tout dépôt GIT pour le rendre disponible en HTTP.&lt;/p&gt;
 
@@ -2072,12 +2383,11 @@ git push
 #    2f8b5ca..75c770c  prod -&amp;gt; prod
 &lt;/pre&gt;
 
-&lt;h2 id=&#34;conclusion:9a61f479ec3b884c96ec71a3289973af&#34;&gt;Conclusion&lt;/h2&gt;
+&lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
 
 &lt;p&gt;GIT est incroyablement puissant, mais ça vous le saviez déjà. Bien maîtrisé, il permet de mettre en place à moindre frais une véritable solution de déploiement continue et de travail collaboratif pour un site Web. Un grand &amp;#8220;plus&amp;#8221; en terme de professionnalisme. D&amp;rsquo;autre part, cette solution à l&amp;rsquo;immense avantage de fonctionner avec une offre d&amp;rsquo;hébergement mutualisé en disposant d&amp;rsquo;un simple accès SSH+GIT.&lt;/p&gt;
 
-&lt;p&gt;Happy GITing !&lt;/p&gt;
-</description>
+&lt;p&gt;Happy GITing !&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -2086,7 +2396,7 @@ git push
       <pubDate>Wed, 03 Jul 2013 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2013/07/03/wordpress-from-localhost-to-production/</guid>
-      <description>&lt;p&gt;Yesterday, a friend of mine asked me urgent help. He fully developed a WP based website for a research project on &lt;em&gt;localhost/his_website&lt;/em&gt;. As WP stores &lt;em&gt;full links&lt;/em&gt; pretty much everywhere in the database, his website was obviously completely broken when he moved it to production on &lt;em&gt;his_website.com&lt;/em&gt;.&lt;/p&gt;
+      <description>&lt;p&gt;Yesterday, a friend of mine asked me urgent help. He fully developed a WP based website for a research project on _localhost/his&lt;em&gt;website&lt;/em&gt;. As WP stores &lt;em&gt;full links&lt;/em&gt; pretty much everywhere in the database, his website was obviously completely broken when he moved it to production on _his&lt;em&gt;website.com&lt;/em&gt;.&lt;/p&gt;
 
 &lt;p&gt;I quickly put some PHP lines of codes together to fix the whole DB at once. Feel free to re-use it in your own projects.&lt;/p&gt;
 
@@ -2208,41 +2518,7 @@ chmod +x /root/server/backup.d/42
 
 &lt;p&gt;Beware that there is a major &lt;strong&gt;drawback&lt;/strong&gt; with this method. Backing-up &lt;strong&gt;/var/lib/mysql&lt;/strong&gt; with this method will probably result in &lt;strong&gt;data corruption&lt;/strong&gt; as the tables are not locked. Again, most articles forgets to mention this&amp;#8230; You can workaround this by first running &amp;#8216;mysqldump&amp;rsquo; then archiving the resulting file. This is left as an exercise to the reader 😉&lt;/p&gt;
 
-&lt;p&gt;In a next article, I will try yo address the &lt;strong&gt;restore&lt;/strong&gt; issue.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Google HTTPS SEO (Nginx)</title>
-      <link>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</link>
-      <pubDate>Fri, 07 Sep 2012 00:00:00 +0000</pubDate>
-      
-      <guid>http://blog.yadutaf.fr/2012/09/07/google-https-seo-nginx/</guid>
-      <description>&lt;p&gt;A couple of days ago, well, 5 to be precise, I moved this blog to a new server, new Nginx based stack. In the move, I decided to enforce secured HTTPS force all my services, including this blog. Privacy matters!&lt;/p&gt;
-
-&lt;p&gt;Surprisingly enough, I suddenly disappeared from Google at the very same time.&lt;/p&gt;
-
-&lt;p&gt;It appears to be linked to the HTTPS move. Disabling the systematic redirection to the secured protocol made it happy again.&lt;/p&gt;
-
-&lt;p&gt;However, I still want to be automatically moved to the secure version every time I log into the backend. All WordPress admin pages starts with &amp;#8216;/wp-&amp;#8216;, it is then straight forward to make Nginx clever about security. Here is a nice snippet to put into the relevant &amp;#8216;server&amp;rsquo; section:&lt;/p&gt;
-
-&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;location /wp-
-    {
-      if ($ssl_protocol = &#34;&#34;)
-      {
-          rewrite ^   https://$server_name$request_uri? permanent;
-      }
-    }
-&lt;/pre&gt;
-
-&lt;p&gt;instead of only&lt;/p&gt;
-
-&lt;pre class=&#34;brush: cpp; title: ; notranslate&#34; title=&#34;&#34;&gt;if ($ssl_protocol = &#34;&#34;)
-    {
-        rewrite ^   https://$server_name$request_uri? permanent;
-    }
-&lt;/pre&gt;
-</description>
+&lt;p&gt;In a next article, I will try yo address the &lt;strong&gt;restore&lt;/strong&gt; issue.&lt;/p&gt;</description>
     </item>
     
   </channel>

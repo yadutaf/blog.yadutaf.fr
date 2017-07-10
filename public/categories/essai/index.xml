@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Essai on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/categories/essai/</link>
+    <link>http://blog.yadutaf.fr/categories/essai/index.xml</link>
     <description>Recent content in Essai on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 14 Oct 2012 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/categories/essai/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -35,7 +35,7 @@
 
 &lt;p&gt;Quoi qu’étant, à titre strictement personnel, fermement opposé au communisme, je ne voudrais certainement pas que cette opposition se fasse au prix de ma lucidité et de ma capacité à prendre du recul.&lt;/p&gt;
 
-&lt;p&gt;Avez-vous observé la tendance actuelle en matière de modèles économiques dans le domaine des services ? À vrai dire, nous avons tellement le nez dessus que nous ne le voyons même plus.&lt;/p&gt;
+&lt;p&gt;Avez-vous observé la tendance actuelle en matière de modèles économiques dans le domaine des services ? À vrai dire, nous avons tellement le nez dessus que nous ne le voyons même plus. &lt;/p&gt;
 
 &lt;p&gt;Si le système politique communiste doit, pour survivre se doter d&amp;rsquo;un système économique libérale, J&amp;rsquo;ai bien peur que, pour sa survie, notre système économique ait crût indispensable de se doter d&amp;rsquo;une politique digne des pires régimes communistes.&lt;/p&gt;
 
@@ -49,8 +49,7 @@
 
 &lt;p&gt;Du coté de la vidéo rien n&amp;rsquo;est gagné encore. S&amp;rsquo;il est encore possible de partager les supports physiques, il s&amp;rsquo;en est fallu de peu pour que ce droit ne survive pas à l&amp;rsquo;arrivée du blueray. En effet, il était initialement prévu que les platines déclarent auprès d&amp;rsquo;un service centralisée toute tentative de lecture. Celles-ci seraient automatiquement refusées si ce même support avait déjà été joué sur une autre platine et cela même si son propriétaire était la même personne. On imagine également les conséquences en termes de potentialité de censure à posteriori. Si ce système a été abandonné pour ces supports, il n&amp;rsquo;en est pas moins utilisé dans les consoles de jeux, mais c&amp;rsquo;est encore une autre histoire.&lt;/p&gt;
 
-&lt;p&gt;L&amp;rsquo;arrivée du numérique dans le domaine du partage de la connaissance et de la culture a permis d&amp;rsquo; accélérer grandement sa diffusion et c&amp;rsquo;est  une chose vraiment  remarquable. Je trouve également qu&amp;rsquo;il est juste que l&amp;rsquo;auteur d&amp;rsquo;une œuvre, fut -elle numérique, puisse être rémunéré à hauteur de son travail s&amp;rsquo;il en exprime le souhait. Pour cela, encore faudrait- il qu&amp;rsquo;on cesse de multiplier les barrières à l’achat tel que le prix ou les contraintes techniques imposées par les verrous numériques (DRM). La grande majorité des gens ne sont pas des voleurs. Si l&amp;rsquo;on cesse de multiplier les barrières de l&amp;rsquo;offre légale, peut être pourra elle enfin se développer. Au fond, j&amp;rsquo;ai d&amp;rsquo;abord besoin que l&amp;rsquo;on me fasse confiance et  qu&amp;rsquo;on me laisse respirer.&lt;/p&gt;
-</description>
+&lt;p&gt;L&amp;rsquo;arrivée du numérique dans le domaine du partage de la connaissance et de la culture a permis d&amp;rsquo; accélérer grandement sa diffusion et c&amp;rsquo;est  une chose vraiment  remarquable. Je trouve également qu&amp;rsquo;il est juste que l&amp;rsquo;auteur d&amp;rsquo;une œuvre, fut -elle numérique, puisse être rémunéré à hauteur de son travail s&amp;rsquo;il en exprime le souhait. Pour cela, encore faudrait- il qu&amp;rsquo;on cesse de multiplier les barrières à l’achat tel que le prix ou les contraintes techniques imposées par les verrous numériques (DRM). La grande majorité des gens ne sont pas des voleurs. Si l&amp;rsquo;on cesse de multiplier les barrières de l&amp;rsquo;offre légale, peut être pourra elle enfin se développer. Au fond, j&amp;rsquo;ai d&amp;rsquo;abord besoin que l&amp;rsquo;on me fasse confiance et  qu&amp;rsquo;on me laisse respirer.&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -65,7 +64,7 @@
 
 &lt;p&gt;On ne présente plus l&amp;rsquo;AFNIC, actuel dépositaire de la gestion du &amp;#8216;.fr&amp;rsquo;. En revanche, [Pour peu que l&amp;rsquo;on s’intéresse à l&amp;rsquo;IT en France, il est difficile de passer à coté de &lt;a href=&#34;http://www.industrie.gouv.fr/tic/consultation-publique/domaines-nationaux/aac-domaines-internet.php&#34;&gt;l&amp;rsquo;appel d&amp;rsquo;offre qui oppose l&amp;rsquo;AFNIC et un nouvel entrant, FRNIC&lt;/a&gt; dans la gestion du &amp;#8216;.fr&amp;rsquo; et les 10 autres domaines français.&lt;/p&gt;
 
-&lt;p&gt;Avant de rentrer plus avant dans le vif du sujet, je tiens à insister sur un point: mes propos n&amp;rsquo;engagent que moi. Ils relèvent plus d&amp;rsquo;une tentative de réflexion indépendante que d&amp;rsquo;une analyse poussée.&lt;/p&gt;
+&lt;p&gt;Avant de rentrer plus avant dans le vif du sujet, je tiens à insister sur un point: mes propos n&amp;rsquo;engagent que moi. Ils relèvent plus d&amp;rsquo;une tentative de réflexion indépendante que d&amp;rsquo;une analyse poussée.&lt;!--more--&gt;&lt;/p&gt;
 
 &lt;p&gt;On ne présente plus l&amp;rsquo;AFNIC, actuel dépositaire de la gestion du &amp;#8216;.fr&amp;rsquo;. En revanche,]&lt;a href=&#34;http://www.frnic.fr/&#34; title=&#34;Le nouveau &#39;.fr&#39;&#34;&gt;2&lt;/a&gt; est beaucoup plus discret. La plupart des articles présentant frnic qui circulent sur Twitter le présentent uniquement à partir de son (maigre) site internet et d&amp;rsquo;interviews de son contact, &amp;#8216;Guillaume Buffet&amp;rsquo;. Ces articles se contentent de citer faits et déclarations sans prendre de recul.&lt;/p&gt;
 
@@ -73,11 +72,11 @@
 
 &lt;p&gt;L&amp;rsquo;Afnic, en place depuis fin 1997 a développé une véritable expertise de son métier. &lt;a href=&#34;http://www.bortzmeyer.org/&#34;&gt;Stéphane Bortmeyer&lt;/a&gt; en est d&amp;rsquo;ailleurs une figure emblématique. Elle a aussi largement investi dans ses services et infrastructures. Elle propose par exemple le &lt;a href=&#34;http://www.lemondeinformatique.fr/actualites/lire-l-afnic-evangelise-sur-le-dnssec-31672.html&#34;&gt;DNSSEC&lt;/a&gt; depuis septembre 2010 pour une sécurité maximale et s&amp;rsquo;appuie sur le méthode [Pour peu que l&amp;rsquo;on s’intéresse à l&amp;rsquo;IT en France, il est difficile de passer à coté de &lt;a href=&#34;http://www.industrie.gouv.fr/tic/consultation-publique/domaines-nationaux/aac-domaines-internet.php&#34;&gt;l&amp;rsquo;appel d&amp;rsquo;offre qui oppose l&amp;rsquo;AFNIC et un nouvel entrant, FRNIC&lt;/a&gt; dans la gestion du &amp;#8216;.fr&amp;rsquo; et les 10 autres domaines français.&lt;/p&gt;
 
-&lt;p&gt;Avant de rentrer plus avant dans le vif du sujet, je tiens à insister sur un point: mes propos n&amp;rsquo;engagent que moi. Ils relèvent plus d&amp;rsquo;une tentative de réflexion indépendante que d&amp;rsquo;une analyse poussée.&lt;/p&gt;
+&lt;p&gt;Avant de rentrer plus avant dans le vif du sujet, je tiens à insister sur un point: mes propos n&amp;rsquo;engagent que moi. Ils relèvent plus d&amp;rsquo;une tentative de réflexion indépendante que d&amp;rsquo;une analyse poussée.&lt;!--more--&gt;&lt;/p&gt;
 
 &lt;p&gt;On ne présente plus l&amp;rsquo;AFNIC, actuel dépositaire de la gestion du &amp;#8216;.fr&amp;rsquo;. En revanche, [Pour peu que l&amp;rsquo;on s’intéresse à l&amp;rsquo;IT en France, il est difficile de passer à coté de &lt;a href=&#34;http://www.industrie.gouv.fr/tic/consultation-publique/domaines-nationaux/aac-domaines-internet.php&#34;&gt;l&amp;rsquo;appel d&amp;rsquo;offre qui oppose l&amp;rsquo;AFNIC et un nouvel entrant, FRNIC&lt;/a&gt; dans la gestion du &amp;#8216;.fr&amp;rsquo; et les 10 autres domaines français.&lt;/p&gt;
 
-&lt;p&gt;Avant de rentrer plus avant dans le vif du sujet, je tiens à insister sur un point: mes propos n&amp;rsquo;engagent que moi. Ils relèvent plus d&amp;rsquo;une tentative de réflexion indépendante que d&amp;rsquo;une analyse poussée.&lt;/p&gt;
+&lt;p&gt;Avant de rentrer plus avant dans le vif du sujet, je tiens à insister sur un point: mes propos n&amp;rsquo;engagent que moi. Ils relèvent plus d&amp;rsquo;une tentative de réflexion indépendante que d&amp;rsquo;une analyse poussée.&lt;!--more--&gt;&lt;/p&gt;
 
 &lt;p&gt;On ne présente plus l&amp;rsquo;AFNIC, actuel dépositaire de la gestion du &amp;#8216;.fr&amp;rsquo;. En revanche,]&lt;a href=&#34;http://www.frnic.fr/&#34; title=&#34;Le nouveau &#39;.fr&#39;&#34;&gt;2&lt;/a&gt; est beaucoup plus discret. La plupart des articles présentant frnic qui circulent sur Twitter le présentent uniquement à partir de son (maigre) site internet et d&amp;rsquo;interviews de son contact, &amp;#8216;Guillaume Buffet&amp;rsquo;. Ces articles se contentent de citer faits et déclarations sans prendre de recul.&lt;/p&gt;
 
@@ -93,8 +92,7 @@
 
 &lt;p&gt;Quoiqu&amp;rsquo;il en soit, la décision finale appartient au prochain ministre de l’économie, des finances et de l’industrie.&lt;/p&gt;
 
-&lt;p&gt;Soutenir l&amp;rsquo;AFNIC: &lt;a href=&#34;http://je-soutiens-afnic.fr/&#34;&gt;http://je-soutiens-afnic.fr/&lt;/a&gt;&lt;/p&gt;
-</description>
+&lt;p&gt;Soutenir l&amp;rsquo;AFNIC: &lt;a href=&#34;http://je-soutiens-afnic.fr/&#34;&gt;http://je-soutiens-afnic.fr/&lt;/a&gt;&lt;/p&gt;</description>
     </item>
     
   </channel>

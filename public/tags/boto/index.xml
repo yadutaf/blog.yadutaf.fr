@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Boto on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/boto/</link>
+    <link>http://blog.yadutaf.fr/tags/boto/index.xml</link>
     <description>Recent content in Boto on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 11 Oct 2012 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/boto/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -31,8 +31,7 @@
 
 &lt;p&gt;Last advice: always keep profiling informations. I was asked for the &amp;#8216;TransactionID&amp;rsquo; and suddenly felt stupid as we have none. Bad luck. If you use the great &lt;a href=&#34;http://docs.pythonboto.org/en/latest/index.html&#34; title=&#34;Python Boto library&#34;&gt;Boto library&lt;/a&gt;, do not forget to configure &amp;#8216;boto.perflog&amp;rsquo;, I contributed it for this very purpose &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;Oh, If you read this down to that point, you may be interested in some &lt;a href=&#34;https://blog.jtlebi.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/&#34; title=&#34;Common DynamoDB questions/misconceptions/recipes&#34;&gt;common DynamoDB recipies&lt;/a&gt; too.&lt;/p&gt;
-</description>
+&lt;p&gt;Oh, If you read this down to that point, you may be interested in some &lt;a href=&#34;https://blog.jtlebi.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/&#34; title=&#34;Common DynamoDB questions/misconceptions/recipes&#34;&gt;common DynamoDB recipies&lt;/a&gt; too.&lt;/p&gt;</description>
     </item>
     
   </channel>

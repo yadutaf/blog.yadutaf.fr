@@ -109,7 +109,7 @@
 
 <p>If you are not familiar with eBPF or linux tracing, you really should read the full post. It tries to progressively go through the pitfalls I stumbled unpon while playing around with bcc / eBPF while saving you a lot of the time I spent searching and digging.</p>
 
-<h3 id="a-note-on-push-vs-pull-in-a-linux-world:30fe7a87f2e63f2b769ee3edffa56012">A note on push vs pull in a Linux world</h3>
+<h3 id="a-note-on-push-vs-pull-in-a-linux-world">A note on push vs pull in a Linux world</h3>
 
 <p>When I started to work on containers, I was wondering how we could update a load balancer configuration dynamically based on actual system state. A common strategy, which works, it to let the container orchestrator trigger a load balancer configuration update whenever it starts a container and then let the load balancer poll the container until some health check passes. It may be a simple &ldquo;SYN&rdquo; test.</p>
 
@@ -132,7 +132,7 @@
 
 <p>Ideally, we&rsquo;d need a generic way to do it. How?</p>
 
-<h3 id="kernel-tracing-and-ebpf-a-bit-of-history:30fe7a87f2e63f2b769ee3edffa56012">Kernel tracing and eBPF, a bit of history</h3>
+<h3 id="kernel-tracing-and-ebpf-a-bit-of-history">Kernel tracing and eBPF, a bit of history</h3>
 
 <p>Until recently the only way was to patch the kernel or resort on SystemTap. <a href="https://en.wikipedia.org/wiki/SystemTap">SytemTap</a> is a tracing Linux system. In a nutshell, it provides a DSL which is then compiled into a kernel module which is then live-loaded into the running kernel. Except that some production system disable dynamic module loading for security reasons. Including the one I was working on at that time. The other way would be to patch the kernel to trigger some events, probably based on netlink. This is not really convenient. Kernel hacking come with downsides including &ldquo;interesting&rdquo; new &ldquo;features&rdquo; and increased maintenance burden.</p>
 
@@ -144,7 +144,7 @@
 
 <p>Let&rsquo;s get started.</p>
 
-<h3 id="hello-from-from-inet-listen:30fe7a87f2e63f2b769ee3edffa56012">Hello from from <code>inet_listen</code></h3>
+<h3 id="hello-from-from-inet-listen">Hello from from <code>inet_listen</code></h3>
 
 <p>As writing assembly is not the most convenient task, even for the best of us, we&rsquo;ll use <a href="https://github.com/iovisor/bcc">bcc</a>. bcc is a collection of tools based on LLVM and Python abstracting the underlying machinery. Probes are written in C and the results can be exploited from python allowing to easily write non trivial applications.</p>
 
@@ -197,7 +197,7 @@ ubuntu@bcc:~$ nc -l 0 4242
 
 <p>Yay!</p>
 
-<h3 id="grab-the-backlog:30fe7a87f2e63f2b769ee3edffa56012">Grab the backlog</h3>
+<h3 id="grab-the-backlog">Grab the backlog</h3>
 
 <p>Now, let&rsquo;s print some easily accessible data. Say the &ldquo;backlog&rdquo;. The backlog is the number of pending established TCP connections, pending to be <code>accept()</code>ed.</p>
 
@@ -216,7 +216,7 @@ ubuntu@bcc:~$ nc -l 0 4242
 
 <p>Easy hue? Now let&rsquo;s get the port.</p>
 
-<h3 id="grab-the-port-and-ip:30fe7a87f2e63f2b769ee3edffa56012">Grab the port and IP</h3>
+<h3 id="grab-the-port-and-ip">Grab the port and IP</h3>
 
 <p>Studying <code>inet_listen</code> source from the kernel, we know that we need to get the <code>inet_sock</code> from the <code>socket</code> object. Just copy from the sources, and insert at the beginning of the tracer:</p>
 
@@ -301,7 +301,7 @@ while True:
 
 <p>All done, one more piece: We want to get the related container. In the context of networking, that&rsquo;s means we want the network namespace. The network namespace being the building block of containers allowing them to have isolated networks.</p>
 
-<h3 id="grab-the-network-namespace-a-forced-introduction-to-perf-events:30fe7a87f2e63f2b769ee3edffa56012">Grab the network namespace: a forced introduction to perf events</h3>
+<h3 id="grab-the-network-namespace-a-forced-introduction-to-perf-events">Grab the network namespace: a forced introduction to perf events</h3>
 
 <p>On the userland, the network namespace can be determined by checking the target of <code>/proc/PID/ns/net</code>. It should look like <code>net:[4026531957]</code>. The number between brackets is the inode number of the network namespace. This said, we could grab it by scrapping &lsquo;/proc&rsquo; but this is racy, we may be dealing with short-lived processes. And races are never good. We&rsquo;ll grab the inode number directly from the kernel. Fortunately, that&rsquo;s an easy one:</p>
 
@@ -399,7 +399,7 @@ Listening on 0 6379 with 128 pending connections in container 4026532165
 Listening on 7f000001 6588 with 1 pending connections in container 4026531957
 </code></pre>
 
-<h3 id="last-word:30fe7a87f2e63f2b769ee3edffa56012">Last word</h3>
+<h3 id="last-word">Last word</h3>
 
 <p>Absolutely everything is now setup to use trigger events from arbitrary function calls in the kernel using eBPF, and you should have seen most of the common pitfalls I hit while learning eBPF. If you want to see the full version of this tool, along with some more tricks like IPv6 support, have a look at <a href="https://github.com/iovisor/bcc/blob/master/tools/solisten.py">https://github.com/iovisor/bcc/blob/master/tools/solisten.py</a>. It&rsquo;s now an official tool, thanks to the support of the bcc team.</p>
 

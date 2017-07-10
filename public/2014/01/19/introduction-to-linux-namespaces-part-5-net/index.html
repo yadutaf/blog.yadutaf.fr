@@ -107,6 +107,8 @@
 
 <p>First, let&rsquo;s see what network interfaces we have at the moment:</p>
 
+<p></p>
+
 <pre class="brush: bash; title: ; notranslate" title="">ip link list</pre>
 
 <p>Which outputs something like:</p>
@@ -280,7 +282,6 @@ jean-tiare@jeantiare-Ubuntu:~$
 <p>If you feel that running a bunch of <code>system()</code> calls into a production system is a dirty hack (and it is !), you could have look at the <code>rtnetlink</code> kernel communication interface. This is the barely documented API used by iproute under the hood.</p>
 
 <p>That&rsquo;s all for &#8220;NET&#8221; namespace. It&rsquo;s so powerful that it&rsquo;s used as the foundation of the <a href="http://cs.itd.nrl.navy.mil/work/core/index.php">&#8220;CORE&#8221; lightweight network simulator</a>. With the next article we&rsquo;ll explore the last and most tricky namespace &#8220;USER&#8221;. Thanks for reading !</p>
-
       
       
       <div id="share-this" class="col span_10">

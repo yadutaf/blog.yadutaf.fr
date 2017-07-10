@@ -101,13 +101,11 @@
       </div>
     </div>
     <article>
-      
-
-<p>DynamoDB is a key:value store of the NoSQL family developed and offered by Amazon as part of AWS. It focuses on high performance throughput vs functionality.</p>
+      <p>DynamoDB is a key:value store of the NoSQL family developed and offered by Amazon as part of AWS. It focuses on high performance throughput vs functionality.</p>
 
 <p>I started to work with DynamoDB 3 month ago. It is lean enough to be easily mastered and I started answering more and more advanced questions from my colleagues and then from SO people.</p>
 
-<h2 id="a-name-h-r4l2vhnrpon2-a-dynamodb-is-not-nosql-database:067b0dd2ca2874b435bf10768946d6fa"><a name="h.r4l2vhnrpon2"></a>DynamoDB is NOT NoSQL Database</h2>
+<h2 id="a-name-h-r4l2vhnrpon2-a-dynamodb-is-not-nosql-database"><a name="h.r4l2vhnrpon2"></a>DynamoDB is NOT NoSQL Database</h2>
 
 <p>DynamoDB belongs to the huge family of NoSQL. But NoSQL does not define what it is. It defines what it is not not. DynamoDB is a Key:Value store, much closer to Redis or Cassandra than it is to MongoDB (document database) or FlockDB (graph database).</p>
 
@@ -126,7 +124,7 @@
 <p>I like to compare Key:Value stores to RISC processors. Reduced instruction set, predictable behavior/time.</p>
 </blockquote>
 
-<h2 id="a-name-h-js6b59ucu505-a-dynamodb-is-not-a-sql-database:067b0dd2ca2874b435bf10768946d6fa"><a name="h.js6b59ucu505"></a>DynamoDB is NOT a SQL database</h2>
+<h2 id="a-name-h-js6b59ucu505-a-dynamodb-is-not-a-sql-database"><a name="h.js6b59ucu505"></a>DynamoDB is NOT a SQL database</h2>
 
 <p>Yeah, what you read is “de-normaliztion”. This topic is implied by the previous one. This is the point. Depending on the context, you may want to duplicate you data, “de-normalize”, to make queries fast.</p>
 
@@ -141,7 +139,7 @@
 <p>To make it simple, (DynamoDB ⊂SQL) but (SQL ⊄DynamoDB)</p>
 </blockquote>
 
-<h2 id="a-name-h-t1u6qh1ggqlz-a-getting-an-auto-inc-like-behavior:067b0dd2ca2874b435bf10768946d6fa"><a name="h.t1u6qh1ggqlz"></a>Getting an auto_inc-like behavior</h2>
+<h2 id="a-name-h-t1u6qh1ggqlz-a-getting-an-auto-inc-like-behavior"><a name="h.t1u6qh1ggqlz"></a>Getting an auto_inc-like behavior</h2>
 
 <p>Ok, this is both possible and reliable. But please, think twice before using it ! Most of the time when you use it you should rethink your modeling. This is the first feature that was added to DynamoDB-mapper, long before I took over the development. It has never been used internally. I only refactored it to be harmless.</p>
 
@@ -170,7 +168,7 @@
 <p>Thanks to atomic counters, auto_inc behavior is possible. But do you need it ? I never found a real use-case.</p>
 </blockquote>
 
-<h2 id="a-name-h-vtv3e1yckbsj-a-storing-article-revisions-getting-always-the-latest:067b0dd2ca2874b435bf10768946d6fa"><a name="h.vtv3e1yckbsj"></a>Storing article revisions, getting always the latest</h2>
+<h2 id="a-name-h-vtv3e1yckbsj-a-storing-article-revisions-getting-always-the-latest"><a name="h.vtv3e1yckbsj"></a>Storing article revisions, getting always the latest</h2>
 
 <p>After my DynamoDB presentation, a colleague asked me how we could let’s say, store blog posts revisions and efficiently get the most recent one. I did not know whether it was possible and told him frankly.</p>
 
@@ -200,7 +198,7 @@
 <p>DynamoDB is excellent when it comes to revisions. The single &#8220;trick&#8221; to remember is &#8220;reverse scan + limit=1&#8221;</p>
 </blockquote>
 
-<h2 id="a-name-h-g2za5919ol0l-a-the-third-key-trick:067b0dd2ca2874b435bf10768946d6fa"><a name="h.g2za5919ol0l"></a>The “third key trick”</h2>
+<h2 id="a-name-h-g2za5919ol0l-a-the-third-key-trick"><a name="h.g2za5919ol0l"></a>The “third key trick”</h2>
 
 <p>This was an internal question at my job. A backend engineer asked me how I would do to find all challenges initiated</p>
 
@@ -235,7 +233,7 @@
 <p>Thanks to the power of queries, you can simulate a third key by concatenating two and then apply query filters.</p>
 </blockquote>
 
-<h2 id="a-name-h-1shlqfirwps3-a-how-do-i-query-a-non-key-field:067b0dd2ca2874b435bf10768946d6fa"><a name="h.1shlqfirwps3"></a>How do I query a non key field ?</h2>
+<h2 id="a-name-h-1shlqfirwps3-a-how-do-i-query-a-non-key-field"><a name="h.1shlqfirwps3"></a>How do I query a non key field ?</h2>
 
 <p>Have double checked your model ? Have you considered the “3rd key trick” above ?</p>
 
@@ -245,10 +243,9 @@
 <p>He basically suggests to build (and) maintain special tables as custom indexes. I never tried it myself but it sounds really good.</p>
 </blockquote>
 
-<h2 id="that-s-all-folks:067b0dd2ca2874b435bf10768946d6fa">That&rsquo;s all folks</h2>
+<h2 id="that-s-all-folks">That&rsquo;s all folks</h2>
 
 <p>Well, all I can think of for today <img src="https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;" /></p>
-
       
       
       <div id="share-this" class="col span_10">

@@ -111,6 +111,8 @@
 
 <p>Let&rsquo;s start experimenting. In the previous example, just activate the NS:</p>
 
+<p></p>
+
 <pre class="brush: cpp; first-line: 43; title: activate-ns-snippet.c; notranslate" title="activate-ns-snippet.c">int child_pid = clone(child_main, child_stack+STACK_SIZE, 
       CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | SIGCHLD, NULL);
 </pre>
@@ -199,7 +201,6 @@ int main()
 <p>To leverage the power of this technique you could now prepare and enter a chroot to further enhance the isolation. Steps involved would be to prepare a &#8220;debootstrap&#8221;, remount some essentials filesystems like &#8220;/tmp&#8221;, &#8220;/dev/shm&#8221;, &#8220;/proc&#8221;, optionally all or part of &#8220;/dev&#8221; and &#8220;/sys&#8221; and then &#8220;<a href="http://linux.die.net/man/2/chdir" title="man chdir">chdir</a>&#8221; + &#8220;<a href="http://linux.die.net/man/1/chroot" title="man Chroot">chroot</a>&#8220;. I&rsquo;ll leave it as an exercise for the reader.</p>
 
 <p>That&rsquo;s all for &#8220;NS&#8221; namespace. With the next article we&rsquo;ll explore an incredibly powerful namespace &#8220;NET&#8221;. It&rsquo;s so powerful that it&rsquo;s used as the foundation of the <a href="http://cs.itd.nrl.navy.mil/work/core/index.php">&#8220;CORE&#8221; lightweight network simulator</a>. Thanks for reading !</p>
-
       
       
       <div id="share-this" class="col span_10">

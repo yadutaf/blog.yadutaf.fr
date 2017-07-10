@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Power8 on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/power8/</link>
+    <link>http://blog.yadutaf.fr/tags/power8/index.xml</link>
     <description>Recent content in Power8 on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 28 Oct 2014 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/power8/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -15,9 +15,7 @@
       <pubDate>Tue, 28 Oct 2014 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2014/10/28/getting-docker-to-run-on-power8/</guid>
-      <description>
-
-&lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
+      <description>&lt;p&gt;Last Week-End, I wanted to play around with Docker on a &lt;a href=&#34;http://en.wikipedia.org/wiki/POWER8&#34;&gt;Power8 processor&lt;/a&gt;. Unfortunately, there no &amp;#8220;ready-to-use&amp;#8221; build available (yet) and Go support is still quite rough. Anyway, I love challenges and the process was eased a lot by the work of &lt;a href=&#34;http://dave.cheney.net/&#34;&gt;Dave Cheney&lt;/a&gt; from Canonical who did the hard work of &lt;a href=&#34;http://go-talks.appspot.com/github.com/davecheney/gosyd/gccgo.slide#1&#34;&gt;porting the go command line to Power8&lt;/a&gt; and IBM&amp;rsquo;s who is working with Docker to bring necessary fixes to gccgo.&lt;/p&gt;
 
 &lt;p&gt;[UPDATE 2014-11-19]: IBM is currently porting Docker to gccgo/Power8, see the comments below for more informations.&lt;/p&gt;
 
@@ -26,6 +24,8 @@
 &lt;p&gt;Docker is a tool helping developers to build, ship and run code anywhere just like containers helps shipping anything anywhere. It is increasingly used in production to cleanly isolate processes on a same physical machine without the overhead of a Virtual Machine.&lt;/p&gt;
 
 &lt;p&gt;So, let&amp;rsquo;s get started. My goal was to get docker running and, if possible the latest version (it turns out it actually **is** the latest version). The goal was not to make it the shiniest way. That&amp;rsquo;s for later.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;Here is the state of the art:&lt;/p&gt;
 
@@ -58,7 +58,7 @@
 &lt;li&gt;celebrate&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;1-get-a-power8-machine:843e6337e67e60d94f17e70050c565c9&#34;&gt;1. Get a Power8 Machine&lt;/h3&gt;
+&lt;h3 id=&#34;1-get-a-power8-machine&#34;&gt;1. Get a Power8 Machine&lt;/h3&gt;
 
 &lt;p&gt;The easiest way to get one is to &lt;a href=&#34;http://labs.runabove.com/power8/&#34;&gt;join RunAbove&amp;rsquo;s public beta&lt;/a&gt; which comes with a $32 Voucher. That&amp;rsquo;s one month worth of Power8.&lt;/p&gt;
 
@@ -69,14 +69,14 @@ sudo apt-get -y update
 sudo apt-get -y install subversion mercurial git build-essential gccgo-go
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;2-grab-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;2. Grab GCC&lt;/h3&gt;
+&lt;h3 id=&#34;2-grab-gcc&#34;&gt;2. Grab GCC&lt;/h3&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
 svn checkout svn://gcc.gnu.org/svn/gcc/trunk gcc
 # Be *very* patient
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;3-grab-go-dev-power64:843e6337e67e60d94f17e70050c565c9&#34;&gt;3. Grab Go dev.power64&lt;/h3&gt;
+&lt;h3 id=&#34;3-grab-go-dev-power64&#34;&gt;3. Grab Go dev.power64&lt;/h3&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;cd
 hg clone -u release https://code.google.com/p/go
@@ -84,7 +84,7 @@ cd go
 hg update dev.power64
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;4-patch-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;4. Patch GCC&lt;/h3&gt;
+&lt;h3 id=&#34;4-patch-gcc&#34;&gt;4. Patch GCC&lt;/h3&gt;
 
 &lt;p&gt;GCC&amp;rsquo;s libcgo implementation lakes elf parsing supporting for PPC64 instruction set. As this is required by &lt;code&gt;cgo&lt;/code&gt;, we&amp;rsquo;ll get it from Go itself.&lt;/p&gt;
 
@@ -141,7 +141,7 @@ cp go/src/debug/elf/elf.go gcc/libgo/go/debug/elf/
 
 &lt;p&gt;If you&amp;rsquo;re planning on making a break, just wait one more minute. We&amp;rsquo;ll launch GCC&amp;rsquo;s build&amp;#8230;&lt;/p&gt;
 
-&lt;h3 id=&#34;5-build-gcc:843e6337e67e60d94f17e70050c565c9&#34;&gt;5. Build GCC&lt;/h3&gt;
+&lt;h3 id=&#34;5-build-gcc&#34;&gt;5. Build GCC&lt;/h3&gt;
 
 &lt;p&gt;As usual, except that we built it out of tree.&lt;/p&gt;
 
@@ -163,7 +163,7 @@ echo &#34;/opt/gcc-trunk/lib64&#34; | sudo tee /etc/ld.so.conf.d/gcc-trunk.conf
 sudo ldconfig
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;6-build-and-install-cgo:843e6337e67e60d94f17e70050c565c9&#34;&gt;6. Build (and install) CGO&lt;/h3&gt;
+&lt;h3 id=&#34;6-build-and-install-cgo&#34;&gt;6. Build (and install) CGO&lt;/h3&gt;
 
 &lt;p&gt;Cgo is the component bridging the gap between Go and C world. It is notably required to build the devmapper driver of Docker.&lt;/p&gt;
 
@@ -186,7 +186,7 @@ sudo cp * /usr/src/cmd/cgo
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;export CGO_ENABLED=1
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;7-grab-docker-1-3-0:843e6337e67e60d94f17e70050c565c9&#34;&gt;7. Grab Docker 1.3.0&lt;/h3&gt;
+&lt;h3 id=&#34;7-grab-docker-1-3-0&#34;&gt;7. Grab Docker 1.3.0&lt;/h3&gt;
 
 &lt;p&gt;This is the last stable release at the time of writing. Let&amp;rsquo;s use it.&lt;/p&gt;
 
@@ -204,7 +204,7 @@ export PATH=/opt/gcc-trunk/bin/:$PATH
 export GOPATH=/go:/go/src/github.com/docker/docker/vendor
 &lt;/pre&gt;
 
-&lt;h3 id=&#34;8-build-docker:843e6337e67e60d94f17e70050c565c9&#34;&gt;8. Build Docker&lt;/h3&gt;
+&lt;h3 id=&#34;8-build-docker&#34;&gt;8. Build Docker&lt;/h3&gt;
 
 &lt;p&gt;Just issue &amp;#8216;docker build&amp;rsquo;. I&amp;rsquo;m kidding.&lt;/p&gt;
 
@@ -328,8 +328,7 @@ cd docker
 sudo cp /home/admin/docker/bundles/1.3.1/binary/docker-1.3.1 /usr/bin/docker
 &lt;/pre&gt;
 
-&lt;p&gt;And we&amp;rsquo;re done !&lt;/p&gt;
-</description>
+&lt;p&gt;And we&amp;rsquo;re done !&lt;/p&gt;</description>
     </item>
     
   </channel>

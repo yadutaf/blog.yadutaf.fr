@@ -121,7 +121,7 @@
 
 <p>As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my <a href="https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/">introduction to Linux Namespaces</a>&hellip; But I will soon #teaser.</p>
 
-<h3 id="user-namespaces-and-docker:beda4b7909718c488f1040442ce702e5">User Namespaces and Docker</h3>
+<h3 id="user-namespaces-and-docker">User Namespaces and Docker</h3>
 
 <p>(If you don&rsquo;t like or care about the technical background, you can safely skip this part)</p>
 
@@ -188,7 +188,7 @@ yadutaf:100000:65535
 
 <p>This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.</p>
 
-<h3 id="give-power-back-to-the-user-no-security-compromise:beda4b7909718c488f1040442ce702e5">Give power back to the user, no (security) compromise</h3>
+<h3 id="give-power-back-to-the-user-no-security-compromise">Give power back to the user, no (security) compromise</h3>
 
 <p>With all this in mind, we can put the pieces together and let the magic happen. We need to:</p>
 
@@ -298,6 +298,8 @@ $ docker run --rm -it \
     
       <span class="previous">&larr; <a href="http://blog.yadutaf.fr/2016/03/30/turn-any-syscall-into-event-introducing-ebpf-kernel-probes/" rel="prev">How to turn any syscall into an event: Introducing eBPF Kernel probes</a></span>
     
+    
+      <span class="next"><a href="http://blog.yadutaf.fr/2017/07/11/tracing-a-packet-journey-thanks-to-ebpf/" rel="next">Tracing a packet journey thanks to eBPF</a> &rarr;</span>
     
   </nav>
 

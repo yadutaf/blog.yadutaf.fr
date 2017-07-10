@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Ssl on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/ssl/</link>
+    <link>http://blog.yadutaf.fr/tags/ssl/index.xml</link>
     <description>Recent content in Ssl on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 02 Sep 2012 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/ssl/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -46,8 +46,7 @@ ssl_certificate_key /etc/ssl/private/ssl-main.key;
 
 &lt;p&gt;If Nginx complains with &amp;#8220;nginx: [emerg] bind() to [::]:443 failed (98: Address already in use)&amp;#8221;, try appending &amp;#8220;ipv6only=on&amp;#8221; to the the faulty config line.&lt;/p&gt;
 
-&lt;p&gt;Try on this blog, it should only be accessible with HTTPS &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
-</description>
+&lt;p&gt;Try on this blog, it should only be accessible with HTTPS &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;</description>
     </item>
     
   </channel>

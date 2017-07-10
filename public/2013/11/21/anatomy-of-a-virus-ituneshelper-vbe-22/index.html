@@ -130,6 +130,8 @@
 
 <p><strong>1st</strong> level of dissimulation: <em>dissuasion</em>. The file appears to be 65MB big. While this seems small, most text editors (who said Notepad ?) just assumes text files are no more than a couple of KB big. It makes it almost impossible to read it. Moreover, it starts with empty lines discouraging to scroll down to the real code. We&rsquo;ll make it fast.</p>
 
+<p></p>
+
 <pre class="brush: plain; title: filter iTuneHelper.vbe empty lines noise; notranslate" title="filter iTuneHelper.vbe empty lines noise">jean-tiare@laptop:~$ grep -E "^\\s*$" iTuneHelper.vbe | wc -l
 34 598 142 # huh huh, ~34 *millions* of empty lines. Useful...
 jean-tiare@laptop:~$ grep -vE "^\\s*$" iTuneHelper.vbe | wc -l
@@ -274,7 +276,6 @@ End Sub
 <li>&#8220;What are all theses shortcuts doing here ???&#8221; user suspicion.</li>
 <li>and HEAVY on memory usage !</li>
 </ul>
-
       
       
       <div id="share-this" class="col span_10">

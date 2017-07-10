@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Duplicity on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/duplicity/</link>
+    <link>http://blog.yadutaf.fr/tags/duplicity/index.xml</link>
     <description>Recent content in Duplicity on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 08 Sep 2012 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/duplicity/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -114,8 +114,7 @@ chmod +x /root/server/backup.d/42
 
 &lt;p&gt;Beware that there is a major &lt;strong&gt;drawback&lt;/strong&gt; with this method. Backing-up &lt;strong&gt;/var/lib/mysql&lt;/strong&gt; with this method will probably result in &lt;strong&gt;data corruption&lt;/strong&gt; as the tables are not locked. Again, most articles forgets to mention this&amp;#8230; You can workaround this by first running &amp;#8216;mysqldump&amp;rsquo; then archiving the resulting file. This is left as an exercise to the reader 😉&lt;/p&gt;
 
-&lt;p&gt;In a next article, I will try yo address the &lt;strong&gt;restore&lt;/strong&gt; issue.&lt;/p&gt;
-</description>
+&lt;p&gt;In a next article, I will try yo address the &lt;strong&gt;restore&lt;/strong&gt; issue.&lt;/p&gt;</description>
     </item>
     
   </channel>

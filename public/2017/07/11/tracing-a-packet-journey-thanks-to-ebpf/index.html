@@ -1,0 +1,465 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Tracing a packet journey thanks to eBPF | Yet another enthusiast blog!
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.yadutaf.fr/2017/07/11/tracing-a-packet-journey-thanks-to-ebpf/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="http://blog.yadutaf.fr/index.xml" rel="alternate" type="application/rss+xml" title="Yet another enthusiast blog!" />
+  <link href="http://blog.yadutaf.fr/index.xml" rel="feed" type="application/rss+xml" title="Yet another enthusiast blog!" />
+
+  
+  <link rel="stylesheet" href="/css/hljs/solarized_dark.css">
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  <script>
+  
+  
+  document.addEventListener("DOMContentLoaded", function (event) {
+      var codeBlocks = document.getElementsByTagName("pre");
+
+      for (var i = 0; i < codeBlocks.length; i++) {
+          var block = codeBlocks[i];
+
+          var regex = /brush\:\s([a-zA-z]+)/g;
+          match = regex.exec(block.className);
+          var brushName = "nohighlight";
+          if (match != null) {
+              var oldBrushName = match[1];
+              if (oldBrushName == "csharp") oldBrushName = "cs";
+              if (oldBrushName == "js") oldBrushName = "javascript";
+              else {
+                  brushName = oldBrushName;
+              }
+              block.className = "hljs " + brushName;
+              hljs.highlightBlock(block);
+          }
+      }
+  });
+  </script>
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="http://blog.yadutaf.fr/">Yet another enthusiast blog!</a></h1>
+        <h2>There is no great achievement whithout great challenges.</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="/about">About me</a></li>
+          <li><a href="https://twitter.com/oyadutaf" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/yadutaf" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Tracing a packet journey thanks to eBPF</h1>
+      <div class="meta">
+        Jul 11, 2017 &nbsp;
+        
+          #<a href="/tags/linux">linux</a>&nbsp;
+        
+          #<a href="/tags/netns">netns</a>&nbsp;
+        
+          #<a href="/tags/docker">docker</a>&nbsp;
+        
+          #<a href="/tags/ebpf">ebpf</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<p>If you do networking, you are used to long debugging sessions, firing up a couple of <code>tcpdump</code>, <code>mtr</code> and <code>*ping</code> along the expected/actual packet journey. At least, when there is routing involved, <code>mtr</code> (or <code>traceroute</code> if you have no choice) does a good at showing what&rsquo;s going on. But not everything is L3. Since containers became popular on Linux, people found new &lsquo;exciting&rsquo; ways to torture the networking subsystem with (powerful) virtual interfaces like veth, macvlan bridge, V(x)LAN, &hellip; Add a bunch of network namespaces [<strong>TODO LINK TO POST</strong>] in the equation and debugging starts to get&hellip; interesting. If not excitingly frustrating.</p>
+
+<p>When I was working for OVH, I designed a significant part of the inner networking of the next generation of Load Balancers. Without revealing trade secrets / announcing not-yet-if-ever-released products, I can tell that it involved a fair amount of network namespaces, virtual interfaces and truly nasty routing tricks (like routing via an interface with no IP and using <code>dummy</code> interfaces). At least, it did not involve multiple routing tables (at that time). For all this time, I whished I had a tool to trace a packet journey across the interfaces and network namespaces.</p>
+
+<p>Latter, I was struggling with a network issue in a trivial 2 nodes Docker Swarm setup I use to play around <sup class="footnote-ref" id="fnref:play-around"><a rel="footnote" href="#fn:play-around">1</a></sup>. Exactly half the connections timed out. It turned out to be the kind of bugs you end up fixing by rebooting&hellip; the other node. Frustrating. I whished I had a tool to trace a packet journey across the interfaces and network namespaces.</p>
+
+<p>In such situation, one usually ends up checking manually each possible ip route, ip table, iptables, iptables tables (!) in each possible network namespace / vrf, possibly firing a couple of tcpdumps as an attempt to make sense of the problem. Feels like a maze. At least, it does to me. You have to guess a path, check it, rinse, repeat. At least, in an actual maze, you can cheat by looking from above. <code>tcpdump</code> would be a good tool even though tracing is not the area where it excels. To get the &ldquo;view from above&rdquo;, you could make it listen on the special &ldquo;any&rdquo; interface. But that won&rsquo;t help when using multiple network namespaces. You&rsquo;d need 1 tcpdump instance per network namespace. Doable. But cumbersome.</p>
+
+<h3 id="the-solution-enter-ebpf">The solution: Enter eBPF</h3>
+
+<p>Then, it hit me. When I wrote the solisten.py [<strong>TODO LINK TO POST</strong>] tool to notify whenever a programs starts to listen on any network interface, in any network namespace, I used eBPF to hook on the main listen function in the kernel (inet_listen [<strong>TODO LINK TO KERNEL SOURCE</strong>]) and send events. Maybe we can do the same to trace a packet? Sounds reasonable!</p>
+
+<p>Let&rsquo;s define the problem. We want to:</p>
+
+<ul>
+<li>Trace a packet journey in the kernel, on a single node</li>
+<li>List all crossed interface</li>
+<li>List all crossed network namespace</li>
+</ul>
+
+<p>Ok, now that the problem is defined, this looks more like a trackable problem. Let&rsquo;s translate these goals to needs. We need to:</p>
+
+<ul>
+<li>Use bcc [<strong>TODO LINK TO BCC PROJECT</strong>]. It comes with a C to eBPF compiler and a Python API. Seems reasonable for prototyping.</li>
+<li>Trace ping packets. They are well known, have no side effect, contain an &ldquo;identifier&rdquo; and &ldquo;sequence&rdquo; field.</li>
+<li>Find a function that is (almost) always called when a packet is queued on an interface. That would solve the &ldquo;all crossed interface and network namespace&rdquo;.</li>
+</ul>
+
+<p>To keep things simple, distributed, TCP and UDP tracing are out of the scope. That would be perfectly feasible, but that would also be over-engineering in that specific case. Additionally, even though I did my proof of concept with IPv6 and IPv4 support, I&rsquo;ll focus exclusively on IPv4 in the post for the sake of readability and link to the final code at the end of this post for curious people [<strong>TODO LINK TO THE FULL CODE</strong>].</p>
+
+<h3 id="find-a-function-to-trace">Find a function to trace</h3>
+
+<p>We need a good function to trace. Long story short, we&rsquo;ll use <code>dev_hard_start_xmit</code> on Linux 4.10 [<strong>TODO LINK</strong>] for the sake of this post. This may not be the best / perfect pick. But it does the job.</p>
+
+<p>As digging in the kernel source may seem intimidating, I&rsquo;d like to broadly re-trace the process of finding one, in the hope it can help you find one next time you need to.</p>
+
+<p>There are some constraints. We need a function that is never inlined. If it is inlined, it is potentially present in all the calling site and maybe optimized away. Moreover, it can not be a &ldquo;static&rdquo; function. Static functions are basically the C equivalent of private function in most languages. All in all, if the candidate is not present in <code>/proc/kallsyms</code>, it won&rsquo;t work. Some of them are special and can&rsquo;t be traced either, but we&rsquo;ll leave it aside.</p>
+
+<p>Additionally, if possible, we&rsquo;d prefer a function that is common to all or most of the devices and code path to limit the number of functions to trace. This is not a hard constraint, but that would surely help!</p>
+
+<p>As I add no clue behind looking into &ldquo;/net&rdquo;, I started from the veth driver. It looked like a reasonable candidate to start. This is a reasonably simple virtual driver, there should not be too much noise in it. Use &lsquo;find&rsquo; to locate it and there you are <a href="http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c">http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c</a>. Around 500 lines of code. For the kernel, that&rsquo;s pretty small. Nice. Now, we need to check the functions in this file, looking for some good looking name. A good looking name would suggest that this function queues or forwards a packet on this interface. Good news, there is a single candidate, &ldquo;vethxmit&rdquo; <a href="http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L106">http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L106</a>. As this is a driver, if this function is actually the one used by to enqueue packets, it will be registered somewhere and called via a function pointer. This the kernel&rsquo;s way to interfaces. A few lines below, it is registered under the name &lsquo;ndo_start_xmit&rsquo; <a href="http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L291">http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L291</a>.</p>
+
+<p>Some &lsquo;grep&rsquo; later, we learn that <code>ndo_start_xmit()</code> is mostly called from <code>__netdev_start_xmit</code> in <a href="http://elixir.free-electrons.com/linux/v4.10.17/source/include/linux/netdevice.h">http://elixir.free-electrons.com/linux/v4.10.17/source/include/linux/netdevice.h</a>. There are 2 other call sites but they are related to usb and infiniband. We&rsquo;ll ignore them for now. Bad news is, this is a static inline function. We&rsquo;ll need another candidate.</p>
+
+<p>This function is called from a couple of places [<a href="http://elixir.free-electrons.com/linux/v4.10.17/ident/netdev_start_xmit">http://elixir.free-electrons.com/linux/v4.10.17/ident/netdev_start_xmit</a>]. There are multiple good candidates here. I guess we&rsquo;d need to trace at least a couple of them. But we&rsquo;ll start with the most likely candidate and maybe add more later. We&rsquo;ll go for <code>xmit_one</code> in <a href="http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2905">http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2905</a>. Unfortunately, this function is static, hence private, hence untraceable. On the bright side, it&rsquo;s static so we know all call sites must be in the same module. In our case, there is a single call place in <code>dev_hard_start_xmit</code> <a href="http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2922">http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2922</a>. a quick grep in <code>/proc/kallsyms</code> confirms this simple is exported: we have our candidate!</p>
+
+<h3 id="install-bcc">Install bcc</h3>
+
+<p>If you already have it installed or are not intending to experiment (yet) on this PoC, you can safely skip this section. I should probably just skip it entirely anyway but install instruction are not exactly up to date. Hence, here is an updated, quick and dirty &trade; procedure for Ubuntu 17.04 (Zesty).</p>
+
+<pre><code class="language-bash"># Install dependencies
+sudo apt install bison build-essential cmake flex git libedit-dev python zlib1g-dev libelf-dev libllvm4.0 llvm-dev libclang-dev luajit luajit-5.1-dev
+
+# Grab the sources
+git clone https://github.com/iovisor/bcc.git
+
+# Build and install
+mkdir bcc/build
+cd bcc/build
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+make
+sudo make install
+</code></pre>
+
+<p>On Ubuntu 16.10 (Xenial) and older, install llvm3.7 instead.</p>
+
+<h3 id="trace-dev-hard-start-xmit-using-bcc">Trace <code>dev_hard_start_xmit</code> using bcc</h3>
+
+<p>That&rsquo;s the fun part. We&rsquo;ll attach a kernel probe (kprobe, you guessed it :)) to <code>dev_hard_start_xmit</code> and start building some events from the probe. Then we&rsquo;ll use a piece of simple Python code to parse these events and print some info.</p>
+
+<p>Even though probes look like regular C and is indeed build using a LLVM C compiler, this is only a restricted subset of C that compiles to eBPF. That is, a simple VM inside the kernel designed to allow safe observers (ie: not actors / modifiers) to look around, provided the meet some criterions. First, most loops won&rsquo;t be allowed, the kernels needs to prove the program will always exit before starting it. Second, this is an observing program. You can not call arbitrary kernel functions for obvious security reasons. Some inline accessors defined in &ldquo;.h&rdquo; files are OK though. Third, you can not access memory outside the probe stack. If you need to do so, you need to be explicit about it and use bpf accessors. More on this later.</p>
+
+<p>With this in place, we can proceed with a hello world probe. We&rsquo;ll simply emit an event for each packet sent (don&rsquo;t run it on a production system!). This event will only contain the owning programm name.</p>
+
+<pre><code class="language-c">#include &lt;bcc/proto.h&gt;
+#include &lt;linux/sched.h&gt;
+
+// Event structure
+struct route_evt_t {
+    char comm[TASK_COMM_LEN];
+};
+BPF_PERF_OUTPUT(route_evt);
+
+int kprobe__dev_hard_start_xmit(struct pt_regs *ctx, struct sk_buff *first, struct net_device *dev, struct netdev_queue *txq, int *ret)
+{
+    // Built event for userland
+    struct route_evt_t evt = {};
+    bpf_get_current_comm(evt.comm, TASK_COMM_LEN);
+
+    // Send event to userland
+    route_evt.perf_submit(ctx, &amp;evt, sizeof(evt));
+
+    return 0;
+};
+</code></pre>
+
+<p>Let&rsquo;s look at what it does.</p>
+
+<ol>
+<li>Grab some definitions, just like a regular C program</li>
+<li>Declare out event structure (<code>struct route_evt_t</code>) and channel name (<code>BPF_PERF_OUTPUT(route_evt)</code>)
+3/ Declare our probe (<code>kprobe__dev_hard_start_xmit</code>). Notice the <code>kprobe__</code> prefix and <code>struct pt_regs *ctx</code> argument. bcc automatically detects the prefix and attaches it to the proper kernel function and will pass the context as first argument.
+4/ Use a special bpf helper function (<code>bpf_get_current_comm</code>) to load the program name into the event structure. This is one of the rare function that can be called from eBPF!
+5/ Send the event (<code>route_evt.perf_submit()</code>)</li>
+</ol>
+
+<p>We can now integrate it in a simple Python program:</p>
+
+<pre><code class="language-python">#!/usr/bin/env python
+# coding: utf-8
+
+from socket import inet_ntop
+from bcc import BPF
+import ctypes as ct
+
+bpf_text = '''&lt;SEE CODE SNIPPET ABOVE&gt;'''
+
+TASK_COMM_LEN = 16 # linux/sched.h
+
+class RouteEvt(ct.Structure):
+    _fields_ = [
+        (&quot;comm&quot;,    ct.c_char * TASK_COMM_LEN),
+    ]
+
+def event_printer(cpu, data, size):
+    # Decode event
+    event = ct.cast(data, ct.POINTER(RouteEvt)).contents
+
+    # Print event
+    print &quot;Just go a packet from %s&quot; % (event.comm)
+
+if __name__ == &quot;__main__&quot;:
+    b = BPF(text=bpf_text)
+    b[&quot;route_evt&quot;].open_perf_buffer(event_printer)
+
+    while True:
+        b.kprobe_poll()
+</code></pre>
+
+<p>I won&rsquo;t go too much into the details, here, this is mostly self-explanatory. This is basically te mirror of the setup on the eBPF side. Declare the event structure using ctypes to decode it, declare the probe, listen for events and print them.</p>
+
+<p>If you run this program (as root), you&rsquo;ll probably see something like:</p>
+
+<pre><code>Just go a packet from ping
+Just go a packet from ping
+Just go a packet from Socket Thread
+Just go a packet from irq/46-iwlwifi
+</code></pre>
+
+<p>You&rsquo;ll notice that I have a ping running in the background and using WiFi. So you can rightfully guess I&rsquo;m typing from this from my laptop. Indeed, eBPF is not reserved to datacenters :)</p>
+
+<h3 id="load-interface-name-netns-id-from-ipv4-packets">Load interface name, netns id from IPv4 packets</h3>
+
+<p>Once the plumbing is in place this is straightforward. If we can call straightforward to parse network packets from kernel structures :p. In this section, I&rsquo;ll focus on <code>kprobe__dev_hard_start_xmit</code> in the C/eBPF part of the probe. The structure and Python part can be easily extended. I&rsquo;ll put a link to a complete version at the end of the post.</p>
+
+<p>We&rsquo;ll start by keeping only IPv4 packets:</p>
+
+<pre><code class="language-c">// Cast types. Intermediate cast not needed, kept for readability
+struct sock *sk = first-&gt;sk;
+
+// Filter IPv4 packets
+if (sk-&gt;sk_family != AF_INET) {
+	return 0;
+}
+</code></pre>
+
+<p>Here, there is no choice, you need to read the structure definitions in the kernel. Fortunately, this is one of the most active and documented subsystem of Linux.</p>
+
+<p>While dealing with <code>sk</code>, we can grab the network namespace internal identifier. This will not give you a pretty name like <code>ip netns</code> does, that&rsquo;s only a magic trick. Rather, it will return the numerical part of what you can see when using <code>readlink</code> on some <code>/proc/[PID]/ns/net</code> pseudo file.</p>
+
+<pre><code class="language-c">// Get netns id
+evt.netns = sk-&gt;sk_net.net-&gt;ns.inum;
+</code></pre>
+
+<p>Granted, this may require quite a bit of detective work to find! While we are at the low hanging fruits, we can load the interface name into the event structure as well, from the device:</p>
+
+<pre><code class="language-c">// Get interface name
+bpf_probe_read(&amp;evt.ifname, IFNAMSIZ, dev-&gt;name);
+__builtin_memcpy(&amp;evt.ifname, dev-&gt;name, IFNAMSIZ);
+</code></pre>
+
+<p>Notice the <code>bpf_probe_read</code> function. This is the helper to use when reading data. It will handle the memory safety checks for you so that the kernel can trust your code, even though it may access memory outside the eBPF stack. Alternatively, you could use <code>__builtin_memcpy</code> as well. Actually, this is what I used initially. But it feels hackish. Failing to do so may result in strange build errors like &ldquo;error: extraneous closing brace (&lsquo;}&rsquo;)&rdquo; if you used the more familiar &ldquo;memcpy&rdquo; or &ldquo;Permission Denied&rdquo; from the kernel if it failed to prove safe memory access at validation time, before your code even get a chance to run.</p>
+
+<h3 id="keep-only-icmp-echo-request-ping-and-echo-replies">Keep only ICMP echo request (ping) and echo replies</h3>
+
+<p>With these gratifying low hanging fruits in hands, we can focus on the packet itself. Depending on you point of view when reading this post, it may seem trivial or&hellip; disheartening, wondering how one can find the necessary fields and offsets. I generally fall into the second category. That&rsquo;s OK. You may use kernel structures for IP and ICMP to guess the fields and Wikipedia has really high quality pages about these foundation protocols.</p>
+
+<p>Enough talking. Let&rsquo;s get started. First, step, some grounding work. Let&rsquo;s compute the IPv4 and ICMP headers addresses:</p>
+
+<pre><code class="language-c">// Pre-Compute header addresses
+char* ip_header_address   = first-&gt;head + first-&gt;network_header;
+char* icmp_header_address = first-&gt;head + first-&gt;transport_header;
+</code></pre>
+
+<p>Notice the manual inlining of <code>skb_network_header()</code> and <code>skb_transport_header()</code>. Although both are static inline, we can unfortunately not use them here. If we do, the kernel will complain about &ldquo;R1 invalid mem access &lsquo;inv&rsquo;&rdquo;. I suspect this is a compiler glitch as the code are strictly equivalent. Keep in mind eBPF and it&rsquo;s bcc frontends are quite recent additions.</p>
+
+<p>On the a side note, I accidentally lost quite some time using <code>first-&gt;data</code> instead of <code>first-&gt;head</code>. The former is the head of the buffer from which all offsets are computed, while the later is the offset of the first &ldquo;meaningful&rdquo; byte in the buffer.</p>
+
+<p>Then, load the IP header and filter ICMP packets only, using the next <code>protocol</code> field from the IPv4 header. We&rsquo;ll use the kernel&rsquo;s <code>struct iphdr</code> definition to get the offsets right:</p>
+
+<pre><code class="language-c">// Filter ICMP packets
+struct iphdr* iphdr = (struct iphdr*)ip_header_address;
+if (iphdr-&gt;protocol != IPPROTO_ICMP) {
+	return 0;
+}
+</code></pre>
+
+<p>You may wonder why I did not write the more compact <code>struct iphdr* iphdr = (struct iphdr*)(first-&gt;head + first-&gt;network_header)</code>. This is the same reason as above. The generated code would fail to pass the kernel validation phase. As it generally helps with bcc, I split the statements into smaller ones to help the verifier.</p>
+
+<p>We can now do the same with the ICMP header and keep only ICMP echo request and ICMP echo replies:</p>
+
+<pre><code class="language-c">// Filter ICMP echo request and echo reply
+struct icmphdr* icmphdr = (struct icmphdr*)icmp_header_address;
+if (icmphdr-&gt;type != ICMP_ECHO &amp;&amp; icmphdr-&gt;type != ICMP_ECHOREPLY) {
+	return 0;
+}
+</code></pre>
+
+<p>Last but not least: load relevant data into the event.</p>
+
+<pre><code class="language-c">// Get address and icmp info
+evt.saddr    = iphdr-&gt;saddr;
+evt.daddr    = iphdr-&gt;daddr;
+evt.icmptype = icmphdr-&gt;type;
+evt.icmpid   = icmphdr-&gt;un.echo.id;
+evt.icmpseq  = icmphdr-&gt;un.echo.sequence;
+
+// Fix endian
+evt.icmpid  = be16_to_cpu(evt.icmpid);
+evt.icmpseq = be16_to_cpu(evt.icmpseq);
+</code></pre>
+
+<p>And we&rsquo;re done! We now have an event ready to send to user space with all relevant information.</p>
+
+<p>Note: If you intend to add IPv6 support, please note that the ICMP protocol number is NOT the same as with IPv4 and echo request/replay have different op codes, even though the general packet structure looks similar. I lost quite some time on this&hellip;</p>
+
+<h3 id="show-time">Show time</h3>
+
+<p>With some trivial Python to handle the event, we can test it in a couple of scenarios. Start the program as root, launch some &ldquo;ping&rdquo; in another terminal and observe:</p>
+
+<pre><code># ping -4 localhost
+[  4026531957]               lo request #32693.001 127.0.0.1 -&gt; 127.0.0.1
+[  4026531957]               lo   reply #32693.001 127.0.0.1 -&gt; 127.0.0.1
+[  4026531957]               lo request #32693.002 127.0.0.1 -&gt; 127.0.0.1
+[  4026531957]               lo   reply #32693.002 127.0.0.1 -&gt; 127.0.0.1
+[  4026531957]               lo request #32693.003 127.0.0.1 -&gt; 127.0.0.1
+[  4026531957]               lo   reply #32693.003 127.0.0.1 -&gt; 127.0.0.1
+</code></pre>
+
+<p>We clearly see the first 3 ping sent the process 32693 (the ICMP id on Linux&rsquo;s ping) on the loopback interface as well as the generated reply. Mission accomplished!</p>
+
+<p>What about some external &ldquo;random&rdquo; target IP?</p>
+
+<pre><code># ping -4 google.com
+[  4026531957]           wlp2s0 request #31348.001 192.168.1.11 -&gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.002 192.168.1.11 -&gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.003 192.168.1.11 -&gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.004 192.168.1.11 -&gt; 216.58.198.206
+[  4026531957]           wlp2s0 request #31348.005 192.168.1.11 -&gt; 216.58.198.206
+</code></pre>
+
+<p>We clearly see the 5 first pings sent via my WiFi interface from my home network to Google. Interestingly, we don&rsquo;t see the reply here. This is probably due the hypothesis we did above when choosing a function to trace. We certainly should add some tracing points to be exhaustive, but the general principle says the same. The point is proven !</p>
+
+<p>And my personal favorite: let&rsquo;s ping a Docker container:</p>
+
+<pre><code># ping -4 172.17.0.2
+[  4026531957]          docker0 request #01952.001 172.17.0.1 -&gt; 172.17.0.2
+[  4026531957]      veth0e65931 request #01952.001 172.17.0.1 -&gt; 172.17.0.2
+[  4026532395]             eth0   reply #01952.001 172.17.0.2 -&gt; 172.17.0.1
+</code></pre>
+
+<p>Like the Google example, this is not perfect BUT we do see the change of network namespace and can reasonably guess that the packet journey goes:</p>
+
+<pre><code>       Host netns           | Container netns
++---------------------------+-----------------+
+| docker0 ---&gt; veth0e65931 ---&gt; eth0          |
++---------------------------+-----------------+
+</code></pre>
+
+<h3 id="final-word">Final word</h3>
+
+<p>eBPF can be used to instrument the kernel and trace the journey of an arbitrary bit of information in the kernel. I would not pretend this is a &ldquo;quick way&rdquo; to instrument the kernel. It&rsquo;s not. And the C-like language limitations can feel frustrating at first. But once this initial frustration step is over, this is an extremely powerful tool. I hope this post gave you a good taste of it and helped ease the initial journey in eBPF. I intentionally pasted full error messages in this post in the hope they may be indexed and help you if you meet them (and you will ^^).</p>
+
+<p>As far as this demo is concerned, it would benefit from additional tracing point. Some packets are clearly missing. It would also be interesting to instrument the routing and filtering phases to better help troubleshoot common routing issues.</p>
+
+<p>I did not measure the performance impact. I know there is one. Kernel probes work by inserting jumps in the kernel on tracing points. This tracing point ends up being called for each packet. On production system that would mean a <em>LOT</em>. It should not matter. I would not install LLVM and a build toolchain a production system for the sole sake of debugging anyway!</p>
+
+<p>As promised, the full code for this post is available on Github, with IPv4 and IPv6 support: <a href="https://github.com/yadutaf/tracepkt">https://github.com/yadutaf/tracepkt</a></p>
+<div class="footnotes">
+
+<hr />
+
+<ol>
+<li id="fn:play-around">That is, if by &ldquo;play around&rdquo; you mean &ldquo;host a hobby application with literally 10s of thousands clients syncing on a daily basis&rdquo;.
+ <a class="footnote-return" href="#fnref:play-around"><sup>[return]</sup></a></li>
+</ol>
+</div>
+
+      
+      
+      <div id="share-this" class="col span_10">
+        <span class='st_twitter_large' displayText='Tweet'></span>
+        <span class='st_facebook_large' displayText='Facebook'></span>
+        <span class='st_googleplus_large' displayText='Google +'></span>
+        <span class='st_pocket_large' displayText='Pocket'></span>
+        <span class='st_sharethis_large' displayText='ShareThis'></span>
+        <span class='st_email_large' displayText='Email'></span>  
+      </div>
+    </article>
+    
+ <aside><div id="disqus_thread"></div></aside> 
+
+<script type="text/javascript">
+     
+    var disqus_shortname = 'yadutaf';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="http://blog.yadutaf.fr/2016/04/14/docker-for-your-users-introducing-user-namespace/" rel="prev">Docker for your users - Introducing user namespace</a></span>
+    
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      <img src="/images/profile.jpg" width="64" height="64"><br>
+      Jean-Tiare Le Bigot
+    </div>
+  </footer>
+
+
+</div>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-25807049-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+</body>
+</html>
+

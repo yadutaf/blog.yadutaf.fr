@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Security on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/security/</link>
+    <link>http://blog.yadutaf.fr/tags/security/index.xml</link>
     <description>Recent content in Security on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 14 Apr 2016 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/security/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -33,7 +33,7 @@
 
 &lt;p&gt;As it turns out, the response has changed and this is a good occasion to talk about the 6th namespace. The one I never blogged about in my &lt;a href=&#34;https://blog.yadutaf.fr/2013/12/22/introduction-to-linux-namespaces-part-1-uts/&#34;&gt;introduction to Linux Namespaces&lt;/a&gt;&amp;hellip; But I will soon #teaser.&lt;/p&gt;
 
-&lt;h3 id=&#34;user-namespaces-and-docker:beda4b7909718c488f1040442ce702e5&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
+&lt;h3 id=&#34;user-namespaces-and-docker&#34;&gt;User Namespaces and Docker&lt;/h3&gt;
 
 &lt;p&gt;(If you don&amp;rsquo;t like or care about the technical background, you can safely skip this part)&lt;/p&gt;
 
@@ -100,7 +100,7 @@ yadutaf:100000:65535
 
 &lt;p&gt;This is extremely powerful as this is key to share files between your main host system and your container without loosing access to them. You need a common uid. This common uid will be root in the container while being yours in the real system context.&lt;/p&gt;
 
-&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise:beda4b7909718c488f1040442ce702e5&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
+&lt;h3 id=&#34;give-power-back-to-the-user-no-security-compromise&#34;&gt;Give power back to the user, no (security) compromise&lt;/h3&gt;
 
 &lt;p&gt;With all this in mind, we can put the pieces together and let the magic happen. We need to:&lt;/p&gt;
 
@@ -482,6 +482,8 @@ Status: 159        &amp;lt;------ 128+31 ==&amp;gt; SIGSYS
 
 &lt;p&gt;&lt;strong&gt;1st&lt;/strong&gt; level of dissimulation: &lt;em&gt;dissuasion&lt;/em&gt;. The file appears to be 65MB big. While this seems small, most text editors (who said Notepad ?) just assumes text files are no more than a couple of KB big. It makes it almost impossible to read it. Moreover, it starts with empty lines discouraging to scroll down to the real code. We&amp;rsquo;ll make it fast.&lt;/p&gt;
 
+&lt;p&gt;&lt;/p&gt;
+
 &lt;pre class=&#34;brush: plain; title: filter iTuneHelper.vbe empty lines noise; notranslate&#34; title=&#34;filter iTuneHelper.vbe empty lines noise&#34;&gt;jean-tiare@laptop:~$ grep -E &#34;^\\s*$&#34; iTuneHelper.vbe | wc -l
 34 598 142 # huh huh, ~34 *millions* of empty lines. Useful...
 jean-tiare@laptop:~$ grep -vE &#34;^\\s*$&#34; iTuneHelper.vbe | wc -l
@@ -625,8 +627,7 @@ End Sub
 &lt;li&gt;Essential registry key is still visible.&lt;/li&gt;
 &lt;li&gt;&amp;#8220;What are all theses shortcuts doing here ???&amp;#8221; user suspicion.&lt;/li&gt;
 &lt;li&gt;and HEAVY on memory usage !&lt;/li&gt;
-&lt;/ul&gt;
-</description>
+&lt;/ul&gt;</description>
     </item>
     
     <item>
@@ -655,6 +656,8 @@ End Sub
 &lt;p&gt;&lt;strong&gt;2/ Symptoms&lt;/strong&gt;&lt;/p&gt;
 
 &lt;p&gt;When an infected USB mass storage is connected to a target system, all files on its root folder appears as shortcuts instead of plain files. This set aside, icons are as expected and &amp;#8220;files&amp;#8221; behaves apparently behave as expected too.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;div id=&#34;attachment_344&#34; style=&#34;width: 310px&#34; class=&#34;wp-caption aligncenter&#34;&gt;
   &lt;a href=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible.png&#34;&gt;&lt;img class=&#34;size-medium wp-image-344&#34; alt=&#34;iTuneHelper, only shortcuts visible&#34; src=&#34;https://blog.jtlebi.fr/wp-content/uploads/2013/11/iTuneHelper-1-visible-300x225.png&#34; width=&#34;300&#34; height=&#34;225&#34; /&gt;&lt;/a&gt;
@@ -758,8 +761,7 @@ End Sub
 
 &lt;p&gt;[&lt;/p&gt;
 
-&lt;p&gt;For a more technical approach, please read on: second part.]&lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;1&lt;/a&gt;&lt;/p&gt;
-</description>
+&lt;p&gt;For a more technical approach, please read on: second part.]&lt;a href=&#34;https://blog.jtlebi.fr/2013/11/21/anatomy-of-a-virus-ituneshelper-vbe-22/&#34; title=&#34;Anatomy of a virus: iTunesHelper.vbe 2/2&#34;&gt;1&lt;/a&gt;&lt;/p&gt;</description>
     </item>
     
   </channel>

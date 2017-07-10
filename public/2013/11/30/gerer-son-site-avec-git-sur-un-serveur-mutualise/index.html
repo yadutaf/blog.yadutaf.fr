@@ -101,9 +101,7 @@
       </div>
     </div>
     <article>
-      
-
-<p>Que l&rsquo;on souhaite disposer simplement d&rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &#8220;d&rsquo;Intégration Continue&#8221; (&#8220;Continuous Integration&#8221; en anglais ou &#8220;CI&#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.</p>
+      <p>Que l&rsquo;on souhaite disposer simplement d&rsquo;un gestionnaire de version pour un projet occasionnel ou mettre en place une véritable solution &#8220;d&rsquo;Intégration Continue&#8221; (&#8220;Continuous Integration&#8221; en anglais ou &#8220;CI&#8221;) GIT est probablement la solution la plus puissante et la plus versatile. Cet article retrace les étapes clés pour mettre en place GIT sur un serveur mutualisé.</p>
 
 <p><strong>Prérequis</strong>:</p>
 
@@ -113,7 +111,9 @@
 <li>Connaissances de bases de SSH/Bash</li>
 </ul>
 
-<h2 id="première-étape-initialiser-un-dépôt-distant:9a61f479ec3b884c96ec71a3289973af">Première étape: Initialiser un dépôt distant</h2>
+<h2 id="première-étape-initialiser-un-dépôt-distant">Première étape: Initialiser un dépôt distant</h2>
+
+<p></p>
 
 <p><strong>Dans votre &#8220;/homez.123/<votre identifiant>&#8221;:</strong></p>
 
@@ -123,7 +123,7 @@
 
 <p>Cette commande initialise un dépôt git &#8220;nue&#8221; (bare) dans le dossier `site-perso.git`. Aucune copie de travail ne sera présente sur le serveur. Et c&rsquo;est probablement ce que vous voulez 😉</p>
 
-<h2 id="deuxième-étape-clone-local-et-première-publication:9a61f479ec3b884c96ec71a3289973af">Deuxième étape: Clone local et première publication</h2>
+<h2 id="deuxième-étape-clone-local-et-première-publication">Deuxième étape: Clone local et première publication</h2>
 
 <p><strong>Clone local:</strong></p>
 
@@ -156,7 +156,7 @@ git commit -am "ajoute la page d'accueil"
 
 <p>On a maintenant un site avec une page statique versionné. Une copie du dépôt GIT se trouve directement sur le serveur web. Toute personne disposant d&rsquo;un accès à ce compte SSH aura la possibilité de contribuer au dépôt.</p>
 
-<h2 id="troisième-étape-optionnelle-accès-collaborateurs-et-public:9a61f479ec3b884c96ec71a3289973af">Troisième étape (optionnelle): Accès collaborateurs et Public</h2>
+<h2 id="troisième-étape-optionnelle-accès-collaborateurs-et-public">Troisième étape (optionnelle): Accès collaborateurs et Public</h2>
 
 <p><strong>Accès en écriture pour les collaborateurs, restreint à GIT:</strong></p>
 
@@ -187,7 +187,7 @@ ln -s ../../site-perso.git ./
 
 <p>Votre dépôt peut maintenant être cloné avec <code>git clone http://www.example.com/public-git/site-perso.git</code>. Pour révoquer l&rsquo;accès, il suffit de supprimer le lien dans <code>www/public-git/site-perso.git</code>. Il n&rsquo;est pas nécessaire de supprimer le &#8220;hook&#8221;. Pour ajouter une authentification minimale, la méthode habituelle par &#8220;htaccess&#8221; pourra être employée.</p>
 
-<h2 id="quatrième-étape-optionnelle-déploiement-continue-oh-yeah:9a61f479ec3b884c96ec71a3289973af">Quatrième étape (optionnelle): Déploiement continue (Oh Yeah !)</h2>
+<h2 id="quatrième-étape-optionnelle-déploiement-continue-oh-yeah">Quatrième étape (optionnelle): Déploiement continue (Oh Yeah !)</h2>
 
 <p>La crème de la crème avec GIT, ce sont les &#8220;hook&#8221; que je traduirai par &#8220;prises&#8221; en français. Ce sont des points sur lesquels on se branche aisément pour personnaliser un traitement. On a déjà utilisé l&rsquo;un de ceux qui sont fourni à titre d&rsquo;exemple dans tout dépôt GIT pour le rendre disponible en HTTP.</p>
 
@@ -259,12 +259,11 @@ git push
 #    2f8b5ca..75c770c  prod -&gt; prod
 </pre>
 
-<h2 id="conclusion:9a61f479ec3b884c96ec71a3289973af">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>GIT est incroyablement puissant, mais ça vous le saviez déjà. Bien maîtrisé, il permet de mettre en place à moindre frais une véritable solution de déploiement continue et de travail collaboratif pour un site Web. Un grand &#8220;plus&#8221; en terme de professionnalisme. D&rsquo;autre part, cette solution à l&rsquo;immense avantage de fonctionner avec une offre d&rsquo;hébergement mutualisé en disposant d&rsquo;un simple accès SSH+GIT.</p>
 
 <p>Happy GITing !</p>
-
       
       
       <div id="share-this" class="col span_10">

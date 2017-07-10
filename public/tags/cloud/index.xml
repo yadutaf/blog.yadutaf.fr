@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Cloud on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/cloud/</link>
+    <link>http://blog.yadutaf.fr/tags/cloud/index.xml</link>
     <description>Recent content in Cloud on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 07 Oct 2012 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/cloud/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -15,13 +15,11 @@
       <pubDate>Sun, 07 Oct 2012 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2012/10/07/common-dynamodb-questionsmisconceptionsrecipes/</guid>
-      <description>
-
-&lt;p&gt;DynamoDB is a key:value store of the NoSQL family developed and offered by Amazon as part of AWS. It focuses on high performance throughput vs functionality.&lt;/p&gt;
+      <description>&lt;p&gt;DynamoDB is a key:value store of the NoSQL family developed and offered by Amazon as part of AWS. It focuses on high performance throughput vs functionality.&lt;/p&gt;
 
 &lt;p&gt;I started to work with DynamoDB 3 month ago. It is lean enough to be easily mastered and I started answering more and more advanced questions from my colleagues and then from SO people.&lt;/p&gt;
 
-&lt;h2 id=&#34;a-name-h-r4l2vhnrpon2-a-dynamodb-is-not-nosql-database:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.r4l2vhnrpon2&#34;&gt;&lt;/a&gt;DynamoDB is NOT NoSQL Database&lt;/h2&gt;
+&lt;h2 id=&#34;a-name-h-r4l2vhnrpon2-a-dynamodb-is-not-nosql-database&#34;&gt;&lt;a name=&#34;h.r4l2vhnrpon2&#34;&gt;&lt;/a&gt;DynamoDB is NOT NoSQL Database&lt;/h2&gt;
 
 &lt;p&gt;DynamoDB belongs to the huge family of NoSQL. But NoSQL does not define what it is. It defines what it is not not. DynamoDB is a Key:Value store, much closer to Redis or Cassandra than it is to MongoDB (document database) or FlockDB (graph database).&lt;/p&gt;
 
@@ -40,7 +38,7 @@
 &lt;p&gt;I like to compare Key:Value stores to RISC processors. Reduced instruction set, predictable behavior/time.&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;h2 id=&#34;a-name-h-js6b59ucu505-a-dynamodb-is-not-a-sql-database:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.js6b59ucu505&#34;&gt;&lt;/a&gt;DynamoDB is NOT a SQL database&lt;/h2&gt;
+&lt;h2 id=&#34;a-name-h-js6b59ucu505-a-dynamodb-is-not-a-sql-database&#34;&gt;&lt;a name=&#34;h.js6b59ucu505&#34;&gt;&lt;/a&gt;DynamoDB is NOT a SQL database&lt;/h2&gt;
 
 &lt;p&gt;Yeah, what you read is “de-normaliztion”. This topic is implied by the previous one. This is the point. Depending on the context, you may want to duplicate you data, “de-normalize”, to make queries fast.&lt;/p&gt;
 
@@ -55,7 +53,7 @@
 &lt;p&gt;To make it simple, (DynamoDB ⊂SQL) but (SQL ⊄DynamoDB)&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;h2 id=&#34;a-name-h-t1u6qh1ggqlz-a-getting-an-auto-inc-like-behavior:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.t1u6qh1ggqlz&#34;&gt;&lt;/a&gt;Getting an auto_inc-like behavior&lt;/h2&gt;
+&lt;h2 id=&#34;a-name-h-t1u6qh1ggqlz-a-getting-an-auto-inc-like-behavior&#34;&gt;&lt;a name=&#34;h.t1u6qh1ggqlz&#34;&gt;&lt;/a&gt;Getting an auto_inc-like behavior&lt;/h2&gt;
 
 &lt;p&gt;Ok, this is both possible and reliable. But please, think twice before using it ! Most of the time when you use it you should rethink your modeling. This is the first feature that was added to DynamoDB-mapper, long before I took over the development. It has never been used internally. I only refactored it to be harmless.&lt;/p&gt;
 
@@ -84,7 +82,7 @@
 &lt;p&gt;Thanks to atomic counters, auto_inc behavior is possible. But do you need it ? I never found a real use-case.&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;h2 id=&#34;a-name-h-vtv3e1yckbsj-a-storing-article-revisions-getting-always-the-latest:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.vtv3e1yckbsj&#34;&gt;&lt;/a&gt;Storing article revisions, getting always the latest&lt;/h2&gt;
+&lt;h2 id=&#34;a-name-h-vtv3e1yckbsj-a-storing-article-revisions-getting-always-the-latest&#34;&gt;&lt;a name=&#34;h.vtv3e1yckbsj&#34;&gt;&lt;/a&gt;Storing article revisions, getting always the latest&lt;/h2&gt;
 
 &lt;p&gt;After my DynamoDB presentation, a colleague asked me how we could let’s say, store blog posts revisions and efficiently get the most recent one. I did not know whether it was possible and told him frankly.&lt;/p&gt;
 
@@ -114,7 +112,7 @@
 &lt;p&gt;DynamoDB is excellent when it comes to revisions. The single &amp;#8220;trick&amp;#8221; to remember is &amp;#8220;reverse scan + limit=1&amp;#8221;&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;h2 id=&#34;a-name-h-g2za5919ol0l-a-the-third-key-trick:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.g2za5919ol0l&#34;&gt;&lt;/a&gt;The “third key trick”&lt;/h2&gt;
+&lt;h2 id=&#34;a-name-h-g2za5919ol0l-a-the-third-key-trick&#34;&gt;&lt;a name=&#34;h.g2za5919ol0l&#34;&gt;&lt;/a&gt;The “third key trick”&lt;/h2&gt;
 
 &lt;p&gt;This was an internal question at my job. A backend engineer asked me how I would do to find all challenges initiated&lt;/p&gt;
 
@@ -149,7 +147,7 @@
 &lt;p&gt;Thanks to the power of queries, you can simulate a third key by concatenating two and then apply query filters.&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;h2 id=&#34;a-name-h-1shlqfirwps3-a-how-do-i-query-a-non-key-field:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;&lt;a name=&#34;h.1shlqfirwps3&#34;&gt;&lt;/a&gt;How do I query a non key field ?&lt;/h2&gt;
+&lt;h2 id=&#34;a-name-h-1shlqfirwps3-a-how-do-i-query-a-non-key-field&#34;&gt;&lt;a name=&#34;h.1shlqfirwps3&#34;&gt;&lt;/a&gt;How do I query a non key field ?&lt;/h2&gt;
 
 &lt;p&gt;Have double checked your model ? Have you considered the “3rd key trick” above ?&lt;/p&gt;
 
@@ -159,10 +157,9 @@
 &lt;p&gt;He basically suggests to build (and) maintain special tables as custom indexes. I never tried it myself but it sounds really good.&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;h2 id=&#34;that-s-all-folks:067b0dd2ca2874b435bf10768946d6fa&#34;&gt;That&amp;rsquo;s all folks&lt;/h2&gt;
+&lt;h2 id=&#34;that-s-all-folks&#34;&gt;That&amp;rsquo;s all folks&lt;/h2&gt;
 
-&lt;p&gt;Well, all I can think of for today &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;
-</description>
+&lt;p&gt;Well, all I can think of for today &lt;img src=&#34;https://blog.jtlebi.fr/wp-includes/images/smilies/simple-smile.png&#34; alt=&#34;:)&#34; class=&#34;wp-smiley&#34; style=&#34;height: 1em; max-height: 1em;&#34; /&gt;&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -175,7 +172,7 @@
 
 &lt;p&gt;Quoi qu’étant, à titre strictement personnel, fermement opposé au communisme, je ne voudrais certainement pas que cette opposition se fasse au prix de ma lucidité et de ma capacité à prendre du recul.&lt;/p&gt;
 
-&lt;p&gt;Avez-vous observé la tendance actuelle en matière de modèles économiques dans le domaine des services ? À vrai dire, nous avons tellement le nez dessus que nous ne le voyons même plus.&lt;/p&gt;
+&lt;p&gt;Avez-vous observé la tendance actuelle en matière de modèles économiques dans le domaine des services ? À vrai dire, nous avons tellement le nez dessus que nous ne le voyons même plus. &lt;/p&gt;
 
 &lt;p&gt;Si le système politique communiste doit, pour survivre se doter d&amp;rsquo;un système économique libérale, J&amp;rsquo;ai bien peur que, pour sa survie, notre système économique ait crût indispensable de se doter d&amp;rsquo;une politique digne des pires régimes communistes.&lt;/p&gt;
 
@@ -189,8 +186,7 @@
 
 &lt;p&gt;Du coté de la vidéo rien n&amp;rsquo;est gagné encore. S&amp;rsquo;il est encore possible de partager les supports physiques, il s&amp;rsquo;en est fallu de peu pour que ce droit ne survive pas à l&amp;rsquo;arrivée du blueray. En effet, il était initialement prévu que les platines déclarent auprès d&amp;rsquo;un service centralisée toute tentative de lecture. Celles-ci seraient automatiquement refusées si ce même support avait déjà été joué sur une autre platine et cela même si son propriétaire était la même personne. On imagine également les conséquences en termes de potentialité de censure à posteriori. Si ce système a été abandonné pour ces supports, il n&amp;rsquo;en est pas moins utilisé dans les consoles de jeux, mais c&amp;rsquo;est encore une autre histoire.&lt;/p&gt;
 
-&lt;p&gt;L&amp;rsquo;arrivée du numérique dans le domaine du partage de la connaissance et de la culture a permis d&amp;rsquo; accélérer grandement sa diffusion et c&amp;rsquo;est  une chose vraiment  remarquable. Je trouve également qu&amp;rsquo;il est juste que l&amp;rsquo;auteur d&amp;rsquo;une œuvre, fut -elle numérique, puisse être rémunéré à hauteur de son travail s&amp;rsquo;il en exprime le souhait. Pour cela, encore faudrait- il qu&amp;rsquo;on cesse de multiplier les barrières à l’achat tel que le prix ou les contraintes techniques imposées par les verrous numériques (DRM). La grande majorité des gens ne sont pas des voleurs. Si l&amp;rsquo;on cesse de multiplier les barrières de l&amp;rsquo;offre légale, peut être pourra elle enfin se développer. Au fond, j&amp;rsquo;ai d&amp;rsquo;abord besoin que l&amp;rsquo;on me fasse confiance et  qu&amp;rsquo;on me laisse respirer.&lt;/p&gt;
-</description>
+&lt;p&gt;L&amp;rsquo;arrivée du numérique dans le domaine du partage de la connaissance et de la culture a permis d&amp;rsquo; accélérer grandement sa diffusion et c&amp;rsquo;est  une chose vraiment  remarquable. Je trouve également qu&amp;rsquo;il est juste que l&amp;rsquo;auteur d&amp;rsquo;une œuvre, fut -elle numérique, puisse être rémunéré à hauteur de son travail s&amp;rsquo;il en exprime le souhait. Pour cela, encore faudrait- il qu&amp;rsquo;on cesse de multiplier les barrières à l’achat tel que le prix ou les contraintes techniques imposées par les verrous numériques (DRM). La grande majorité des gens ne sont pas des voleurs. Si l&amp;rsquo;on cesse de multiplier les barrières de l&amp;rsquo;offre légale, peut être pourra elle enfin se développer. Au fond, j&amp;rsquo;ai d&amp;rsquo;abord besoin que l&amp;rsquo;on me fasse confiance et  qu&amp;rsquo;on me laisse respirer.&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -199,13 +195,13 @@
       <pubDate>Tue, 17 Jan 2012 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2012/01/17/testing-x2go-on-ovh-public-cloud/</guid>
-      <description>
-
-&lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;
+      <description>&lt;p&gt;About 1 month ago, &lt;a href=&#34;http://www.ovh.com/&#34; title=&#34;OVH website&#34;&gt;OVH&lt;/a&gt; launched its &amp;#8220;Public Cloud&amp;#8221;. This basically is a solution taking inspiration from Amazon&amp;rsquo;s AWS without being subject to the Patriot Act. At the moment, the &amp;#8220;Public Cloud&amp;#8221; is still pretty young and lacks some vital functionality as custom templates or a real storage solution but it&amp;rsquo;s on the way.&lt;/p&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://www.x2go.org/&#34; title=&#34;X2go official Website&#34;&gt;X2go&lt;/a&gt; is an open source remote desktop solution based on the very per-formant NX protocol. It feels very much like the remote server is in the same room. After a very quick test, it seems to much lighter and responsive than RDP.&lt;/p&gt;
 
-&lt;h1 id=&#34;remote-instance-setup:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Remote instance setup&lt;/h1&gt;
+&lt;p&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;remote-instance-setup&#34;&gt;Remote instance setup&lt;/h1&gt;
 
 &lt;p&gt;Subscriptions to the gamma test OVH&amp;rsquo;s Cloud are here: &lt;a href=&#34;http://www.ovh.com/fr/cloud/&#34; title=&#34;OVH public Cloud Subscription&#34;&gt;http://www.ovh.com/fr/cloud/&lt;/a&gt;. They provide us with a nice and easy to use web interface as well as a full SOAP API and a shell script to automate instance and project management.&lt;/p&gt;
 
@@ -266,7 +262,7 @@ instanceId function    status finishDate zone comment lastUpdate                
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ ./ovhcloud instance getLoginInformations&lt;/pre&gt;
 
-&lt;h1 id=&#34;installing-x2go-on-the-instance:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Installing X2go on the instance&lt;/h1&gt;
+&lt;h1 id=&#34;installing-x2go-on-the-instance&#34;&gt;Installing X2go on the instance&lt;/h1&gt;
 
 &lt;p&gt;This part is (almost) independent from the previous one. I&amp;rsquo;ll assume you are connected to a remote server running Ubuntu 10.04. It should be fine with any supported flavor of Ubuntu but I did not test it.&lt;/p&gt;
 
@@ -288,7 +284,7 @@ $ sudo apt-get install x2gognomebindings #brings some integration &lt;/pre&gt;
 
 &lt;pre class=&#34;brush: bash; title: ; notranslate&#34; title=&#34;&#34;&gt;$ sudo apt-get install x2goclient &lt;/pre&gt;
 
-&lt;h1 id=&#34;conclusion:9bf64dc3af8100b999fc0a9936364179&#34;&gt;Conclusion&lt;/h1&gt;
+&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
 
 &lt;p&gt;You should now be able to run a Cloud desktop. It is possible to start/stop it on demand with a simple shell command :&lt;/p&gt;
 
@@ -298,8 +294,7 @@ $ sudo apt-get install x2gognomebindings #brings some integration &lt;/pre&gt;
 
 &lt;p&gt;I encourage the reader to test sound, folder and printer sharing between the client and the remote desktop. My experience is that the sound only works from a theoretical point of view as it uses a huge BP. Folder sharing is OK and I could not manage to make printer sharing work (at the moment).&lt;/p&gt;
 
-&lt;p&gt;Enjoy !&lt;/p&gt;
-</description>
+&lt;p&gt;Enjoy !&lt;/p&gt;</description>
     </item>
     
   </channel>

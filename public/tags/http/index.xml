@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Http on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/http/</link>
+    <link>http://blog.yadutaf.fr/tags/http/index.xml</link>
     <description>Recent content in Http on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 21 Sep 2011 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/http/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -25,6 +25,8 @@ Client &amp;lt;----&amp;gt; Reverse-Proxy |&amp;lt;-----&amp;gt; Etherpad
                             |...&lt;/pre&gt;
 
 &lt;p&gt;Using tcpdump, we noticed that the packet with the &amp;#8220;FIN&amp;#8221; flag set was never send by the client. The strangest was that Wget received more data than Firefox.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;After a few hours of investigations, it appeared that Wget was sending header &amp;#8220;keepalive&amp;#8221; to keep the connection open while using http version 1.0. &amp;#8220;Keepalive&amp;#8221; is an illegal header in HTTP 1.0 as it has been introduced with 1.1 revision. This is actually a &lt;a href=&#34;https://www.varnish-cache.org/trac/ticket/524&#34;&gt;known bug&lt;/a&gt;. A workaround is to use it in conjunction with &amp;#8220;-no-http-keep-alive&amp;#8221; command-line option.&lt;/p&gt;
 
@@ -68,8 +70,7 @@ Client &amp;lt;----&amp;gt; Reverse-Proxy |&amp;lt;-----&amp;gt; Etherpad
     Let me know if a better fix would be a good idea.
   &lt;/p&gt;
 &lt;/div&gt;
-&lt;/blockquote&gt;
-</description>
+&lt;/blockquote&gt;</description>
     </item>
     
   </channel>

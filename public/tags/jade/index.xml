@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Jade on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/jade/</link>
+    <link>http://blog.yadutaf.fr/tags/jade/index.xml</link>
     <description>Recent content in Jade on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 20 Nov 2011 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/jade/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -15,9 +15,7 @@
       <pubDate>Sun, 20 Nov 2011 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2011/11/20/understanding-mvc-with-express-node-js-and-mongo-db/</guid>
-      <description>
-
-&lt;p&gt;Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight &lt;a href=&#34;http://codeigniter.com/&#34;&gt;CodeIgniter&lt;/a&gt; or the very complete  &lt;a href=&#34;http://symfony.com/&#34;&gt;Symfony&lt;/a&gt; and I missed clean MVC coding. My previous node.js app barely stand in a single controller &lt;a href=&#34;http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/&#34; title=&#34;Node.Js reverse proxy&#34;&gt;as it was a reverse proxy&lt;/a&gt;. This time, I wondered how I could write a bare minimum clean registration form.&lt;/p&gt;
+      <description>&lt;p&gt;Coming from the PHP/MySQL world, I got used to frameworks such as the lightweight &lt;a href=&#34;http://codeigniter.com/&#34;&gt;CodeIgniter&lt;/a&gt; or the very complete  &lt;a href=&#34;http://symfony.com/&#34;&gt;Symfony&lt;/a&gt; and I missed clean MVC coding. My previous node.js app barely stand in a single controller &lt;a href=&#34;http://blog.jtlebi.fr/2011/09/19/nodejs-reverse-proxy/&#34; title=&#34;Node.Js reverse proxy&#34;&gt;as it was a reverse proxy&lt;/a&gt;. This time, I wondered how I could write a bare minimum clean registration form.&lt;/p&gt;
 
 &lt;p&gt;For this &amp;#8220;application&amp;#8221;, the goals were to&lt;/p&gt;
 
@@ -26,6 +24,8 @@
 &lt;li&gt;Provide us with a registered user list and a CSV exporter&lt;/li&gt;
 &lt;li&gt;Store the registrations in a Mongo.DB collection&lt;/li&gt;
 &lt;/ul&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;As this post is pretty long, not all the source code will be provided in this post. You can download them as well as to test a simplified version of a real-world&amp;trade; app I did to provide visitors in an event to register and leave their contact on my company&amp;rsquo;s stand.&lt;/p&gt;
 
@@ -41,7 +41,7 @@ node app.js&lt;/pre&gt;
 
 &lt;p&gt;The following parts of this post will assume that you start from scratch, without this archive.&lt;/p&gt;
 
-&lt;h1 id=&#34;setup:37973bb4341bd246a575a1b01ee2d703&#34;&gt;Setup&lt;/h1&gt;
+&lt;h1 id=&#34;setup&#34;&gt;Setup&lt;/h1&gt;
 
 &lt;p&gt;If not yet done, go to &lt;a href=&#34;http://nodejs.org/&#34;&gt;http://nodejs.org/&lt;/a&gt; and download the Node.JS installer for your platform. For linux users, I recommend you to build it from source as this is a fast moving project and most distributions packages are outdated.&lt;/p&gt;
 
@@ -94,7 +94,7 @@ express . #setup the project with default settings&lt;/pre&gt;
 
 &lt;p&gt;In order to spare some time and focus on the development work, I suggest you to use the twitter css bootstrap. It will provide you with a nice and clean stylesheet. In the following code snippets of this article, I&amp;rsquo;ll assume you are using this framework.&lt;/p&gt;
 
-&lt;h1 id=&#34;the-model:37973bb4341bd246a575a1b01ee2d703&#34;&gt;The Model&lt;/h1&gt;
+&lt;h1 id=&#34;the-model&#34;&gt;The Model&lt;/h1&gt;
 
 &lt;p&gt;The model is the place where the data type is defined. The first step is to identify the required fields and their constraints. To keep the example minimal, I&amp;rsquo;ll use just a little subset :&lt;/p&gt;
 
@@ -145,7 +145,7 @@ MemberSchema.path(&#39;date&#39;)
 
 &lt;pre class=&#34;brush: jscript; title: ; notranslate&#34; title=&#34;&#34;&gt;module.exports = mongoose.model(&#39;Members&#39;, MemberSchema);&lt;/pre&gt;
 
-&lt;h1 id=&#34;the-view:37973bb4341bd246a575a1b01ee2d703&#34;&gt;The view&lt;/h1&gt;
+&lt;h1 id=&#34;the-view&#34;&gt;The view&lt;/h1&gt;
 
 &lt;p&gt;The view is the place where the actual web page you see is generated from data computed in the controller. In small projects such as this one, I usually code the controller at last since it is the &amp;#8220;glue&amp;#8221; between the Model and the View.&lt;/p&gt;
 
@@ -200,7 +200,7 @@ header, section, article, nav, footer, aside, hgroup{
 
 &lt;p&gt;The body of views/list.jade basically loops over the members structures and displays all members in a table.&lt;/p&gt;
 
-&lt;h1 id=&#34;the-controller:37973bb4341bd246a575a1b01ee2d703&#34;&gt;The controller&lt;/h1&gt;
+&lt;h1 id=&#34;the-controller&#34;&gt;The controller&lt;/h1&gt;
 
 &lt;p&gt;The controller is the part that glues the views and the models together. It takes the input from the user, routes it, handle it and then triggers the render of the view.&lt;/p&gt;
 
@@ -252,10 +252,9 @@ exports.csv = function(req, res){
     });
 };&lt;/pre&gt;
 
-&lt;h1 id=&#34;conclusion:37973bb4341bd246a575a1b01ee2d703&#34;&gt;Conclusion&lt;/h1&gt;
+&lt;h1 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h1&gt;
 
-&lt;p&gt;This (long) post demonstrated and demystified quite a lot of modern technologies at once which may be a little confusing for a newcomer. Sadly, I could not get an in depth overview of these tools. It would have required many books ! Nonetheless, I hope it has been useful to you and help you getting started. have fun !&lt;/p&gt;
-</description>
+&lt;p&gt;This (long) post demonstrated and demystified quite a lot of modern technologies at once which may be a little confusing for a newcomer. Sadly, I could not get an in depth overview of these tools. It would have required many books ! Nonetheless, I hope it has been useful to you and help you getting started. have fun !&lt;/p&gt;</description>
     </item>
     
   </channel>

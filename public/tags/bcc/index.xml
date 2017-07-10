@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Bcc on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/bcc/</link>
+    <link>http://blog.yadutaf.fr/tags/bcc/index.xml</link>
     <description>Recent content in Bcc on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 30 Mar 2016 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/bcc/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -21,7 +21,7 @@
 
 &lt;p&gt;If you are not familiar with eBPF or linux tracing, you really should read the full post. It tries to progressively go through the pitfalls I stumbled unpon while playing around with bcc / eBPF while saving you a lot of the time I spent searching and digging.&lt;/p&gt;
 
-&lt;h3 id=&#34;a-note-on-push-vs-pull-in-a-linux-world:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;A note on push vs pull in a Linux world&lt;/h3&gt;
+&lt;h3 id=&#34;a-note-on-push-vs-pull-in-a-linux-world&#34;&gt;A note on push vs pull in a Linux world&lt;/h3&gt;
 
 &lt;p&gt;When I started to work on containers, I was wondering how we could update a load balancer configuration dynamically based on actual system state. A common strategy, which works, it to let the container orchestrator trigger a load balancer configuration update whenever it starts a container and then let the load balancer poll the container until some health check passes. It may be a simple &amp;ldquo;SYN&amp;rdquo; test.&lt;/p&gt;
 
@@ -44,7 +44,7 @@
 
 &lt;p&gt;Ideally, we&amp;rsquo;d need a generic way to do it. How?&lt;/p&gt;
 
-&lt;h3 id=&#34;kernel-tracing-and-ebpf-a-bit-of-history:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Kernel tracing and eBPF, a bit of history&lt;/h3&gt;
+&lt;h3 id=&#34;kernel-tracing-and-ebpf-a-bit-of-history&#34;&gt;Kernel tracing and eBPF, a bit of history&lt;/h3&gt;
 
 &lt;p&gt;Until recently the only way was to patch the kernel or resort on SystemTap. &lt;a href=&#34;https://en.wikipedia.org/wiki/SystemTap&#34;&gt;SytemTap&lt;/a&gt; is a tracing Linux system. In a nutshell, it provides a DSL which is then compiled into a kernel module which is then live-loaded into the running kernel. Except that some production system disable dynamic module loading for security reasons. Including the one I was working on at that time. The other way would be to patch the kernel to trigger some events, probably based on netlink. This is not really convenient. Kernel hacking come with downsides including &amp;ldquo;interesting&amp;rdquo; new &amp;ldquo;features&amp;rdquo; and increased maintenance burden.&lt;/p&gt;
 
@@ -56,7 +56,7 @@
 
 &lt;p&gt;Let&amp;rsquo;s get started.&lt;/p&gt;
 
-&lt;h3 id=&#34;hello-from-from-inet-listen:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Hello from from &lt;code&gt;inet_listen&lt;/code&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;hello-from-from-inet-listen&#34;&gt;Hello from from &lt;code&gt;inet_listen&lt;/code&gt;&lt;/h3&gt;
 
 &lt;p&gt;As writing assembly is not the most convenient task, even for the best of us, we&amp;rsquo;ll use &lt;a href=&#34;https://github.com/iovisor/bcc&#34;&gt;bcc&lt;/a&gt;. bcc is a collection of tools based on LLVM and Python abstracting the underlying machinery. Probes are written in C and the results can be exploited from python allowing to easily write non trivial applications.&lt;/p&gt;
 
@@ -109,7 +109,7 @@ ubuntu@bcc:~$ nc -l 0 4242
 
 &lt;p&gt;Yay!&lt;/p&gt;
 
-&lt;h3 id=&#34;grab-the-backlog:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Grab the backlog&lt;/h3&gt;
+&lt;h3 id=&#34;grab-the-backlog&#34;&gt;Grab the backlog&lt;/h3&gt;
 
 &lt;p&gt;Now, let&amp;rsquo;s print some easily accessible data. Say the &amp;ldquo;backlog&amp;rdquo;. The backlog is the number of pending established TCP connections, pending to be &lt;code&gt;accept()&lt;/code&gt;ed.&lt;/p&gt;
 
@@ -128,7 +128,7 @@ ubuntu@bcc:~$ nc -l 0 4242
 
 &lt;p&gt;Easy hue? Now let&amp;rsquo;s get the port.&lt;/p&gt;
 
-&lt;h3 id=&#34;grab-the-port-and-ip:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Grab the port and IP&lt;/h3&gt;
+&lt;h3 id=&#34;grab-the-port-and-ip&#34;&gt;Grab the port and IP&lt;/h3&gt;
 
 &lt;p&gt;Studying &lt;code&gt;inet_listen&lt;/code&gt; source from the kernel, we know that we need to get the &lt;code&gt;inet_sock&lt;/code&gt; from the &lt;code&gt;socket&lt;/code&gt; object. Just copy from the sources, and insert at the beginning of the tracer:&lt;/p&gt;
 
@@ -213,7 +213,7 @@ while True:
 
 &lt;p&gt;All done, one more piece: We want to get the related container. In the context of networking, that&amp;rsquo;s means we want the network namespace. The network namespace being the building block of containers allowing them to have isolated networks.&lt;/p&gt;
 
-&lt;h3 id=&#34;grab-the-network-namespace-a-forced-introduction-to-perf-events:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Grab the network namespace: a forced introduction to perf events&lt;/h3&gt;
+&lt;h3 id=&#34;grab-the-network-namespace-a-forced-introduction-to-perf-events&#34;&gt;Grab the network namespace: a forced introduction to perf events&lt;/h3&gt;
 
 &lt;p&gt;On the userland, the network namespace can be determined by checking the target of &lt;code&gt;/proc/PID/ns/net&lt;/code&gt;. It should look like &lt;code&gt;net:[4026531957]&lt;/code&gt;. The number between brackets is the inode number of the network namespace. This said, we could grab it by scrapping &amp;lsquo;/proc&amp;rsquo; but this is racy, we may be dealing with short-lived processes. And races are never good. We&amp;rsquo;ll grab the inode number directly from the kernel. Fortunately, that&amp;rsquo;s an easy one:&lt;/p&gt;
 
@@ -311,7 +311,7 @@ Listening on 0 6379 with 128 pending connections in container 4026532165
 Listening on 7f000001 6588 with 1 pending connections in container 4026531957
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;last-word:30fe7a87f2e63f2b769ee3edffa56012&#34;&gt;Last word&lt;/h3&gt;
+&lt;h3 id=&#34;last-word&#34;&gt;Last word&lt;/h3&gt;
 
 &lt;p&gt;Absolutely everything is now setup to use trigger events from arbitrary function calls in the kernel using eBPF, and you should have seen most of the common pitfalls I hit while learning eBPF. If you want to see the full version of this tool, along with some more tricks like IPv6 support, have a look at &lt;a href=&#34;https://github.com/iovisor/bcc/blob/master/tools/solisten.py&#34;&gt;https://github.com/iovisor/bcc/blob/master/tools/solisten.py&lt;/a&gt;. It&amp;rsquo;s now an official tool, thanks to the support of the bcc team.&lt;/p&gt;
 

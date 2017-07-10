@@ -109,6 +109,8 @@
 
 <p>But, WAIT! My &#8220;parent process&#8221; is now isolated from my &#8220;child process&#8221; right ? What if I need to do some kind of communication between them ?</p>
 
+<p></p>
+
 <p>That&rsquo;s a good question. A common use case for this is you need some additional setup from the parent before letting the child take full control. Fortunately, not everything is isolated and clone shares memory space with its parent so that you can still use:</p>
 
 <ul>
@@ -225,7 +227,6 @@ int main()
 <p>That&rsquo;s all for IPC. IPC in itself is nothing complicated. It just becomes tricky when it comes to parent/child synchronization as we will do later. This is where the &#8220;pipe&#8221; technique comes as a handy solution. It actually works and is used in production.</p>
 
 <p>The next article will be on my favorite one (as sysadmin): PID namespaces.</p>
-
       
       
       <div id="share-this" class="col span_10">

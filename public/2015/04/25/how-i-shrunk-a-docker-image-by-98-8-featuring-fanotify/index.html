@@ -101,9 +101,7 @@
       </div>
     </div>
     <article>
-      
-
-<p>Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &#8220;diet program for Docker Images&#8221; ?</p>
+      <p>Some weeks ago, I did an internal presentation on Docker. During the presentation, one of the ops asked an seemingly trivial question: Is there anything like a &#8220;diet program for Docker Images&#8221; ?</p>
 
 <p>You can find a couple of pretty decent common-sense powered approach <a href="https://intercityup.com/blog/downsizing-docker-containers.html">on the web</a> like removing well known cache folders, temporary files, installing all superfluous packages and flatten layers if not the full image. There is also the <code>-slim</code> declination of the official language images.</p>
 
@@ -112,6 +110,8 @@
 <p>Whaou! Is there any chance to do something comparable, deterministic with any random application?</p>
 
 <p>It turns out there could be one. The idea is simple: We could profile the image at run time one way or another to determine which files are ever accessed/opened/&#8230;, then remove all the remaining files. Hmm, sounds promising. Let&rsquo;s PoC it.</p>
+
+<p></p>
 
 <p><strong>Target definition</strong>:</p>
 
@@ -386,7 +386,7 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 
 <p>Resulting Docker image is 83.5 <em>times</em> smaller<sup>3</sup>. That&rsquo;s a 98.8% reduction. Looks good to me, I&rsquo;ll accept it. If you agree.</p>
 
-<h3 id="last-thought:ed6b7f79feba98b85e08740dab416986">Last Thought</h3>
+<h3 id="last-thought">Last Thought</h3>
 
 <p>Like all profiling based method, it will only tell you about what&rsquo;s actually done/used in a specific scenario. For example, try to run <code>/bin/ls -l</code> in the resulting image and see by yourself. (spoiler: it does not work. Well it does, but not as expected).</p>
 
@@ -394,7 +394,7 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 
 <p>If I were to build a production shrinker, I would probably go for a <code>ptrace</code> based method.</p>
 
-<h3 id="footnotes:ed6b7f79feba98b85e08740dab416986">Footnotes</h3>
+<h3 id="footnotes">Footnotes</h3>
 
 <ol>
 <li><p>Let&rsquo;s face the truth: What I really wanted, was experimenting with this syscall. Docker images are more of a (good) pretext.</p></li>
@@ -403,7 +403,6 @@ docker rmi -f ubuntu_lean; sudo tar -c . | docker import - ubuntu_lean
 
 <li><p>That&rsquo;s also 2.4 times smaller that the 6.13MB image I mentioned at the beginning of this post. But the comparison is not fair.</p></li>
 </ol>
-
       
       
       <div id="share-this" class="col span_10">

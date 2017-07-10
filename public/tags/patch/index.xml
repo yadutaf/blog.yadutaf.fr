@@ -2,11 +2,11 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Patch on Yet another enthusiast blog!</title>
-    <link>http://blog.yadutaf.fr/tags/patch/</link>
+    <link>http://blog.yadutaf.fr/tags/patch/index.xml</link>
     <description>Recent content in Patch on Yet another enthusiast blog!</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 12 Dec 2014 00:00:00 +0000</lastBuildDate>
+    <copyright>Jean-Tiare Le Bigot</copyright>
     <atom:link href="http://blog.yadutaf.fr/tags/patch/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -15,15 +15,15 @@
       <pubDate>Fri, 12 Dec 2014 00:00:00 +0000</pubDate>
       
       <guid>http://blog.yadutaf.fr/2014/12/12/how-to-run-docker-behind-an-nginx-reverse-proxy/</guid>
-      <description>
-
-&lt;p&gt;A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.&lt;/p&gt;
+      <description>&lt;p&gt;A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.&lt;/p&gt;
 
 &lt;p&gt;Shared hosting farms are usually built around some kind of public gateway for incoming/outgoing traffic as well as management traffic including FTP and SSH. Te largest part of the farm - not unlike an iceberg - being &amp;#8220;hidden&amp;#8221; in a private network behind these gateways.&lt;/p&gt;
 
 &lt;p&gt;So, my question was, is there any way we can imagine that could enable a similar gateway behavior with Docker, including multi-tenancy support and all features you&amp;rsquo;d expect?&lt;/p&gt;
 
 &lt;p&gt;It turns out, there is.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
 
 &lt;p&gt;Docker binary can actually play up to 3 roles:&lt;/p&gt;
 
@@ -145,7 +145,7 @@ http {
 
 &lt;p&gt;And we&amp;rsquo;re done!&lt;/p&gt;
 
-&lt;h3 id=&#34;final-thought:d5aecd33c8f89018de5951b27bb1e669&#34;&gt;Final thought&lt;/h3&gt;
+&lt;h3 id=&#34;final-thought&#34;&gt;Final thought&lt;/h3&gt;
 
 &lt;p&gt;While hacking this, I noticed that all Nginx needs to switch protocols for websockets was proper HTTP Headers:&lt;/p&gt;
 
@@ -159,8 +159,7 @@ Connection: Upgrade
 Upgrade: websocket
 &lt;/pre&gt;
 
-&lt;p&gt;So that another approach could be to inject proper headers in Docker protocol.&lt;/p&gt;
-</description>
+&lt;p&gt;So that another approach could be to inject proper headers in Docker protocol.&lt;/p&gt;</description>
     </item>
     
   </channel>

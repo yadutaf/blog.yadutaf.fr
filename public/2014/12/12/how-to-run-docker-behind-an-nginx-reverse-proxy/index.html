@@ -101,15 +101,15 @@
       </div>
     </div>
     <article>
-      
-
-<p>A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.</p>
+      <p>A couple of weeks ago, I wanted to run some experiment to see how Docker could run in a cloud / shared hosting like environment. In the mean time, Docker released version 1.4 bringing additional security/authentication and Docker machine to automate the process of creating and running a remote Docker instance.</p>
 
 <p>Shared hosting farms are usually built around some kind of public gateway for incoming/outgoing traffic as well as management traffic including FTP and SSH. Te largest part of the farm - not unlike an iceberg - being &#8220;hidden&#8221; in a private network behind these gateways.</p>
 
 <p>So, my question was, is there any way we can imagine that could enable a similar gateway behavior with Docker, including multi-tenancy support and all features you&rsquo;d expect?</p>
 
 <p>It turns out, there is.</p>
+
+<p></p>
 
 <p>Docker binary can actually play up to 3 roles:</p>
 
@@ -231,7 +231,7 @@ http {
 
 <p>And we&rsquo;re done!</p>
 
-<h3 id="final-thought:d5aecd33c8f89018de5951b27bb1e669">Final thought</h3>
+<h3 id="final-thought">Final thought</h3>
 
 <p>While hacking this, I noticed that all Nginx needs to switch protocols for websockets was proper HTTP Headers:</p>
 
@@ -246,7 +246,6 @@ Upgrade: websocket
 </pre>
 
 <p>So that another approach could be to inject proper headers in Docker protocol.</p>
-
       
       
       <div id="share-this" class="col span_10">
