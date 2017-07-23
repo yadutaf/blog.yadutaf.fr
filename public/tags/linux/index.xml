@@ -10,62 +10,72 @@
     <atom:link href="http://blog.yadutaf.fr/tags/linux/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>Tracing a packet journey thanks to eBPF</title>
-      <link>http://blog.yadutaf.fr/2017/07/11/tracing-a-packet-journey-thanks-to-ebpf/</link>
-      <pubDate>Tue, 11 Jul 2017 00:00:00 +0000</pubDate>
+      <title>Tracing a packet journey using Linux tracepoints, perf and eBPF</title>
+      <link>http://blog.yadutaf.fr/2017/07/28/tracing-a-packet-journey-using-linux-tracepoints-perf-ebpf/</link>
+      <pubDate>Fri, 28 Jul 2017 00:00:00 +0000</pubDate>
       
-      <guid>http://blog.yadutaf.fr/2017/07/11/tracing-a-packet-journey-thanks-to-ebpf/</guid>
+      <guid>http://blog.yadutaf.fr/2017/07/28/tracing-a-packet-journey-using-linux-tracepoints-perf-ebpf/</guid>
       <description>
 
-&lt;p&gt;If you do networking, you are used to long debugging sessions, firing up a couple of &lt;code&gt;tcpdump&lt;/code&gt;, &lt;code&gt;mtr&lt;/code&gt; and &lt;code&gt;*ping&lt;/code&gt; along the expected/actual packet journey. At least, when there is routing involved, &lt;code&gt;mtr&lt;/code&gt; (or &lt;code&gt;traceroute&lt;/code&gt; if you have no choice) does a good at showing what&amp;rsquo;s going on. But not everything is L3. Since containers became popular on Linux, people found new &amp;lsquo;exciting&amp;rsquo; ways to torture the networking subsystem with (powerful) virtual interfaces like veth, macvlan bridge, V(x)LAN, &amp;hellip; Add a bunch of network namespaces [&lt;strong&gt;TODO LINK TO POST&lt;/strong&gt;] in the equation and debugging starts to get&amp;hellip; interesting. If not excitingly frustrating.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;ve been looking for a low level Linux network debugging tool for quite some time. Linux allows to build complex networks running directly on the host, using a combination of virtual interfaces and &lt;a href=&#34;http://blog.yadutaf.fr/2014/01/19/introduction-to-linux-namespaces-part-5-net/&#34;&gt;network namespaces&lt;/a&gt;. When something goes wrong, troubleshooting is rather tedious. If this is a L3 routing issue, &lt;code&gt;mtr&lt;/code&gt; has a good chance of being of some help. But if this is a lower level issue, I typically end up manually checking each interface / bridge / network namespace / iptables and firing up a couple of tcpdumps as an attempt to get a sense of what&amp;rsquo;s going on. If you have no prior knowledge of the network setup, this may feel like a maze.&lt;/p&gt;
 
-&lt;p&gt;When I was working for OVH, I designed a significant part of the inner networking of the next generation of Load Balancers. Without revealing trade secrets / announcing not-yet-if-ever-released products, I can tell that it involved a fair amount of network namespaces, virtual interfaces and truly nasty routing tricks (like routing via an interface with no IP and using &lt;code&gt;dummy&lt;/code&gt; interfaces). At least, it did not involve multiple routing tables (at that time). For all this time, I whished I had a tool to trace a packet journey across the interfaces and network namespaces.&lt;/p&gt;
+&lt;p&gt;What I&amp;rsquo;d need is a tool which could tell me &amp;ldquo;Hey, I&amp;rsquo;ve seen your packet: It&amp;rsquo;s gone this way, on this interface, in this network namespace&amp;rdquo;.&lt;/p&gt;
 
-&lt;p&gt;Latter, I was struggling with a network issue in a trivial 2 nodes Docker Swarm setup I use to play around &lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:play-around&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:play-around&#34;&gt;1&lt;/a&gt;&lt;/sup&gt;. Exactly half the connections timed out. It turned out to be the kind of bugs you end up fixing by rebooting&amp;hellip; the other node. Frustrating. I whished I had a tool to trace a packet journey across the interfaces and network namespaces.&lt;/p&gt;
+&lt;p&gt;Basically, what I&amp;rsquo;d need is a &lt;code&gt;mtr&lt;/code&gt; for L2.&lt;/p&gt;
 
-&lt;p&gt;In such situation, one usually ends up checking manually each possible ip route, ip table, iptables, iptables tables (!) in each possible network namespace / vrf, possibly firing a couple of tcpdumps as an attempt to make sense of the problem. Feels like a maze. At least, it does to me. You have to guess a path, check it, rinse, repeat. At least, in an actual maze, you can cheat by looking from above. &lt;code&gt;tcpdump&lt;/code&gt; would be a good tool even though tracing is not the area where it excels. To get the &amp;ldquo;view from above&amp;rdquo;, you could make it listen on the special &amp;ldquo;any&amp;rdquo; interface. But that won&amp;rsquo;t help when using multiple network namespaces. You&amp;rsquo;d need 1 tcpdump instance per network namespace. Doable. But cumbersome.&lt;/p&gt;
+&lt;p&gt;Does not exist? Let&amp;rsquo;s build one!&lt;/p&gt;
 
-&lt;h3 id=&#34;the-solution-enter-ebpf&#34;&gt;The solution: Enter eBPF&lt;/h3&gt;
+&lt;p&gt;At the end of this post, we&amp;rsquo;ll have a simple and easy to use low level packet tracer. If you ping a local Docker container, it will show something like:&lt;/p&gt;
 
-&lt;p&gt;Then, it hit me. When I wrote the solisten.py [&lt;strong&gt;TODO LINK TO POST&lt;/strong&gt;] tool to notify whenever a programs starts to listen on any network interface, in any network namespace, I used eBPF to hook on the main listen function in the kernel (inet_listen [&lt;strong&gt;TODO LINK TO KERNEL SOURCE&lt;/strong&gt;]) and send events. Maybe we can do the same to trace a packet? Sounds reasonable!&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# ping -4 172.17.0.2
+[  4026531957]          docker0 request #17146.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026531957]      vetha373ab6 request #17146.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026532258]             eth0 request #17146.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026532258]             eth0   reply #17146.001 172.17.0.2 -&amp;gt; 172.17.0.1
+[  4026531957]      vetha373ab6   reply #17146.001 172.17.0.2 -&amp;gt; 172.17.0.1
+[  4026531957]          docker0   reply #17146.001 172.17.0.2 -&amp;gt; 172.17.0.1
+&lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Let&amp;rsquo;s define the problem. We want to:&lt;/p&gt;
+&lt;h3 id=&#34;tracing-to-the-rescue&#34;&gt;Tracing to the rescue&lt;/h3&gt;
 
-&lt;ul&gt;
-&lt;li&gt;Trace a packet journey in the kernel, on a single node&lt;/li&gt;
-&lt;li&gt;List all crossed interface&lt;/li&gt;
-&lt;li&gt;List all crossed network namespace&lt;/li&gt;
-&lt;/ul&gt;
+&lt;p&gt;One way to get out of a maze, is by exploring. This is what you do when getting out of the maze is part of a game. Another way to get out is to shift your point of view, looking from above, and observing the path taken by those who know the path.&lt;/p&gt;
 
-&lt;p&gt;Ok, now that the problem is defined, this looks more like a trackable problem. Let&amp;rsquo;s translate these goals to needs. We need to:&lt;/p&gt;
+&lt;p&gt;In Linux terms, that would mean shifting to the kernel point of view, where network namespaces are just labels, instead of &amp;ldquo;containers&amp;rdquo;&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:containers&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:containers&#34;&gt;1&lt;/a&gt;&lt;/sup&gt;. In the kernel, packets, interfaces and so on are plain observable objects.&lt;/p&gt;
 
-&lt;ul&gt;
-&lt;li&gt;Use bcc [&lt;strong&gt;TODO LINK TO BCC PROJECT&lt;/strong&gt;]. It comes with a C to eBPF compiler and a Python API. Seems reasonable for prototyping.&lt;/li&gt;
-&lt;li&gt;Trace ping packets. They are well known, have no side effect, contain an &amp;ldquo;identifier&amp;rdquo; and &amp;ldquo;sequence&amp;rdquo; field.&lt;/li&gt;
-&lt;li&gt;Find a function that is (almost) always called when a packet is queued on an interface. That would solve the &amp;ldquo;all crossed interface and network namespace&amp;rdquo;.&lt;/li&gt;
-&lt;/ul&gt;
+&lt;p&gt;In this post, I&amp;rsquo;ll focus on 2 tracing tools. &lt;code&gt;perf&lt;/code&gt; and &lt;code&gt;eBPF&lt;/code&gt;.&lt;/p&gt;
 
-&lt;p&gt;To keep things simple, distributed, TCP and UDP tracing are out of the scope. That would be perfectly feasible, but that would also be over-engineering in that specific case. Additionally, even though I did my proof of concept with IPv6 and IPv4 support, I&amp;rsquo;ll focus exclusively on IPv4 in the post for the sake of readability and link to the final code at the end of this post for curious people [&lt;strong&gt;TODO LINK TO THE FULL CODE&lt;/strong&gt;].&lt;/p&gt;
+&lt;h3 id=&#34;introducing-perf-and-ebpf&#34;&gt;Introducing &lt;code&gt;perf&lt;/code&gt; and &lt;code&gt;eBPF&lt;/code&gt;&lt;/h3&gt;
 
-&lt;h3 id=&#34;find-a-function-to-trace&#34;&gt;Find a function to trace&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;perf&lt;/code&gt; is a the baseline tool for every performance related analysis on Linux. It is developed in the same source tree as the Linux kernel and must be specifically compiled for the kernel you will use to trace. It can trace the kernel as well as user programs. It may also work by sampling or using tracepoints. Think of it as a massive superset of &lt;code&gt;strace&lt;/code&gt; with a much lower overhead. We&amp;rsquo;ll use it only in a very simple way here. If you want to know more about &lt;code&gt;perf&lt;/code&gt;, I highly encourage you to &lt;a href=&#34;http://www.brendangregg.com/perf.html&#34;&gt;visit Brendan Gregg&amp;rsquo;s blog&lt;/a&gt;.&lt;/p&gt;
 
-&lt;p&gt;We need a good function to trace. Long story short, we&amp;rsquo;ll use &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; on Linux 4.10 [&lt;strong&gt;TODO LINK&lt;/strong&gt;] for the sake of this post. This may not be the best / perfect pick. But it does the job.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;eBPF&lt;/code&gt; is a relatively recent addition to the Linux Kernel. As its name suggests, this is an extended version of the BPF bytecode known as &amp;ldquo;Berkeley Packet Filter&amp;rdquo; used to&amp;hellip; filter packets on the BSD family. You name it. On Linux, it can also be used to safely run platform independent code in the live kernel, provided that it meets some safety criteria. For instance, memory accesses are validated BEFORE the program can run and it must be possible to prove that the program will end in a restricted amount of time. If the kernel can&amp;rsquo;t prove it, even if it&amp;rsquo;s safe and always terminates, it will be rejected.&lt;/p&gt;
 
-&lt;p&gt;As digging in the kernel source may seem intimidating, I&amp;rsquo;d like to broadly re-trace the process of finding one, in the hope it can help you find one next time you need to.&lt;/p&gt;
+&lt;p&gt;Such programs can be used as network classifier for QOS, very low level networking and filtering as part of eXpress Data Plane (XDP), as a tracing agent and many other places. Tracing probes can be attached to any function whose symbol is exported in &lt;code&gt;/proc/kallsyms&lt;/code&gt; or any tracepoints. In this post, I&amp;rsquo;ll focus on tracing agents attached to tracepoints.&lt;/p&gt;
 
-&lt;p&gt;There are some constraints. We need a function that is never inlined. If it is inlined, it is potentially present in all the calling site and maybe optimized away. Moreover, it can not be a &amp;ldquo;static&amp;rdquo; function. Static functions are basically the C equivalent of private function in most languages. All in all, if the candidate is not present in &lt;code&gt;/proc/kallsyms&lt;/code&gt;, it won&amp;rsquo;t work. Some of them are special and can&amp;rsquo;t be traced either, but we&amp;rsquo;ll leave it aside.&lt;/p&gt;
+&lt;p&gt;For an example of tracing probe attached to a kernel function or as a gentler introduction, I invite you to &lt;a href=&#34;http://blog.yadutaf.fr/2016/03/30/turn-any-syscall-into-event-introducing-ebpf-kernel-probes/&#34;&gt;read my previous post on eBPF&lt;/a&gt;.&lt;/p&gt;
 
-&lt;p&gt;Additionally, if possible, we&amp;rsquo;d prefer a function that is common to all or most of the devices and code path to limit the number of functions to trace. This is not a hard constraint, but that would surely help!&lt;/p&gt;
+&lt;h3 id=&#34;lab-setup&#34;&gt;Lab setup&lt;/h3&gt;
 
-&lt;p&gt;As I add no clue behind looking into &amp;ldquo;/net&amp;rdquo;, I started from the veth driver. It looked like a reasonable candidate to start. This is a reasonably simple virtual driver, there should not be too much noise in it. Use &amp;lsquo;find&amp;rsquo; to locate it and there you are &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c&lt;/a&gt;. Around 500 lines of code. For the kernel, that&amp;rsquo;s pretty small. Nice. Now, we need to check the functions in this file, looking for some good looking name. A good looking name would suggest that this function queues or forwards a packet on this interface. Good news, there is a single candidate, &amp;ldquo;vethxmit&amp;rdquo; &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L106&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L106&lt;/a&gt;. As this is a driver, if this function is actually the one used by to enqueue packets, it will be registered somewhere and called via a function pointer. This the kernel&amp;rsquo;s way to interfaces. A few lines below, it is registered under the name &amp;lsquo;ndo_start_xmit&amp;rsquo; &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L291&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/drivers/net/veth.c#L291&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;For this post, we need &lt;code&gt;perf&lt;/code&gt; and some tools to work with eBPF. As I&amp;rsquo;m not a great fan of handwritten assembly, I&amp;rsquo;ll use &lt;a href=&#34;https://github.com/iovisor/bcc&#34;&gt;&lt;code&gt;bcc&lt;/code&gt;&lt;/a&gt; here. This is a powerful and flexible tool allowing you to write kernel probes as restricted C and instrument them in userland with Python. Heavyweight for production, but perfect for development!&lt;/p&gt;
 
-&lt;p&gt;Some &amp;lsquo;grep&amp;rsquo; later, we learn that &lt;code&gt;ndo_start_xmit()&lt;/code&gt; is mostly called from &lt;code&gt;__netdev_start_xmit&lt;/code&gt; in &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/include/linux/netdevice.h&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/include/linux/netdevice.h&lt;/a&gt;. There are 2 other call sites but they are related to usb and infiniband. We&amp;rsquo;ll ignore them for now. Bad news is, this is a static inline function. We&amp;rsquo;ll need another candidate.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;ll reproduce here install instructions for Ubuntu 17.04 (Zesty) which is the OS powering my laptop. Instructions for &amp;ldquo;perf&amp;rdquo; should not diverge much from distributions to other and specific &lt;a href=&#34;https://github.com/iovisor/bcc/blob/master/INSTALL.md&#34;&gt;&lt;code&gt;bcc&lt;/code&gt; install instructions can be found on Github&lt;/a&gt;.&lt;/p&gt;
 
-&lt;p&gt;This function is called from a couple of places [&lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/ident/netdev_start_xmit&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/ident/netdev_start_xmit&lt;/a&gt;]. There are multiple good candidates here. I guess we&amp;rsquo;d need to trace at least a couple of them. But we&amp;rsquo;ll start with the most likely candidate and maybe add more later. We&amp;rsquo;ll go for &lt;code&gt;xmit_one&lt;/code&gt; in &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2905&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2905&lt;/a&gt;. Unfortunately, this function is static, hence private, hence untraceable. On the bright side, it&amp;rsquo;s static so we know all call sites must be in the same module. In our case, there is a single call place in &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2922&#34;&gt;http://elixir.free-electrons.com/linux/v4.10.17/source/net/core/dev.c#L2922&lt;/a&gt;. a quick grep in &lt;code&gt;/proc/kallsyms&lt;/code&gt; confirms this simple is exported: we have our candidate!&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: attaching eBPF to tracepoints requires at least Linux kernel &amp;gt; 4.7.&lt;/p&gt;
+&lt;/blockquote&gt;
 
-&lt;h3 id=&#34;install-bcc&#34;&gt;Install bcc&lt;/h3&gt;
+&lt;p&gt;Install &lt;code&gt;perf&lt;/code&gt;:&lt;/p&gt;
 
-&lt;p&gt;If you already have it installed or are not intending to experiment (yet) on this PoC, you can safely skip this section. I should probably just skip it entirely anyway but install instruction are not exactly up to date. Hence, here is an updated, quick and dirty &amp;trade; procedure for Ubuntu 17.04 (Zesty).&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# Grab &#39;perf&#39;
+sudo apt install linux-tools-generic
+
+# Test it
+perf
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you see an error message, it probably means that your kernel was updated recently but you did not reboot yet.&lt;/p&gt;
+
+&lt;p&gt;Install &lt;code&gt;bcc&lt;/code&gt;:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# Install dependencies
 sudo apt install bison build-essential cmake flex git libedit-dev python zlib1g-dev libelf-dev libllvm4.0 llvm-dev libclang-dev luajit luajit-5.1-dev
@@ -81,26 +91,133 @@ make
 sudo make install
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;On Ubuntu 16.10 (Xenial) and older, install llvm3.7 instead.&lt;/p&gt;
+&lt;h3 id=&#34;finding-good-tracepoints-aka-as-manually-tracing-a-packet-s-journey-with-perf&#34;&gt;Finding good tracepoints aka as &amp;ldquo;manually tracing a packet&amp;rsquo;s journey with &lt;code&gt;perf&lt;/code&gt;&amp;ldquo;&lt;/h3&gt;
 
-&lt;h3 id=&#34;trace-dev-hard-start-xmit-using-bcc&#34;&gt;Trace &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; using bcc&lt;/h3&gt;
+&lt;p&gt;There are multiple ways to find good tracepoints. In a previous version of this post, I started from the code of the &lt;code&gt;veth&lt;/code&gt; driver and followed the trail from there to find functions to trace. While it did lead to acceptable results, I could not catch all the packets. Indeed, the common paths crossed by all packets are in un-exported (inline or static) methods. This is also when I realized Linux had tracepoints and decided to rewrite this post and the associated code using tracepoints instead. This was quite frustrating, but also much more interesting (to me).&lt;/p&gt;
 
-&lt;p&gt;That&amp;rsquo;s the fun part. We&amp;rsquo;ll attach a kernel probe (kprobe, you guessed it :)) to &lt;code&gt;dev_hard_start_xmit&lt;/code&gt; and start building some events from the probe. Then we&amp;rsquo;ll use a piece of simple Python code to parse these events and print some info.&lt;/p&gt;
+&lt;p&gt;Enough talks on myself, back to work.&lt;/p&gt;
 
-&lt;p&gt;Even though probes look like regular C and is indeed build using a LLVM C compiler, this is only a restricted subset of C that compiles to eBPF. That is, a simple VM inside the kernel designed to allow safe observers (ie: not actors / modifiers) to look around, provided the meet some criterions. First, most loops won&amp;rsquo;t be allowed, the kernels needs to prove the program will always exit before starting it. Second, this is an observing program. You can not call arbitrary kernel functions for obvious security reasons. Some inline accessors defined in &amp;ldquo;.h&amp;rdquo; files are OK though. Third, you can not access memory outside the probe stack. If you need to do so, you need to be explicit about it and use bpf accessors. More on this later.&lt;/p&gt;
+&lt;p&gt;The goal is to trace the path taken by a packet. Depending on the crossed interfaces, the crossed tracepoints may differ (spoiler alert: they do).&lt;/p&gt;
 
-&lt;p&gt;With this in place, we can proceed with a hello world probe. We&amp;rsquo;ll simply emit an event for each packet sent (don&amp;rsquo;t run it on a production system!). This event will only contain the owning programm name.&lt;/p&gt;
+&lt;p&gt;To find suitable tracepoints, I used ping with 2 internal and 2 external targets under &lt;code&gt;perf trace&lt;/code&gt;:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;localhost with IP &lt;em&gt;127.0.0.1&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;An innocent Docker container with IP &lt;em&gt;172.17.0.2&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;My phone via USB tethering with IP &lt;em&gt;192.168.42.129&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;My phone via WiFi with IP &lt;em&gt;192.168.43.1&lt;/em&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;code&gt;perf trace&lt;/code&gt; is a sub command of perf, which produces an output similar to strace (with a MUCH lower overhead) by default. We can easily tweak it to hide the syscalls themselves and instead print events of the &amp;lsquo;net&amp;rsquo; category. For instance, tracing a ping to a Docker container with IP 172.17.0.2 would look like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;sudo perf trace --no-syscalls --event &#39;net:*&#39; ping 172.17.0.2 -c1 &amp;gt; /dev/null
+     0.000 net:net_dev_queue:dev=docker0 skbaddr=0xffff96d481988700 len=98)
+     0.008 net:net_dev_start_xmit:dev=docker0 queue_mapping=0 skbaddr=0xffff96d481988700 vlan_tagged=0 vlan_proto=0x0000 vlan_tci=0x0000 protocol=0x0800 ip_summed=0 len=98 data_len=0 network_offset=14 transport_offset_valid=1 transport_offset=34 tx_flags=0 gso_size=0 gso_segs=0 gso_type=0)
+     0.014 net:net_dev_queue:dev=veth79215ff skbaddr=0xffff96d481988700 len=98)
+     0.016 net:net_dev_start_xmit:dev=veth79215ff queue_mapping=0 skbaddr=0xffff96d481988700 vlan_tagged=0 vlan_proto=0x0000 vlan_tci=0x0000 protocol=0x0800 ip_summed=0 len=98 data_len=0 network_offset=14 transport_offset_valid=1 transport_offset=34 tx_flags=0 gso_size=0 gso_segs=0 gso_type=0)
+     0.020 net:netif_rx:dev=eth0 skbaddr=0xffff96d481988700 len=84)
+     0.022 net:net_dev_xmit:dev=veth79215ff skbaddr=0xffff96d481988700 len=98 rc=0)
+     0.024 net:net_dev_xmit:dev=docker0 skbaddr=0xffff96d481988700 len=98 rc=0)
+     0.027 net:netif_receive_skb:dev=eth0 skbaddr=0xffff96d481988700 len=84)
+     0.044 net:net_dev_queue:dev=eth0 skbaddr=0xffff96d481988b00 len=98)
+     0.046 net:net_dev_start_xmit:dev=eth0 queue_mapping=0 skbaddr=0xffff96d481988b00 vlan_tagged=0 vlan_proto=0x0000 vlan_tci=0x0000 protocol=0x0800 ip_summed=0 len=98 data_len=0 network_offset=14 transport_offset_valid=1 transport_offset=34 tx_flags=0 gso_size=0 gso_segs=0 gso_type=0)
+     0.048 net:netif_rx:dev=veth79215ff skbaddr=0xffff96d481988b00 len=84)
+     0.050 net:net_dev_xmit:dev=eth0 skbaddr=0xffff96d481988b00 len=98 rc=0)
+     0.053 net:netif_receive_skb:dev=veth79215ff skbaddr=0xffff96d481988b00 len=84)
+     0.060 net:netif_receive_skb_entry:dev=docker0 napi_id=0x3 queue_mapping=0 skbaddr=0xffff96d481988b00 vlan_tagged=0 vlan_proto=0x0000 vlan_tci=0x0000 protocol=0x0800 ip_summed=2 hash=0x00000000 l4_hash=0 len=84 data_len=0 truesize=768 mac_header_valid=1 mac_header=-14 nr_frags=0 gso_size=0 gso_type=0)
+     0.061 net:netif_receive_skb:dev=docker0 skbaddr=0xffff96d481988b00 len=84)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Keeping only the event names and skbaddr, this looks more readable.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;net_dev_queue           dev=docker0     skbaddr=0xffff96d481988700
+net_dev_start_xmit      dev=docker0     skbaddr=0xffff96d481988700
+net_dev_queue           dev=veth79215ff skbaddr=0xffff96d481988700
+net_dev_start_xmit      dev=veth79215ff skbaddr=0xffff96d481988700
+netif_rx                dev=eth0        skbaddr=0xffff96d481988700
+net_dev_xmit            dev=veth79215ff skbaddr=0xffff96d481988700
+net_dev_xmit            dev=docker0     skbaddr=0xffff96d481988700
+netif_receive_skb       dev=eth0        skbaddr=0xffff96d481988700
+
+net_dev_queue           dev=eth0        skbaddr=0xffff96d481988b00
+net_dev_start_xmit      dev=eth0        skbaddr=0xffff96d481988b00
+netif_rx                dev=veth79215ff skbaddr=0xffff96d481988b00
+net_dev_xmit            dev=eth0        skbaddr=0xffff96d481988b00
+netif_receive_skb       dev=veth79215ff skbaddr=0xffff96d481988b00
+netif_receive_skb_entry dev=docker0     skbaddr=0xffff96d481988b00
+netif_receive_skb       dev=docker0     skbaddr=0xffff96d481988b00
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There are multiple things to be said here. The most obvious being that the &lt;code&gt;skbaddr&lt;/code&gt; changes in the middle, but stays the same otherwise. This is when the echo reply packet is generated as a reply to this echo request (ping). The rest of the time, the same network packet is moved between interfaces, with hopefully no copy. Copying is expensive&amp;hellip;&lt;/p&gt;
+
+&lt;p&gt;The other interesting point is, we clearly see the packet going through the &lt;code&gt;docker0&lt;/code&gt; bridge, then the host side of the veth, &lt;code&gt;veth79215ff&lt;/code&gt; in my case, and finally the container side of the veth, pretending to be &lt;code&gt;eth0&lt;/code&gt;. We don&amp;rsquo;t see the network namespaces yet, but it already gives a good overview.&lt;/p&gt;
+
+&lt;p&gt;Finally, after seeing the packet on &lt;code&gt;eth0&lt;/code&gt; we hit tracepoints in reverse order. This is not the response, but the finalization of the transmission.&lt;/p&gt;
+
+&lt;p&gt;By repeating a similar process on the 4 target scenarios, we can pick the most appropriate tracing points to track our packet&amp;rsquo;s journey. I picked 4 of them:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;net_dev_queue&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;netif_receive_skb_entry&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;netif_rx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;napi_gro_receive_entry&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Taking these 4 tracepoints will give me trace events in order with no duplication, saving some de-duplication work. Still good to take.&lt;/p&gt;
+
+&lt;p&gt;We can easily double check this selection like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;sudo perf trace --no-syscalls           \
+  --event &#39;net:net_dev_queue&#39;           \
+  --event &#39;net:netif_receive_skb_entry&#39; \
+  --event &#39;net:netif_rx&#39;                \
+  --event &#39;net:napi_gro_receive_entry&#39;  \
+  ping 172.17.0.2 -c1 &amp;gt; /dev/null
+     0.000 net:net_dev_queue:dev=docker0 skbaddr=0xffff8e847720a900 len=98)
+     0.010 net:net_dev_queue:dev=veth7781d5c skbaddr=0xffff8e847720a900 len=98)
+     0.014 net:netif_rx:dev=eth0 skbaddr=0xffff8e847720a900 len=84)
+     0.034 net:net_dev_queue:dev=eth0 skbaddr=0xffff8e849cb8cd00 len=98)
+     0.036 net:netif_rx:dev=veth7781d5c skbaddr=0xffff8e849cb8cd00 len=84)
+     0.045 net:netif_receive_skb_entry:dev=docker0 napi_id=0x1 queue_mapping=0 skbaddr=0xffff8e849cb8cd00 vlan_tagged=0 vlan_proto=0x0000 vlan_tci=0x0000 protocol=0x0800 ip_summed=2 hash=0x00000000 l4_hash=0 len=84 data_len=0 truesize=768 mac_header_valid=1 mac_header=-14 nr_frags=0 gso_size=0 gso_type=0)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Mission accomplished!&lt;/p&gt;
+
+&lt;p&gt;If you want to go further and explore a list of available network tracepoints, you may user &lt;code&gt;perf list&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;sudo perf list &#39;net:*&#39;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This should return a list of tracepoints names like &lt;code&gt;net:netif_rx&lt;/code&gt;. The part before the colon (&amp;rsquo;:&amp;lsquo;) is the event category (&amp;lsquo;net&amp;rsquo;). The part after is the event name, in this category.&lt;/p&gt;
+
+&lt;h3 id=&#34;writing-a-custom-tracer-with-ebpf-bcc&#34;&gt;Writing a custom tracer with &lt;code&gt;eBPF&lt;/code&gt; / &lt;code&gt;bcc&lt;/code&gt;&lt;/h3&gt;
+
+&lt;p&gt;This would be more than enough for most situations. If you were reading this post to learn how to trace a packet&amp;rsquo;s journey on a Linux box, you already got all you need. But, if you want to dive deeper, run a custom filter, track more data like the network namespaces crossed by the packets or the source and destination IPs, please, bear with me.&lt;/p&gt;
+
+&lt;p&gt;Starting with Linux Kernel 4.7, eBPF programs can be attached to kernel tracepoints. Before that, the only alternative to build this tracer would have been to attach the probes to exported kernel symbols. While this could work, it would have a couple of drawbacks:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;The kernel internal API is not stable. Tracepoints are (although the data structures ae not necessarily&amp;hellip;).&lt;/li&gt;
+&lt;li&gt;For performance reasons, most of the networking inner functions are inlined or static. Neither of which can be probed.&lt;/li&gt;
+&lt;li&gt;It is tedious to find all potential call sites for this functions, and sometime not all required data is available at this stage.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;An earlier version of this post attempted to use kprobes, which are easier to use, but the results were at best incomplete.&lt;/p&gt;
+
+&lt;p&gt;Now, let&amp;rsquo;s be honest, accessing data via tracepoints is a lot more tedious than with there kprobe counterpart. While I tried to keep this post as gentle as possible, you may want to start with the (slightly older) post &lt;a href=&#34;http://blog.yadutaf.fr/2016/03/30/turn-any-syscall-into-event-introducing-ebpf-kernel-probes/&#34;&gt;&amp;ldquo;How to turn any syscall into an event: Introducing eBPF Kernel probes&amp;rdquo;&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;This disclaimer aside, let&amp;rsquo;s start with a simple hello world and get the low level plumbing into place. In this hello world, we&amp;rsquo;ll build an event every time 1 of the 4 tracepoints we chose earlier (&lt;code&gt;net_dev_queue&lt;/code&gt;, &lt;code&gt;netif_receive_skb_entry&lt;/code&gt;, &lt;code&gt;netif_rx&lt;/code&gt; and &lt;code&gt;napi_gro_receive_entry&lt;/code&gt;) is triggered. To keep things simple at this stage, we&amp;rsquo;ll send the program&amp;rsquo;s &lt;code&gt;comm&lt;/code&gt;, that is, a 16 char string that&amp;rsquo;s basically the program name.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#include &amp;lt;bcc/proto.h&amp;gt;
 #include &amp;lt;linux/sched.h&amp;gt;
 
 // Event structure
 struct route_evt_t {
-    char comm[TASK_COMM_LEN];
+        char comm[TASK_COMM_LEN];
 };
 BPF_PERF_OUTPUT(route_evt);
 
-int kprobe__dev_hard_start_xmit(struct pt_regs *ctx, struct sk_buff *first, struct net_device *dev, struct netdev_queue *txq, int *ret)
+static inline int do_trace(void* ctx, struct sk_buff* skb)
 {
     // Built event for userland
     struct route_evt_t evt = {};
@@ -110,20 +227,49 @@ int kprobe__dev_hard_start_xmit(struct pt_regs *ctx, struct sk_buff *first, stru
     route_evt.perf_submit(ctx, &amp;amp;evt, sizeof(evt));
 
     return 0;
-};
+}
+
+/**
+  * Attach to Kernel Tracepoints
+  */
+
+TRACEPOINT_PROBE(net, netif_rx) {
+    return do_trace(args, (struct sk_buff*)args-&amp;gt;skbaddr);
+}
+
+TRACEPOINT_PROBE(net, net_dev_queue) {
+    return do_trace(args, (struct sk_buff*)args-&amp;gt;skbaddr);
+}
+
+TRACEPOINT_PROBE(net, napi_gro_receive_entry) {
+    return do_trace(args, (struct sk_buff*)args-&amp;gt;skbaddr);
+}
+
+TRACEPOINT_PROBE(net, netif_receive_skb_entry) {
+    return do_trace(args, (struct sk_buff*)args-&amp;gt;skbaddr);
+}
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Let&amp;rsquo;s look at what it does.&lt;/p&gt;
+&lt;p&gt;This snippet attaches to the 4 tracepoints of the &amp;ldquo;net&amp;rdquo; category, loads the &lt;code&gt;skbaddr&lt;/code&gt; field and passes it to the common section which only loads the program name for now. If you wonder where this &lt;code&gt;args-&amp;gt;skbaddr&lt;/code&gt; come from (and I&amp;rsquo;d be glad you do), the &lt;code&gt;args&lt;/code&gt; structure is generated for you by bcc whenever you define a tracepoint with &lt;code&gt;TRACEPOINT_PROBE&lt;/code&gt;. As it is generated on the fly, there is no easy way to see its definition BUT, there is a better way. We can directly look at the data source, from the kernel. Fortunately there is a &lt;code&gt;/sys/kernel/debug/tracing/events&lt;/code&gt; entry for each tracepoint. For instance, for the &lt;code&gt;net:netif_rx&lt;/code&gt;, one could just &amp;ldquo;cat&amp;rdquo; &lt;code&gt;/sys/kernel/debug/tracing/events/net/netif_rx/format&lt;/code&gt; which should output something like this:&lt;/p&gt;
 
-&lt;ol&gt;
-&lt;li&gt;Grab some definitions, just like a regular C program&lt;/li&gt;
-&lt;li&gt;Declare out event structure (&lt;code&gt;struct route_evt_t&lt;/code&gt;) and channel name (&lt;code&gt;BPF_PERF_OUTPUT(route_evt)&lt;/code&gt;)
-3/ Declare our probe (&lt;code&gt;kprobe__dev_hard_start_xmit&lt;/code&gt;). Notice the &lt;code&gt;kprobe__&lt;/code&gt; prefix and &lt;code&gt;struct pt_regs *ctx&lt;/code&gt; argument. bcc automatically detects the prefix and attaches it to the proper kernel function and will pass the context as first argument.
-4/ Use a special bpf helper function (&lt;code&gt;bpf_get_current_comm&lt;/code&gt;) to load the program name into the event structure. This is one of the rare function that can be called from eBPF!
-5/ Send the event (&lt;code&gt;route_evt.perf_submit()&lt;/code&gt;)&lt;/li&gt;
-&lt;/ol&gt;
+&lt;pre&gt;&lt;code&gt;name: netif_rx
+ID: 1183
+format:
+	field:unsigned short common_type;         offset:0; size:2; signed:0;
+	field:unsigned char common_flags;         offset:2; size:1; signed:0;
+	field:unsigned char common_preempt_count; offset:3; size:1; signed:0;
+	field:int common_pid;                     offset:4; size:4; signed:1;
 
-&lt;p&gt;We can now integrate it in a simple Python program:&lt;/p&gt;
+	field:void * skbaddr;         offset:8;  size:8; signed:0;
+	field:unsigned int len;       offset:16; size:4; signed:0;
+	field:__data_loc char[] name; offset:20; size:4; signed:1;
+
+print fmt: &amp;quot;dev=%s skbaddr=%p len=%u&amp;quot;, __get_str(name), REC-&amp;gt;skbaddr, REC-&amp;gt;len
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You may notice the &lt;code&gt;print fmt&lt;/code&gt; line at the end of the record. This is exactly what&amp;rsquo;s used by &lt;code&gt;perf trace&lt;/code&gt; to generate its output.&lt;/p&gt;
+
+&lt;p&gt;With the low level plumbing in place and well understood, we can wrap it in a Python script to display a line for every event send by the eBPF side of the probe:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;#!/usr/bin/env python
 # coding: utf-8
@@ -146,7 +292,7 @@ def event_printer(cpu, data, size):
     event = ct.cast(data, ct.POINTER(RouteEvt)).contents
 
     # Print event
-    print &amp;quot;Just go a packet from %s&amp;quot; % (event.comm)
+    print &amp;quot;Just got a packet from %s&amp;quot; % (event.comm)
 
 if __name__ == &amp;quot;__main__&amp;quot;:
     b = BPF(text=bpf_text)
@@ -156,139 +302,242 @@ if __name__ == &amp;quot;__main__&amp;quot;:
         b.kprobe_poll()
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;I won&amp;rsquo;t go too much into the details, here, this is mostly self-explanatory. This is basically te mirror of the setup on the eBPF side. Declare the event structure using ctypes to decode it, declare the probe, listen for events and print them.&lt;/p&gt;
+&lt;p&gt;You may test it now. You will need to be root.&lt;/p&gt;
 
-&lt;p&gt;If you run this program (as root), you&amp;rsquo;ll probably see something like:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: There is no filtering at this stage. Even a low background network usage may flood your terminal!&lt;/p&gt;
+&lt;/blockquote&gt;
 
-&lt;pre&gt;&lt;code&gt;Just go a packet from ping
-Just go a packet from ping
-Just go a packet from Socket Thread
-Just go a packet from irq/46-iwlwifi
+&lt;pre&gt;&lt;code&gt;$&amp;gt; sudo python ./tracepkt.py
+...
+Just got a packet from ping6
+Just got a packet from ping6
+Just got a packet from ping
+Just got a packet from irq/46-iwlwifi
+...
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;You&amp;rsquo;ll notice that I have a ping running in the background and using WiFi. So you can rightfully guess I&amp;rsquo;m typing from this from my laptop. Indeed, eBPF is not reserved to datacenters :)&lt;/p&gt;
+&lt;p&gt;In this case, you can see that I was using ping and ping6 and the WiFi driver just received some packets. In that case, that was the echo reply.&lt;/p&gt;
 
-&lt;h3 id=&#34;load-interface-name-netns-id-from-ipv4-packets&#34;&gt;Load interface name, netns id from IPv4 packets&lt;/h3&gt;
+&lt;p&gt;Let&amp;rsquo;s start adding some useful data / filters.&lt;/p&gt;
 
-&lt;p&gt;Once the plumbing is in place this is straightforward. If we can call straightforward to parse network packets from kernel structures :p. In this section, I&amp;rsquo;ll focus on &lt;code&gt;kprobe__dev_hard_start_xmit&lt;/code&gt; in the C/eBPF part of the probe. The structure and Python part can be easily extended. I&amp;rsquo;ll put a link to a complete version at the end of the post.&lt;/p&gt;
+&lt;p&gt;I will not focus on performance in this post. This will better demonstrate the the power and limitations of eBPF. To make it (much) faster, we could use the packet size as a heuristic, assuming there is no strange IP options. Using the example programs as is will slow down your network traffic.&lt;/p&gt;
 
-&lt;p&gt;We&amp;rsquo;ll start by keeping only IPv4 packets:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: to limit the length of this post, I&amp;rsquo;ll focus on the C/eBPF part here. I&amp;rsquo;ll put a link to the full source code at the end of this post.&lt;/p&gt;
+&lt;/blockquote&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Cast types. Intermediate cast not needed, kept for readability
-struct sock *sk = first-&amp;gt;sk;
+&lt;h3 id=&#34;add-in-network-interface-information&#34;&gt;Add in network interface information&lt;/h3&gt;
+
+&lt;p&gt;First, you can safely remove the &amp;ldquo;comm&amp;rdquo; fields, loading and sched.h header. It&amp;rsquo;s of no real use here, sorry.&lt;/p&gt;
+
+&lt;p&gt;Then you can include &lt;code&gt;net/inet_sock.h&lt;/code&gt; so that we have all necessary declarations and add &lt;code&gt;char ifname[IFNAMSIZ];&lt;/code&gt; to the event structure.&lt;/p&gt;
+
+&lt;p&gt;We&amp;rsquo;ll now load the device name from the device structure. This is interesting as this is an actually useful piece of information and it demonstrates on a manageable scale the techniques to load any data:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Get device pointer, we&#39;ll need it to get the name and network namespace
+struct net_device *dev;
+bpf_probe_read(&amp;amp;dev, sizeof(skb-&amp;gt;dev), ((char*)skb) + offsetof(typeof(*skb), dev));
+
+// Load interface name
+bpf_probe_read(&amp;amp;evt.ifname, IFNAMSIZ, dev-&amp;gt;name);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can test it, it works as is. Do not forget to add the related part on the Python side though :)&lt;/p&gt;
+
+&lt;p&gt;OK, so how does it work? To load the interface name, we need the interface device structure. I&amp;rsquo;ll start from the last statement as it&amp;rsquo;s the easiest to understand and the previous one is actually just or trickier version. It uses &lt;code&gt;bpf_probe_read&lt;/code&gt; to read data of length &lt;code&gt;IFNAMSIZ&lt;/code&gt; from &lt;code&gt;dev-&amp;gt;name&lt;/code&gt; and copy it to &lt;code&gt;evt.ifname&lt;/code&gt;. The fist line follows exactly the same logic. It loads the value of the &lt;code&gt;skb-&amp;gt;dev&lt;/code&gt; pointer into &lt;code&gt;dev&lt;/code&gt;. Unfortunately, I could not find another way to load the field address without this nice offsetof / typeof tricks.&lt;/p&gt;
+
+&lt;p&gt;As a reminder, the goal of eBPF is to allow &lt;em&gt;safe&lt;/em&gt; scripting of the kernel. This implies that random memory access are forbidden. All memory accesses must be validated. Unless the memory you access in on the stack, you need to use the &lt;code&gt;bpf_probe_read&lt;/code&gt; read accessor. This makes to code cumbersome to read / write but makes it safe too. &lt;code&gt;bpf_probe_read&lt;/code&gt; is somehow like a safe version of &lt;code&gt;memcpy&lt;/code&gt;. It is defined in &lt;a href=&#34;http://elixir.free-electrons.com/linux/v4.10.17/source/kernel/trace/bpf_trace.c#L64&#34;&gt;bpf_trace.c in the kernel&lt;/a&gt;. The interesting parts being:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;It&amp;rsquo;s like memcpy. Beware of the cost of copies on performance.&lt;/li&gt;
+&lt;li&gt;In case of error, it will return a buffer initialized to 0 and return an error. It will &lt;em&gt;not&lt;/em&gt; crash or stop the program.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;For the remaining parts of this post, I&amp;rsquo;ll use the following macro to hep keep things readable:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#define member_read(destination, source_struct, source_member)                 \
+  do{                                                                          \
+    bpf_probe_read(                                                            \
+      destination,                                                             \
+      sizeof(source_struct-&amp;gt;source_member),                                    \
+      ((char*)source_struct) + offsetof(typeof(*source_struct), source_member) \
+    );                                                                         \
+  } while(0)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Which allows us to write:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;member_read(&amp;amp;dev, skb, dev);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s better!&lt;/p&gt;
+
+&lt;h3 id=&#34;add-in-the-network-namespace-id&#34;&gt;Add in the network namespace ID&lt;/h3&gt;
+
+&lt;p&gt;That&amp;rsquo;s probably the most valuable piece of information. In itself, it is a valid reason to all these efforts. Unfortunately, this is also the hardest to load.&lt;/p&gt;
+
+&lt;p&gt;The namespace identifier can be loaded from 2 places:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;the socket &amp;lsquo;sk&amp;rsquo; structure&lt;/li&gt;
+&lt;li&gt;the device &amp;lsquo;dev&amp;rsquo; structure&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;I was initially using the socket structure as this is the one I was using when writing &lt;a href=&#34;https://github.com/iovisor/bcc/blob/master/tools/solisten.py&#34;&gt;solisten.py&lt;/a&gt;. Unfortunately, and I&amp;rsquo;m not sure why, the namespace identifier is no longer readable as soon as the packet crosses a namespace boundary. The field is all 0s, which is a clear indicator of an invalid memory access (remember how bpf_probe_read works in case of errors) and defeats the whole point.&lt;/p&gt;
+
+&lt;p&gt;Fortunately, the device approach works. Think of it like asking the packet on which interface it is and asking the interface in which namespace it belongs.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;struct net* net;
+
+// Get netns id. Equivalent to: evt.netns = dev-&amp;gt;nd_net.net-&amp;gt;ns.inum
+possible_net_t *skc_net = &amp;amp;dev-&amp;gt;nd_net;
+member_read(&amp;amp;net, skc_net, net);
+struct ns_common* ns = member_address(net, ns);
+member_read(&amp;amp;evt.netns, ns, inum);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Which uses the following additional macro for improved readability:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#define member_address(source_struct, source_member) \
+({                                                   \
+  void* __ret;                                       \
+  __ret = (void*) (((char*)source_struct) + offsetof(typeof(*source_struct), source_member)); \
+  __ret;                                             \
+})
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As a side effect, it allows to simplify the &lt;code&gt;member_read&lt;/code&gt; macro. I&amp;rsquo;ll leave it as an exercise for the reader.&lt;/p&gt;
+
+&lt;p&gt;Plug this together, and&amp;hellip; Tadaa!&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$&amp;gt; sudo python ./tracepkt.py
+[  4026531957]          docker0
+[  4026531957]      vetha373ab6
+[  4026532258]             eth0
+[  4026532258]             eth0
+[  4026531957]      vetha373ab6
+[  4026531957]          docker0
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is what you should see if you send a ping to a Docker container. The packet goes through the local &lt;code&gt;docker0&lt;/code&gt; bridge and then moves to the the &lt;code&gt;veth&lt;/code&gt; pair, crossing the network namespace boundary and the reply follows the exact reverse path.&lt;/p&gt;
+
+&lt;p&gt;That was a nasty one!&lt;/p&gt;
+
+&lt;h3 id=&#34;going-further-trace-only-requests-reply-and-echo-replies-packets&#34;&gt;Going further: trace only requests reply and echo replies packets&lt;/h3&gt;
+
+&lt;p&gt;As a bonus, we&amp;rsquo;ll also load the IP from the packets. We have to read the IP header anyway. I&amp;rsquo;ll stick to IPv4 here, but the same logic applies for IPv6.&lt;/p&gt;
+
+&lt;p&gt;Bad news is, nothing is really simple. Remember, we are dealing with the kernel, in the network path. Some packets have not yet been opened. This means that some headers offsets are still uninitialized. We&amp;rsquo;ll have to compute all of them, going from the MAC header to the IP header and finally to the ICMP header.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start gently by loading the MAC header address and deducing the IP header address. We won&amp;rsquo;t load the MAC header itself and instead assume it is 14 bytes long.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;// Compute MAC header address
+char* head;
+u16 mac_header;
+
+member_read(&amp;amp;head,       skb, head);
+member_read(&amp;amp;mac_header, skb, mac_header);
+
+// Compute IP Header address
+#define MAC_HEADER_SIZE 14;
+char* ip_header_address = head + mac_header + MAC_HEADER_SIZE;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This basically means that the IP header starts at &lt;code&gt;skb-&amp;gt;head + skb-&amp;gt;mac_header + MAC_HEADER_SIZE;&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;We can now decode the IP version in the first 4 bits of the IP header, that is, the first half of the first byte, and make sure it is IPv4:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Load IP protocol version
+u8 ip_version;
+bpf_probe_read(&amp;amp;ip_version, sizeof(u8), ip_header_address);
+ip_version = ip_version &amp;gt;&amp;gt; 4 &amp;amp; 0xf;
 
 // Filter IPv4 packets
-if (sk-&amp;gt;sk_family != AF_INET) {
-	return 0;
+if (ip_version != 4) {
+    return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Here, there is no choice, you need to read the structure definitions in the kernel. Fortunately, this is one of the most active and documented subsystem of Linux.&lt;/p&gt;
+&lt;p&gt;We now load the full IP header, grab the IPs to make the Python info even more useful, make sure the next header is ICMP and derive the ICMP header offset. Yes all this:&lt;/p&gt;
 
-&lt;p&gt;While dealing with &lt;code&gt;sk&lt;/code&gt;, we can grab the network namespace internal identifier. This will not give you a pretty name like &lt;code&gt;ip netns&lt;/code&gt; does, that&amp;rsquo;s only a magic trick. Rather, it will return the numerical part of what you can see when using &lt;code&gt;readlink&lt;/code&gt; on some &lt;code&gt;/proc/[PID]/ns/net&lt;/code&gt; pseudo file.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Load IP Header
+struct iphdr iphdr;
+bpf_probe_read(&amp;amp;iphdr, sizeof(iphdr), ip_header_address);
 
-&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Get netns id
-evt.netns = sk-&amp;gt;sk_net.net-&amp;gt;ns.inum;
-&lt;/code&gt;&lt;/pre&gt;
+// Load protocol and address
+u8 icmp_offset_from_ip_header = iphdr.ihl * 4;
+evt.saddr[0] = iphdr.saddr;
+evt.daddr[0] = iphdr.daddr;
 
-&lt;p&gt;Granted, this may require quite a bit of detective work to find! While we are at the low hanging fruits, we can load the interface name into the event structure as well, from the device:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Get interface name
-bpf_probe_read(&amp;amp;evt.ifname, IFNAMSIZ, dev-&amp;gt;name);
-__builtin_memcpy(&amp;amp;evt.ifname, dev-&amp;gt;name, IFNAMSIZ);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Notice the &lt;code&gt;bpf_probe_read&lt;/code&gt; function. This is the helper to use when reading data. It will handle the memory safety checks for you so that the kernel can trust your code, even though it may access memory outside the eBPF stack. Alternatively, you could use &lt;code&gt;__builtin_memcpy&lt;/code&gt; as well. Actually, this is what I used initially. But it feels hackish. Failing to do so may result in strange build errors like &amp;ldquo;error: extraneous closing brace (&amp;lsquo;}&amp;rsquo;)&amp;rdquo; if you used the more familiar &amp;ldquo;memcpy&amp;rdquo; or &amp;ldquo;Permission Denied&amp;rdquo; from the kernel if it failed to prove safe memory access at validation time, before your code even get a chance to run.&lt;/p&gt;
-
-&lt;h3 id=&#34;keep-only-icmp-echo-request-ping-and-echo-replies&#34;&gt;Keep only ICMP echo request (ping) and echo replies&lt;/h3&gt;
-
-&lt;p&gt;With these gratifying low hanging fruits in hands, we can focus on the packet itself. Depending on you point of view when reading this post, it may seem trivial or&amp;hellip; disheartening, wondering how one can find the necessary fields and offsets. I generally fall into the second category. That&amp;rsquo;s OK. You may use kernel structures for IP and ICMP to guess the fields and Wikipedia has really high quality pages about these foundation protocols.&lt;/p&gt;
-
-&lt;p&gt;Enough talking. Let&amp;rsquo;s get started. First, step, some grounding work. Let&amp;rsquo;s compute the IPv4 and ICMP headers addresses:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Pre-Compute header addresses
-char* ip_header_address   = first-&amp;gt;head + first-&amp;gt;network_header;
-char* icmp_header_address = first-&amp;gt;head + first-&amp;gt;transport_header;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Notice the manual inlining of &lt;code&gt;skb_network_header()&lt;/code&gt; and &lt;code&gt;skb_transport_header()&lt;/code&gt;. Although both are static inline, we can unfortunately not use them here. If we do, the kernel will complain about &amp;ldquo;R1 invalid mem access &amp;lsquo;inv&amp;rsquo;&amp;rdquo;. I suspect this is a compiler glitch as the code are strictly equivalent. Keep in mind eBPF and it&amp;rsquo;s bcc frontends are quite recent additions.&lt;/p&gt;
-
-&lt;p&gt;On the a side note, I accidentally lost quite some time using &lt;code&gt;first-&amp;gt;data&lt;/code&gt; instead of &lt;code&gt;first-&amp;gt;head&lt;/code&gt;. The former is the head of the buffer from which all offsets are computed, while the later is the offset of the first &amp;ldquo;meaningful&amp;rdquo; byte in the buffer.&lt;/p&gt;
-
-&lt;p&gt;Then, load the IP header and filter ICMP packets only, using the next &lt;code&gt;protocol&lt;/code&gt; field from the IPv4 header. We&amp;rsquo;ll use the kernel&amp;rsquo;s &lt;code&gt;struct iphdr&lt;/code&gt; definition to get the offsets right:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Filter ICMP packets
-struct iphdr* iphdr = (struct iphdr*)ip_header_address;
-if (iphdr-&amp;gt;protocol != IPPROTO_ICMP) {
-	return 0;
+// Filter ICMP packets
+if (iphdr.protocol != IPPROTO_ICMP) {
+    return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;You may wonder why I did not write the more compact &lt;code&gt;struct iphdr* iphdr = (struct iphdr*)(first-&amp;gt;head + first-&amp;gt;network_header)&lt;/code&gt;. This is the same reason as above. The generated code would fail to pass the kernel validation phase. As it generally helps with bcc, I split the statements into smaller ones to help the verifier.&lt;/p&gt;
+&lt;p&gt;Finally, we can load the ICMP header itself, make sure this is an echo request of reply and load the id and seq from it:&lt;/p&gt;
 
-&lt;p&gt;We can now do the same with the ICMP header and keep only ICMP echo request and ICMP echo replies:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Compute ICMP header address and load ICMP header
+char* icmp_header_address = ip_header_address + icmp_offset_from_ip_header;
+struct icmphdr icmphdr;
+bpf_probe_read(&amp;amp;icmphdr, sizeof(icmphdr), icmp_header_address);
 
-&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Filter ICMP echo request and echo reply
-struct icmphdr* icmphdr = (struct icmphdr*)icmp_header_address;
-if (icmphdr-&amp;gt;type != ICMP_ECHO &amp;amp;&amp;amp; icmphdr-&amp;gt;type != ICMP_ECHOREPLY) {
-	return 0;
+// Filter ICMP echo request and echo reply
+if (icmphdr.type != ICMP_ECHO &amp;amp;&amp;amp; icmphdr.type != ICMP_ECHOREPLY) {
+    return 0;
 }
-&lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Last but not least: load relevant data into the event.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;// Get address and icmp info
-evt.saddr    = iphdr-&amp;gt;saddr;
-evt.daddr    = iphdr-&amp;gt;daddr;
-evt.icmptype = icmphdr-&amp;gt;type;
-evt.icmpid   = icmphdr-&amp;gt;un.echo.id;
-evt.icmpseq  = icmphdr-&amp;gt;un.echo.sequence;
+// Get ICMP info
+evt.icmptype = icmphdr.type;
+evt.icmpid   = icmphdr.un.echo.id;
+evt.icmpseq  = icmphdr.un.echo.sequence;
 
 // Fix endian
 evt.icmpid  = be16_to_cpu(evt.icmpid);
 evt.icmpseq = be16_to_cpu(evt.icmpseq);
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;And we&amp;rsquo;re done! We now have an event ready to send to user space with all relevant information.&lt;/p&gt;
+&lt;p&gt;That&amp;rsquo;s all folks!&lt;/p&gt;
 
-&lt;p&gt;Note: If you intend to add IPv6 support, please note that the ICMP protocol number is NOT the same as with IPv4 and echo request/replay have different op codes, even though the general packet structure looks similar. I lost quite some time on this&amp;hellip;&lt;/p&gt;
+&lt;p&gt;If you want to filter ICMP from a specific ping instance, you may assume &lt;code&gt;evt.icmpid&lt;/code&gt; &lt;a href=&#34;https://github.com/iputils/iputils/blob/master/ping_common.c&#34;&gt;is the PID of the ping&lt;/a&gt; at least using Linux&amp;rsquo;s ping.&lt;/p&gt;
 
-&lt;h3 id=&#34;show-time&#34;&gt;Show time&lt;/h3&gt;
+&lt;h3 id=&#34;show-time&#34;&gt;Show time!&lt;/h3&gt;
 
-&lt;p&gt;With some trivial Python to handle the event, we can test it in a couple of scenarios. Start the program as root, launch some &amp;ldquo;ping&amp;rdquo; in another terminal and observe:&lt;/p&gt;
+&lt;p&gt;With some straightforward Python to handle the event, we can test it in a couple of scenarios. Start the program as root, launch some &amp;ldquo;ping&amp;rdquo; in another terminal and observe:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;# ping -4 localhost
-[  4026531957]               lo request #32693.001 127.0.0.1 -&amp;gt; 127.0.0.1
-[  4026531957]               lo   reply #32693.001 127.0.0.1 -&amp;gt; 127.0.0.1
-[  4026531957]               lo request #32693.002 127.0.0.1 -&amp;gt; 127.0.0.1
-[  4026531957]               lo   reply #32693.002 127.0.0.1 -&amp;gt; 127.0.0.1
-[  4026531957]               lo request #32693.003 127.0.0.1 -&amp;gt; 127.0.0.1
-[  4026531957]               lo   reply #32693.003 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo request #20212.001 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo request #20212.001 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo   reply #20212.001 127.0.0.1 -&amp;gt; 127.0.0.1
+[  4026531957]               lo   reply #20212.001 127.0.0.1 -&amp;gt; 127.0.0.1
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;We clearly see the first 3 ping sent the process 32693 (the ICMP id on Linux&amp;rsquo;s ping) on the loopback interface as well as the generated reply. Mission accomplished!&lt;/p&gt;
+&lt;p&gt;An ICMP echo request is sent by process 20212 (the ICMP id on Linux&amp;rsquo;s ping) on the loopback interface, delivered to the very same loopback interface where an echo reply is generated and sent back. The loopback interface is both the emitting and receiving interface.&lt;/p&gt;
 
-&lt;p&gt;What about some external &amp;ldquo;random&amp;rdquo; target IP?&lt;/p&gt;
+&lt;p&gt;What about my WiFi gateway?&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;# ping -4 google.com
-[  4026531957]           wlp2s0 request #31348.001 192.168.1.11 -&amp;gt; 216.58.198.206
-[  4026531957]           wlp2s0 request #31348.002 192.168.1.11 -&amp;gt; 216.58.198.206
-[  4026531957]           wlp2s0 request #31348.003 192.168.1.11 -&amp;gt; 216.58.198.206
-[  4026531957]           wlp2s0 request #31348.004 192.168.1.11 -&amp;gt; 216.58.198.206
-[  4026531957]           wlp2s0 request #31348.005 192.168.1.11 -&amp;gt; 216.58.198.206
+&lt;pre&gt;&lt;code&gt;# ping -4 192.168.43.1
+[  4026531957]           wlp2s0 request #20710.001 192.168.43.191 -&amp;gt; 192.168.43.1
+[  4026531957]           wlp2s0   reply #20710.001 192.168.43.1 -&amp;gt; 192.168.43.191
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;We clearly see the 5 first pings sent via my WiFi interface from my home network to Google. Interestingly, we don&amp;rsquo;t see the reply here. This is probably due the hypothesis we did above when choosing a function to trace. We certainly should add some tracing points to be exhaustive, but the general principle says the same. The point is proven !&lt;/p&gt;
+&lt;p&gt;In this case, the echo request and echo reply go through the WiFi interface. Easy.&lt;/p&gt;
 
-&lt;p&gt;And my personal favorite: let&amp;rsquo;s ping a Docker container:&lt;/p&gt;
+&lt;p&gt;On a slightly unrelated note, remember when we were only printing the &amp;ldquo;comm&amp;rdquo; of the process owning the packet? In this case, the echo request would belong to ping process while the reply would belong to the WiFi driver as this is the one generating it as far as Linux is concerned.&lt;/p&gt;
+
+&lt;p&gt;And the last one, my personal favorite, ping a Docker container. It&amp;rsquo;s not my favorite because of Docker. It is my favorite because it best shows the the power of eBPF. It allowed to build an &amp;ldquo;x-ray&amp;rdquo; like tool for ping.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;# ping -4 172.17.0.2
-[  4026531957]          docker0 request #01952.001 172.17.0.1 -&amp;gt; 172.17.0.2
-[  4026531957]      veth0e65931 request #01952.001 172.17.0.1 -&amp;gt; 172.17.0.2
-[  4026532395]             eth0   reply #01952.001 172.17.0.2 -&amp;gt; 172.17.0.1
+[  4026531957]          docker0 request #17146.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026531957]      vetha373ab6 request #17146.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026532258]             eth0 request #17146.001 172.17.0.1 -&amp;gt; 172.17.0.2
+[  4026532258]             eth0   reply #17146.001 172.17.0.2 -&amp;gt; 172.17.0.1
+[  4026531957]      vetha373ab6   reply #17146.001 172.17.0.2 -&amp;gt; 172.17.0.1
+[  4026531957]          docker0   reply #17146.001 172.17.0.2 -&amp;gt; 172.17.0.1
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Like the Google example, this is not perfect BUT we do see the change of network namespace and can reasonably guess that the packet journey goes:&lt;/p&gt;
+&lt;p&gt;With some art, it now looks like:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;       Host netns           | Container netns
 +---------------------------+-----------------+
@@ -298,20 +547,20 @@ evt.icmpseq = be16_to_cpu(evt.icmpseq);
 
 &lt;h3 id=&#34;final-word&#34;&gt;Final word&lt;/h3&gt;
 
-&lt;p&gt;eBPF can be used to instrument the kernel and trace the journey of an arbitrary bit of information in the kernel. I would not pretend this is a &amp;ldquo;quick way&amp;rdquo; to instrument the kernel. It&amp;rsquo;s not. And the C-like language limitations can feel frustrating at first. But once this initial frustration step is over, this is an extremely powerful tool. I hope this post gave you a good taste of it and helped ease the initial journey in eBPF. I intentionally pasted full error messages in this post in the hope they may be indexed and help you if you meet them (and you will ^^).&lt;/p&gt;
+&lt;p&gt;eBPF/bcc enables us to write a new range of tools to deeply troubleshoot, trace and track issues in places previously unreachable without patching the kernel. Tracepoints are also quite handy as they give a good hint on interesting places, removing the need to tediously read the kernel code and can be placed in portions of the code that would otherwise be unreachable from kprobes, like inline or static functions.&lt;/p&gt;
 
-&lt;p&gt;As far as this demo is concerned, it would benefit from additional tracing point. Some packets are clearly missing. It would also be interesting to instrument the routing and filtering phases to better help troubleshoot common routing issues.&lt;/p&gt;
+&lt;p&gt;To go further, we could add IPv6 support. This is quite easy to do and I&amp;rsquo;ll leave it as an exercise for the reader. Ideally, I&amp;rsquo;d like to measure the impact on performance as well. But this post is already very, very long. It could be interesting to improve this tool by tracing routing and iptables decisions and tracing ARP packets. All this would turn this tool into a perfect &amp;ldquo;x-ray&amp;rdquo; packet tracer for people like me, sometime struggling with non-trivial Linux network setups.&lt;/p&gt;
 
-&lt;p&gt;I did not measure the performance impact. I know there is one. Kernel probes work by inserting jumps in the kernel on tracing points. This tracing point ends up being called for each packet. On production system that would mean a &lt;em&gt;LOT&lt;/em&gt;. It should not matter. I would not install LLVM and a build toolchain a production system for the sole sake of debugging anyway!&lt;/p&gt;
+&lt;p&gt;Finally, you can see the full code (with IPv6 support) on Github:  &lt;a href=&#34;https://github.com/yadutaf/tracepkt&#34;&gt;https://github.com/yadutaf/tracepkt&lt;/a&gt;&lt;/p&gt;
 
-&lt;p&gt;As promised, the full code for this post is available on Github, with IPv4 and IPv6 support: &lt;a href=&#34;https://github.com/yadutaf/tracepkt&#34;&gt;https://github.com/yadutaf/tracepkt&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&#34;note-s&#34;&gt;Note(s)&lt;/h3&gt;
 &lt;div class=&#34;footnotes&#34;&gt;
 
 &lt;hr /&gt;
 
 &lt;ol&gt;
-&lt;li id=&#34;fn:play-around&#34;&gt;That is, if by &amp;ldquo;play around&amp;rdquo; you mean &amp;ldquo;host a hobby application with literally 10s of thousands clients syncing on a daily basis&amp;rdquo;.
- &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:play-around&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li id=&#34;fn:containers&#34;&gt;I&amp;rsquo;ve put &amp;ldquo;containers&amp;rdquo; into quotes as, technically speaking, network namespaces are one of the many building blocks of Linux containers.
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:containers&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
 &lt;/div&gt;
 </description>
