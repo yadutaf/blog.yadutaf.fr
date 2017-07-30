@@ -348,7 +348,7 @@ As a reminder, the goal of eBPF is to allow *safe* scripting of the kernel. This
 1. It's like memcpy. Beware of the cost of copies on performance.
 2. In case of error, it will return a buffer initialized to 0 and return an error. It will *not* crash or stop the program.
 
-For the remaining parts of this post, I'll use the following macro to hep keep things readable:
+For the remaining parts of this post, I'll use the following macro to help keep things readable:
 
 ```c
 #define member_read(destination, source_struct, source_member)                 \
@@ -556,7 +556,9 @@ eBPF/bcc enables us to write a new range of tools to deeply troubleshoot, trace 
 
 To go further, we could add IPv6 support. This is quite easy to do and I'll leave it as an exercise for the reader. Ideally, I'd like to measure the impact on performance as well. But this post is already very, very long. It could be interesting to improve this tool by tracing routing and iptables decisions and tracing ARP packets. All this would turn this tool into a perfect "x-ray" packet tracer for people like me, sometime struggling with non-trivial Linux network setups.
 
-Finally, you can see the full code (with IPv6 support) on Github:  https://github.com/yadutaf/tracepkt
+As promised, you can see the full code (with IPv6 support) on Github:  https://github.com/yadutaf/tracepkt
+
+Finally, I'd like to acknowledge the help of [@fcabestre](https://twitter.com/fcabestre) who helped me rescue the working draft of this post from a malfunctioning hard disk, [@bluxte](https://twitter.com/bluxte) for his patient proof reading and the people of [bcc](https://github.com/iovisor/bcc) who made this post technically possible.
 
 ### Note(s)
 
