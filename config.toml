@@ -2,7 +2,6 @@ baseurl = "http://blog.yadutaf.fr/"
 name = "Yet another enthusiast blog!"
 title = "Yet another enthusiast blog!"
 languageCode = "en-us"
-disqusShortname = "yadutaf"
 theme = "angels-ladder"
 paginate = 10
 
