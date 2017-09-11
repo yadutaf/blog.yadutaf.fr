@@ -259,4 +259,4 @@ docker run -it --rm \
   xterm xterm
 ```
 
-And voila! (french accent inside) You no have the most beautifully awesome graphical app running on a remote (as far as localhost is remote) server, inside a Docker container.
+And voila! (french accent inside) You now have the most beautifully awesome graphical app running on a remote (as far as localhost is remote) server, inside a Docker container.
