@@ -7,7 +7,6 @@ paginate = 10
 
 [Params]
 subtitle = "There is no great achievement without great challenges."
-twitter = "https://twitter.com/oyadutaf"
 github = "https://github.com/yadutaf"
 profile = "/images/profile.jpg"
 copyright = "Jean-Tiare Le Bigot"
