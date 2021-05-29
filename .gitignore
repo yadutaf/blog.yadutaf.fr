@@ -1,5 +1,8 @@
 *.swp
 
+# Tooling
+.vscode
+
 # Ignore rendered blog
 public/
 
