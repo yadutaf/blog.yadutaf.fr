@@ -2,8 +2,8 @@
 title: "Mounting overlay filesystems with libguestfs"
 author: Jean-Tiare Le Bigot
 layout: post
-date: 2021-05-28
-url: /2021/05/28/mounting-overlay-with-libguestfs/
+date: 2021-05-29
+url: /2021/05/29/mounting-overlay-with-libguestfs/
 categories:
   - Sysadmin
 tags:
