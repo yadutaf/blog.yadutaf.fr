@@ -1,1 +1,5 @@
 *.swp
+
+# Ignore rendered blog
+public/
+
