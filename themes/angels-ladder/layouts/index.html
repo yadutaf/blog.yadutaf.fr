@@ -5,7 +5,7 @@
 –––––––––––––––––––––––––––––––––––––––––––––––––– -->
 <main id="index" role="main">
   <div class="article-header light-gray"><h1>Recent Articles</h1></div>
-  {{ $paginator := .Paginate (where .Data.Pages "Type" "post") }}
+  {{ $paginator := .Paginate ( where (where .Site.Pages "Section" "post") "IsPage" true ) }}
   {{ range $paginator.Pages }}
   <div class="summary">
     <h2><a href="{{ .Permalink }}">{{ .Title }} {{ if .Draft }}:: DRAFT{{end}}</a></h2>
@@ -23,7 +23,6 @@
 <!-- Paginator Section Layout
 –––––––––––––––––––––––––––––––––––––––––––––––––– -->
 <nav>
-  {{ $paginator := .Paginate (where .Data.Pages "Type" "post") }}
   {{ template "_internal/pagination.html" . }}
 </nav>
 

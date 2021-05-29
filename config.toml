@@ -13,3 +13,6 @@ profile = "/images/profile.jpg"
 copyright = "Jean-Tiare Le Bigot"
 analytics = "UA-25807049-1"
 
+[markup.goldmark.renderer]
+unsafe = true
+
