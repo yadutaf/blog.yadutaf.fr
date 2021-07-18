@@ -13,7 +13,7 @@ tags:
   - ssh
 ---
 
-A few days ago, I found myself trying to launch Qemu, the system emulator, into a dedicated [network namespace]({{< relref "2014-01-19-introduction-to-linux-namespaces-part-5-net.md" >}}) (that's easy), on a remote host (that's the fun part). As it was fun, I looked for a way to do it. Spoiler alert, it involves "xauth" tricks, bind mounts and TCP to UNIX domain socket forwarding. No more.
+A few days ago, I found myself trying to launch Qemu, the system emulator, into a dedicated [network namespace]({{< relref "025-introduction-to-linux-namespaces-part-5-net.md" >}}) (that's easy), on a remote host (that's the fun part). As it was fun, I looked for a way to do it. Spoiler alert, it involves "xauth" tricks, bind mounts and TCP to UNIX domain socket forwarding. No more.
 
 My first though was that it's probably not worth a blog post. Who uses network namespaces on a daily basis? Not everyone (I do).
 

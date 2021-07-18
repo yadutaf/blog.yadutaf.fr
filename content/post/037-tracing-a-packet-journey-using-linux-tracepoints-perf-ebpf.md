@@ -13,7 +13,7 @@ tags:
   - ebpf
 ---
 
-I've been looking for a low level Linux network debugging tool for quite some time. Linux allows to build complex networks running directly on the host, using a combination of virtual interfaces and [network namespaces]({{< relref "2014-01-19-introduction-to-linux-namespaces-part-5-net.md" >}}). When something goes wrong, troubleshooting is rather tedious. If this is a L3 routing issue, ``mtr`` has a good chance of being of some help. But if this is a lower level issue, I typically end up manually checking each interface / bridge / network namespace / iptables and firing up a couple of tcpdumps as an attempt to get a sense of what's going on. If you have no prior knowledge of the network setup, this may feel like a maze.
+I've been looking for a low level Linux network debugging tool for quite some time. Linux allows to build complex networks running directly on the host, using a combination of virtual interfaces and [network namespaces]({{< relref "025-introduction-to-linux-namespaces-part-5-net.md" >}}). When something goes wrong, troubleshooting is rather tedious. If this is a L3 routing issue, ``mtr`` has a good chance of being of some help. But if this is a lower level issue, I typically end up manually checking each interface / bridge / network namespace / iptables and firing up a couple of tcpdumps as an attempt to get a sense of what's going on. If you have no prior knowledge of the network setup, this may feel like a maze.
 
 What I'd need is a tool which could tell me "Hey, I've seen your packet: It's gone this way, on this interface, in this network namespace".
 
@@ -49,7 +49,7 @@ In this post, I'll focus on 2 tracing tools. ``perf`` and ``eBPF``.
 
 Such programs can be used as network classifier for QOS, very low level networking and filtering as part of eXpress Data Plane (XDP), as a tracing agent and many other places. Tracing probes can be attached to any function whose symbol is exported in ``/proc/kallsyms`` or any tracepoints. In this post, I'll focus on tracing agents attached to tracepoints.
 
-For an example of tracing probe attached to a kernel function or as a gentler introduction, I invite you to [read my previous post on eBPF]({{< relref "2016-03-30-turn-any-syscall-into-event-introducing-ebpf-kernel-probes.md" >}}).
+For an example of tracing probe attached to a kernel function or as a gentler introduction, I invite you to [read my previous post on eBPF]({{< relref "034-turn-any-syscall-into-event-introducing-ebpf-kernel-probes.md" >}}).
 
 ### Lab setup
 
@@ -199,7 +199,7 @@ Starting with Linux Kernel 4.7, eBPF programs can be attached to kernel tracepoi
 
 An earlier version of this post attempted to use kprobes, which are easier to use, but the results were at best incomplete.
 
-Now, let's be honest, accessing data via tracepoints is a lot more tedious than with there kprobe counterpart. While I tried to keep this post as gentle as possible, you may want to start with the (slightly older) post ["How to turn any syscall into an event: Introducing eBPF Kernel probes"] ({{< relref "2016-03-30-turn-any-syscall-into-event-introducing-ebpf-kernel-probes.md" >}}).
+Now, let's be honest, accessing data via tracepoints is a lot more tedious than with there kprobe counterpart. While I tried to keep this post as gentle as possible, you may want to start with the (slightly older) post ["How to turn any syscall into an event: Introducing eBPF Kernel probes"] ({{< relref "034-turn-any-syscall-into-event-introducing-ebpf-kernel-probes.md" >}}).
 
 This disclaimer aside, let's start with a simple hello world and get the low level plumbing into place. In this hello world, we'll build an event every time 1 of the 4 tracepoints we chose earlier (``net_dev_queue``, ``netif_receive_skb_entry``, ``netif_rx`` and ``napi_gro_receive_entry``) is triggered. To keep things simple at this stage, we'll send the program's ``comm``, that is, a 16 char string that's basically the program name.
 
