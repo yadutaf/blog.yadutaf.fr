@@ -62,9 +62,6 @@ ul,
 ol {
   margin-left: 30px;
 }
-pre {
-  margin: 25px 0;
-}
 table {
   border: 1px solid #ccc;
   margin: 25px 0;
@@ -178,17 +175,6 @@ article h6 {
 }
 article p {
   margin: 25px 0;
-}
-article code {
-  color: #333;
-  background-color: #eee;
-  padding: 0 3px;
-  margin: 0 3px;
-  border: 1px solid #ccc;
-  font-family: consolas, "Courier New", monospace;
-}
-article pre code {
-  font-family: consolas, "Courier New", monospace;
 }
 article blockquote {
   margin: 25px 0;

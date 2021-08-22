@@ -15,3 +15,15 @@ analytics = "UA-25807049-1"
 [markup.goldmark.renderer]
 unsafe = true
 
+[markup.highlight]
+anchorLineNos = false
+codeFences = true
+guessSyntax = true
+hl_Lines = ''
+lineAnchors = ''
+lineNoStart = 1
+lineNos = false
+lineNumbersInTable = true
+noClasses = true
+style = 'monokai'
+tabWidth = 4
