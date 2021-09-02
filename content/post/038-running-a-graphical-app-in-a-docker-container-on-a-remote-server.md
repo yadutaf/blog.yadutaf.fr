@@ -13,6 +13,14 @@ tags:
   - ssh
 ---
 
+**EDIT 2021-09-02**: A reader made me realize that the "socat" trick can be greatly improved by adding ",fork" on the server part.
+This allows socat to accept multiple consecutive connections, just like a real production server would. In practice, I find
+myself using a variation of this trick a lot, but without the 'socat'. Indeed, if it is acceptable for the container to
+open a connection with the host, this easiest is to set ``X11UseLocalhost=no`` in ``/etc/ssh/sshd_config``. The rest of
+the adaptation is left as an exercise to the reader (said otherwise: I'm too lazy to dive into these scripts...). This reader
+also mentionned that the patch to the "Xauthority" could be specified via en environment variable thus allowing to place this
+file anywhere and limit assumptions on the container.
+
 A few days ago, I found myself trying to launch Qemu, the system emulator, into a dedicated [network namespace]({{< relref "025-introduction-to-linux-namespaces-part-5-net.md" >}}) (that's easy), on a remote host (that's the fun part). As it was fun, I looked for a way to do it. Spoiler alert, it involves "xauth" tricks, bind mounts and TCP to UNIX domain socket forwarding. No more.
 
 My first though was that it's probably not worth a blog post. Who uses network namespaces on a daily basis? Not everyone (I do).
@@ -121,20 +129,20 @@ One way to overcome this limitation is to launch the Docker container using the 
 Another way to overcome this, is to re-export the TCP connection as a UNIX domain socket and launch the application like we are used to. Fortunately, a well-known tool can do exactly this: socat.
 
 ```bash
-# Log into the remote server
+# Log into the "remote" server
 ssh -X localhost
 
 # Get the Display number from the DISPLAY variable
 DISPLAY_NUMBER=$(echo $DISPLAY | cut -d. -f1 | cut -d: -f2)
 
 # Proxy between the TCP and the Unix domain world, in the background
-socat TCP4:localhost:60${DISPLAY_NUMBER} UNIX-LISTEN:/tmp/.X11-unix/X${DISPLAY_NUMBER} &
+socat UNIX-LISTEN:/tmp/.X11-unix/X${DISPLAY_NUMBER},fork TCP4:localhost:60${DISPLAY_NUMBER} &
 
 # Expose the "new" display address
 export DISPLAY=:$(echo $DISPLAY | cut -d. -f1 | cut -d: -f2)
 
 # Finally, open xterm in the Docker....
-docker run -it --rm -e 'DISPLAY=${DISPLAY}' -v /tmp/.X11-unix:/tmp/.X11-unix xterm xterm
+docker run -it --rm -e DISPLAY=${DISPLAY} -v /tmp/.X11-unix:/tmp/.X11-unix xterm xterm
 ```
 
 Which should output something like:
@@ -148,10 +156,9 @@ xterm: Xt error: Can't open display: :10
 
 X11 uses a concept of "magic cookies" to grant access to the server. A bit like web cookies. If you don't have the cookie, you can not open a connection to the server and then not display anything. This authentication information is stored in ``~/.Xauthority`` and can be manipulated using the ``xauth`` command.
 
-Still from the SSH connection, Let's retry the proxy trick with the authority file mounted in the container:
+Still from the SSH connection, Let's retry the proxy trick with the authority file mounted in the container (socat is still running in the background):
 
 ```bash
-socat TCP4:localhost:60${DISPLAY_NUMBER} UNIX-LISTEN:/tmp/.X11-unix/X${DISPLAY_NUMBER} &
 docker run -it --rm \
   -e DISPLAY=${DISPLAY} \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
@@ -181,7 +188,6 @@ The cookie is obviously bogus in the example. But the interesting part is: the h
 We can cheat and force the hostname inside the container to be the same as the SSH host and retry:
 
 ```bash
-socat TCP4:localhost:60${DISPLAY_NUMBER} UNIX-LISTEN:/tmp/.X11-unix/X${DISPLAY_NUMBER} &
 docker run -it --rm \
   -e DISPLAY=${DISPLAY} \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
@@ -203,11 +209,11 @@ DISPLAY_NUMBER=$(echo $DISPLAY | cut -d. -f1 | cut -d: -f2)
 export DISPLAY=:${DISPLAY_NUMBER}
 
 # Proxy between the TCP and the Unix domain world, in the background
-socat TCP4:localhost:60${DISPLAY_NUMBER} UNIX-LISTEN:/tmp/.X11-unix/X${DISPLAY_NUMBER} &
+socat UNIX-LISTEN:/tmp/.X11-unix/X${DISPLAY_NUMBER},fork TCP4:localhost:60${DISPLAY_NUMBER} &
 
 # Finally, open xterm in the Docker....
 docker run -it --rm \
-  -e 'DISPLAY=${DISPLAY}' \
+  -e DISPLAY=${DISPLAY} \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   --hostname $(hostname) \
   xterm xterm
@@ -215,7 +221,7 @@ docker run -it --rm \
 
 ### Stretch goal: clean it up! 
 
-The proof of concept works, that's great. How can we make it cleaner? Well, first remember that containers goal is to to isolate as much as possible an application from the host. Sharing the X11 server is not exactly the best way to do it... but we we can't really help on that. What we can (should) isolate:
+The proof of concept works, that's great. How can we make it cleaner? Well, first remember that containers' goal is to isolate as much as possible an application from the host. Sharing the X11 server is not exactly the best way to do it... but we can't really help on that. What we can (should) isolate:
 
 * The hostname. We overloaded it such that it matches the one of the SSH server.
 * The Unix sockets. They are all shared in all containers sharing the same trick.
@@ -248,13 +254,14 @@ AUTH_COOKIE=$(xauth list | grep "^$(hostname)/unix:${DISPLAY_NUMBER} " | awk '{p
 xauth -f display/Xauthority add ${CONTAINER_HOSTNAME}/unix:${CONTAINER_DISPLAY} MIT-MAGIC-COOKIE-1 ${AUTH_COOKIE}
 
 # Proxy with the :0 DISPLAY
-socat TCP4:localhost:60${DISPLAY_NUMBER} UNIX-LISTEN:display/socket/X${CONTAINER_DISPLAY} &
+socat UNIX-LISTEN:display/socket/X${CONTAINER_DISPLAY},fork TCP4:localhost:60${DISPLAY_NUMBER} &
 
 # Launch the container
 docker run -it --rm \
   -e DISPLAY=:${CONTAINER_DISPLAY} \
+  -e XAUTHORITY=/tmp/.Xauthority \
   -v ${PWD}/display/socket:/tmp/.X11-unix \
-  -v ${PWD}/display/Xauthority:/home/xterm/.Xauthority \
+  -v ${PWD}/display/Xauthority:/tmp/.Xauthority \
   --hostname ${CONTAINER_HOSTNAME} \
   xterm xterm
 ```
