@@ -18,12 +18,12 @@ a safe way to script the Linux kernel by attaching to various pre-defines hooks
 and exported functions. For kernel / user spaces communication, the eBPF comes
 with various "map" types.
 
-Every few kernel version, new "map" types are introduced or significantly
+Every few kernel versions, new "map" types are introduced or significantly
 improved and 3 years ago ``BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE`` was
 introduced and is now available in recent distribution kernels.
 
 I was intrigued by it and wanted to learn about it with a simple Cgroup
-network throughput monitoring application. Typicaly the kind of real-world
+network throughput monitoring application. Typically the kind of real-world
 use-case when running multiple workload on a resource-constrained machine.
 
 It turns out I had a hard time understand how to use effectively and wrote this
@@ -38,9 +38,9 @@ library for the userland part. Similar results could be easily achieved in
 [in Python using BCC](https://github.com/iovisor/bcc). The kernel side eBPF
 should work with any other userland with no change.
 
-To minitor the target Cgroup ingress and egress throughput, the demo program
-will attach to the  ``cgroup_skb/ingress`` and ``cgroup_skb/egress`` Cgroup
-eBPF hooks. Of course, resultt will be communicated to userland using a map
+To monitor the target Cgroup ingress and egress throughput, the demo program
+will attach to the ``cgroup_skb/ingress`` and ``cgroup_skb/egress`` Cgroup
+eBPF hooks. Of course, result will be communicated to userland using a map
 of type ``BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE``.
 
 To keep this post reasonably simple and focused on the eBPF portions,
@@ -50,9 +50,9 @@ this post will only monitor one specific hard-coded cgroup path.
 
 This is the eBPF skeleton. It starts with a dummy comment kindly asking the go
 compiler not to attempt compiling it by itself. This is then followed by
-linux kernel and BPF helpers includes and by the license definition.
+Linux kernel and BPF helpers includes and by the license definition.
 
-The license may soud superfluous but eBPF programs are subject to the same rule
+The license may sound superfluous but eBPF programs are subject to the same rule
 as plain-c kernel modules. Typically, some symbol exports are subject to "GPL
 only" (or compatible).
 
@@ -88,7 +88,7 @@ interest. The "/sys/fs/cgroup/unified" prefix may be different from systems to
 systems. This one comes from a Ubuntu with Systemd still configured to use v1
 Cgroup implementation as the main implementation.
 
-``EBPF_PROG_ELF`` may also need adjustement if the eBPF part was not called
+``EBPF_PROG_ELF`` may also need adjustment if the eBPF part was not called
 ``bpf-accounting.bpf.c``.
 
 ```go
@@ -160,7 +160,7 @@ is the go-to choice to avoid spin-locks.
 
 Technically, ``BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE`` is actually a /virtual/ map
 or more accurately a Cgroup *local storage* in the kernel's terminology.
-Internaly, the Cgroup datastructure has a member dedicated to cgroup local
+Internally, the Cgroup data structure has a member dedicated to cgroup local
 storage. Every program of given type will therefore share the *same* storage
 area for a given Cgroup. By default, programs of different types will have a
 dedicated storage area in the Cgroup. It is however possible to share this
@@ -168,14 +168,14 @@ storage area between all program types for a given Cgroup.
 
 This has a couple of practical consequences:
 1. By design, the (virtual) map key is conceptually a ``(cgroup_id, program_type)``
-   tuple. This not be customised. The leaf member type is however flexible.
+   tuple. This not be customized. The leaf member type is however flexible.
 2. If multiple programs of the same type need to store data in the same Cgroup,
    have to cooperate for the leaf member type definition.
 3. Programs may only access the storage area of the cgroup they are attached to.
-   Sayed otherwise, a program attached to Cgroup ``foo`` will only access
+   Said otherwise, a program attached to Cgroup ``foo`` will only access
    storage for Cgroup ``foo`` even if triggered by events in child Cgroup
    ``foo/bar``. If child Cgroup events needs to be specifically tracked, the
-   same program needs to be attached to the Cgroup of insterest as well.
+   same program needs to be attached to the Cgroup of interest as well.
 
 One last thing regarding ``BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE``: Since this is
 a *per-CPU* map type, the storage in the group is not directly the leaf member
@@ -185,9 +185,9 @@ will however require specific handling for the Go part which has a full view of
 data stored for each cgroups + CPUs. 
 
 For this article, there are 2 program types (``cgroup_skb/ingress`` and
-``cgroup_skb/egress``) to match both incomming and outgoing traffic. Since the
+``cgroup_skb/egress``) to match both incoming and outgoing traffic. Since the
 goal is to measure the number of bytes transmitted in each direction, the leaf
-member type can be as simple as an ``uint64``.
+member type can be as simple as a ``uint64``.
 
 On the eBPF side, the structure declaration is as simple as:
 
@@ -218,7 +218,7 @@ real-world maps. Thus, here it is:
 	})low-overhead-cgroup-network-accounting-with-ebpf
 ```
 
-The compiled eBPF ELF file which now contains the map defintion must now be
+The compiled eBPF ELF file which now contains the map definition must now be
 loaded. This where Cilium's ebpf library shines. Under the hod, it parses
 the ELF file and extracts the map definitions and all program metadata
 "collection":
@@ -242,7 +242,7 @@ definition. For the key, Cilium's library does not (yet) come with a
 built-in definition. Since the key format is imposed by the Kernel's
 ABI this is only a matter of translating ``struct bpf_cgroup_storage_key``
 from the [kernel cgroup storage documentation](https://www.kernel.org/doc/html/latest/bpf/map_cgroup_storage.html)
-to go with a dummy 32 bits field at the end for alignement:
+to go with a dummy 32 bits field at the end for alignment:
 
 ```go
 type BpfCgroupStorageKey struct {
@@ -278,7 +278,7 @@ already discussed, this is the type of program (ingress, vs egress). The tricky
 part is the ``CgroupInodeId``. This field is the Inode number of the cgroup
 path.
 
-Since this example is voluntarilly simplistic, it only considers a single
+Since this example is voluntarily simplistic, it only considers a single
 pre-defined hard-coded ``TARGET_CGROUP_V2_PATH`` cgroup. The Inode ID can
 thus be pre-loaded once for all:
 
@@ -373,7 +373,7 @@ SEC("cgroup_skb/egress") int egress(struct __sk_buff *skb)
 ```
 
 The eBPF side is now complete. The next step is to load and attach these
-programs to the Cgroup of interest and do something usfull with the collected
+programs to the Cgroup of interest and do something useful with the collected
 data.
 
 ### Attach the programs and collect data
@@ -464,7 +464,7 @@ llvm-strip -g bpf-accounting.bpf.o
 go build .
 ```
 
-To setup a test environment, the easiest is to open a terminal and run:
+To set up a test environment, the easiest is to open a terminal and run:
 
 ```shell
 # Create the Cgroup
@@ -508,7 +508,7 @@ Tadaa !
 ### Conclusion
 
 This post presented the ``BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE`` eBPF virtual map
-for local storage through a trivial per-cgroup throughtput monitoring
+for local storage through a trivial per-cgroup throughput monitoring
 application.
 
 The main takeaways are:
@@ -519,11 +519,11 @@ The main takeaways are:
 * All eBPF cgroups of a given type attached to a given Cgroup will share the
   *same* storage.
 * Attach the eBPF program to each target cgroups: This storage is tied to a
-  specific attachement.
+  specific attachment.
 
 This example could be used as a basis for a real monitoring application. Such
 an application could for example monitor Cgroup creation and dynamically attach
-the programs on the fly. It Clould also expose collected data in OpenMetrics
+the programs on the fly. It could also expose collected data in OpenMetrics
 (Prometheus) for integration in a larger system.
 
 Last but not least, I would like to thank Cilium's ebpf community for [helping

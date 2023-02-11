@@ -2,10 +2,10 @@
 title: About me
 author: Jean-Tiare Le Bigot
 layout: page
-date: 2021-05-29
+date: 2023-02-11
 ---
 
-I am currently a system TechLead in the main robotic team at [EasyMile](http://easymile.com/).
+I'm a passionate system TechLead in the robotic team at [EasyMile](http://easymile.com/) since July 2017.
 EasyMile is a Toulouse, France, based company building self-driving vehicles like the EZ10 and the Tracteasy.
 As a system TechLead, I'm in charge of the vehicle's network, compute and cybersecurity.
 
