@@ -10,7 +10,7 @@ subtitle = "There is no great achievement without great challenges."
 github = "https://github.com/yadutaf"
 profile = "/images/profile.jpg"
 copyright = "Jean-Tiare Le Bigot"
-analytics = "UA-25807049-1"
+analytics = "G-193EG5SRMJ"
 
 [markup.goldmark.renderer]
 unsafe = true
