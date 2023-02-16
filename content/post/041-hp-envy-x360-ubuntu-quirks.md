@@ -113,11 +113,11 @@ In the process, I quickly came to realize that using the "Function" keys require
 hold the `Fn` key simultaneously. Of course, there is no keyboard "Fn lock" or equivalent,
 but this was easily toggled from the BIOS.
 
-With all this, there remains only 1 itch to scratch (at least for now) for which I have
-no lead. At the same time, I'm not sure if it's painful enough for me to spend more time
-on it. Namely, going from laptop to tablet work just fine. However, when doing the
-opposite, the screen remains "upside-down". Converting back to tablet and back again to
-laptop does the trick and feels like a very acceptable workaround for me.
+With all this, there remains only 1 itch to scratch (at least for now). When in tablet
+mode, the screen can freely rotate up/down/left/right, but when in laptop mode, in can
+only auto-rotate left/right. So, if the screen comes back from tablet mode upside down,
+then I need to go back to tablet, rotate it and go back to laptop mode. Fortunately, there
+is a Gnome extension just for that: https://extensions.gnome.org/extension/5389/screen-rotate/.
 
 ### Getting it all together (aka: TL;DR)
 
@@ -150,6 +150,13 @@ systemctl reboot
 
 **Warning**: The syntax of this file is NOT stable. Actually, the version on "main"
 branch would need something like `AttrEventCode=-EV_KEY:0xf7;` at the time of writing.
+
+Update 2023-02-15: This was actually not the right way to do it. The proper way is
+to add an entry in systemd's `hwdb`. The fix is now [upstream](https://github.com/systemd/systemd/pull/26415).
+
+#### Always enable automatic screen orientation/rotation
+
+Install Gnome extension https://extensions.gnome.org/extension/5389/screen-rotate/
 
 #### Toggling "Fn Lock" to get the F1-F12 by default:
 
