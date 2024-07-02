@@ -168,6 +168,3 @@ but this is not too complicated either, using Gist.
 Moreover, I strongly believe that tooling such as troubleshooting UIs are extremely powerful and valuable
 HOWEVER, whenever possible, they should not be hosted in the production clusters, for architecture,
 security and resource reasons.
-
-**By the way**: I'm available for hire, full-remote or based in Toulouse area (France) 😇. If you have an
-open SRE or system developer position, feel free to contact me: `jt [AT] yadutaf [DOT] fr`.

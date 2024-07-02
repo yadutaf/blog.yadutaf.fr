@@ -440,6 +440,3 @@ management tasks while remaining relatively simple. If you are considering start
 and managed offers do not match your needs, I strongly recommend evaluating Talos.
 
 Going further, I'd love to evaluate the Kata-Containers and disk encryption features, but time to move on.
-
-**By the way**: I'm available for hire, full-remote or based in Toulouse area (France) 😇. If you have an
-open SRE or system developer position, feel free to contact me: `jt [AT] yadutaf [DOT] fr`.
