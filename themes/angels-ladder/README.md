@@ -8,7 +8,6 @@ Angel's Ladder is a simple blog theme for Hugo.
 * Responsive design
 * Pagination
 * Tagging
-* Disqus
 * Source code highlighting
 * Google Analytics
 
@@ -40,7 +39,6 @@ The following is the example configuration.
 baseurl = "http://tanksuzuki.com/"
 languageCode = "ja"
 title = "TANKSUZUKI.COM"
-disqusShortname = "tanksuzuki"
 
 [Params]
 subtitle = "I would like to be a layer 3 switch."
@@ -59,7 +57,6 @@ Details of each parameter are as follows.
 | baseurl | yes | Enter the title of your site. |
 | languageCode | yes | Enter the language code of HTML. Example: en, ja. |
 | title | yes | Enter the title of your site. |
-| disqusShortname | no | Enter the short name of the disqus. If you do not enter, disqus section is hidden. |
 | subtitle | no | Enter the subtitle of your site. If you do not enter, subtitle is hidden. |
 | facebook | no | Enter the URL of Facebook. If you do not enter, the link is hidden. |
 | twitter | no | Enter the URL of Twitter. If you do not enter, the link is hidden. |

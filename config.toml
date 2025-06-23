@@ -3,7 +3,9 @@ name = "Yet another enthusiast blog!"
 title = "Yet another enthusiast blog!"
 languageCode = "en-us"
 theme = "angels-ladder"
-paginate = 10
+
+[pagination]
+pagerSize = 10
 
 [Params]
 subtitle = "There is no great achievement without great challenges."
