@@ -9,7 +9,7 @@ categories:
 tags:
   - linux
   - cgroup
-  - ebpf
+  - eBPF
 ---
 
 Linux eBPF ecosystem is growing fast with new features coming with every

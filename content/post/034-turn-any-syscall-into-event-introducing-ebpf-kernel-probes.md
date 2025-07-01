@@ -9,7 +9,7 @@ categories:
 tags:
   - linux
   - tracing
-  - ebpf
+  - eBPF
   - bcc
 ---
 

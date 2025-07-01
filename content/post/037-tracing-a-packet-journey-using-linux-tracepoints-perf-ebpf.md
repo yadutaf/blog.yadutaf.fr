@@ -10,7 +10,7 @@ tags:
   - linux
   - netns
   - docker
-  - ebpf
+  - eBPF
 ---
 
 I've been looking for a low level Linux network debugging tool for quite some time. Linux allows to build complex networks running directly on the host, using a combination of virtual interfaces and [network namespaces]({{< relref "025-introduction-to-linux-namespaces-part-5-net.md" >}}). When something goes wrong, troubleshooting is rather tedious. If this is a L3 routing issue, ``mtr`` has a good chance of being of some help. But if this is a lower level issue, I typically end up manually checking each interface / bridge / network namespace / iptables and firing up a couple of tcpdumps as an attempt to get a sense of what's going on. If you have no prior knowledge of the network setup, this may feel like a maze.
