@@ -2,7 +2,7 @@ header h2 {
     font-size: 10px;
 }
 
-p > code {
+p code {
     background-color: #eeeeee;
 }
 
