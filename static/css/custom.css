@@ -2,6 +2,14 @@ header h2 {
     font-size: 10px;
 }
 
-pre {
+p > code {
+    background-color: #eeeeee;
+}
+
+.highlight pre {
     padding: 7px;
+}
+
+nav {
+    padding-top: 20px;
 }

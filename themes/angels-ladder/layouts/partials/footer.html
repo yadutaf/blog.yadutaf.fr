@@ -10,6 +10,13 @@
 
 
 </div>
-
+{{ if .Store.Get "hasMermaid" }}
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
+  import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@latest/dist/mermaid-layout-elk.esm.min.mjs"
+  mermaid.registerLayoutLoaders(elkLayouts)
+  mermaid.initialize({ startOnLoad: true })
+</script>
+{{ end }}
 </body>
 </html>
