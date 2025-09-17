@@ -9,8 +9,14 @@ categories:
 tags:
   - linux
   - network
+  - netkit
   - eBPF
 ---
+
+This post is the first in a 2 part series:
+
+1. Part 1: Introduction to Linux Netkit interfaces — with a grain of eBPF (This post)
+2. Part 2: [Creating a Linux “Yogurt-phone” — with netkit and a grain of eBPF]({{< ref "post/045-creating-a-yogurt-phone-with-netkit-ebpf" >}})
 
 If you are reading this, chances are you are already familiar with Linux's `veth`
 interfaces. If not, you can think of it as a virtual Ethernet cable for Linux

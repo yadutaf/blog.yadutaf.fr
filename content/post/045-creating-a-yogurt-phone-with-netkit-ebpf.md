@@ -1,5 +1,5 @@
 ---
-title: "Creating a Linux 'yogurt-phone' — with netkit and a grain of eBPF"
+title: "Creating a Linux “Yogurt-phone” — with netkit and a grain of eBPF"
 author: Jean-Tiare Le Bigot
 layout: post
 date: 2025-09-16
@@ -10,20 +10,31 @@ tags:
   - linux
   - container
   - network
+  - netkit
   - eBPF
 ---
+
+This post is the second in a 2 part series:
+
+1. Part 1: [Introduction to Linux Netkit interfaces]({{< ref "post/044-introduction-to-linux-netkit-interfaces" >}}).
+2. Part 2: Creating a Linux “Yogurt-phone” — with netkit and a grain of eBPF (This post)
 
 A “Yogurt-phone” is a simple children science experiment where young experimenters connect two phones through a thread or wire.
 They can then talk together using the Yogurt pots as ends of a phone line. This is nice introduction to communication over a
 wire — literally.
 
-After building a successful “Hello World” equivalent of Netkit interfaces with eBPF, I wondered how I could build an equivalent
-of this “Yogurt-phone”, connecting two Netkit interface pairs in their own namespaces over an eBPF “wire”.
+After building a successful “Hello World” equivalent of Netkit interfaces with eBPF
+[in the previous post](({{< ref "post/044-introduction-to-linux-netkit-interfaces" >}})), I wondered how I could build an
+equivalent of this “Yogurt-phone”, connecting two Netkit interface pairs in their own namespaces over an eBPF “wire”.
 
-This post is a follow-up on the previous post, [Introduction to Linux Netkit interfaces]({{< ref "post/044-introduction-to-linux-netkit-interfaces" >}}).
-If you are not yet familiar with Linux’s Netkit network interfaces, I highly encourage you to read it first.
+In this post, I will try to show how this could be built, what are the limitations and how to navigate in the scarce eBPF
+documentation.
 
-I will try to show how this could be built, what are the limitations and how to navigate in the scarce eBPF documentation.
+If you are not yet familiar with Linux’s Netkit network interfaces, I highly encourage you to read the first part first.
+
+The full code for this post [is available in this Gist](https://gist.github.com/yadutaf/cdb3f6ceafa0154c59884f9aabf4106c). This
+Gist includes the Go part as well as a dynamic interface discovery that are not detailed in this post.
+
 
 ### Goal
 
